@@ -9,7 +9,6 @@ export default function HomeScreen() {
     <View className="flex-1 items-center justify-center bg-white">
       <Text className='text-black font-bold text-3xl'>Home123</Text>
       <Text className='text-black'>{JSON.stringify(user)}</Text>
-      <Text onPress={()=>signOut()}>Logout</Text>
     </View>
   );
 }

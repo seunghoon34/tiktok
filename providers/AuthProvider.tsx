@@ -72,9 +72,9 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             getUser(session.user.id);
         });
         return () => {
-            authData.subscription.unsubscribe()
-        }
-    })
+            authData.subscription.unsubscribe();
+        };
+    },[])
 
     return (
         <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
