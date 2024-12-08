@@ -124,7 +124,9 @@ const deleteUri = () =>{
 
   }
 
-  return ((cameraMode? (<CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing}>
+  return (
+    <View style={{flex : 1}}>
+    {cameraMode? (<CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing}>
     
     <View style={StyleSheet.create({
       deleteContainer: {
@@ -227,7 +229,8 @@ const deleteUri = () =>{
         </View>
       </CameraView>)
       
-  ));
+  }
+  </View>);
 }
 
 const styles = StyleSheet.create({
