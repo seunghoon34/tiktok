@@ -1,4 +1,6 @@
 import RecordingProgress from '@/components/recordingProgress';
+import { useAuth } from '@/providers/AuthProvider';
+import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
@@ -11,6 +13,8 @@ export default function CameraScreen() {
   const cameraRef = useRef<CameraView>(null);
   const [cameraMode, setCameraMode] = useState(true)
   const [elapsedTime, setElapsedTime] = useState(0);
+  const [uri, setUri] = useState("")
+  const { user } = useAuth() 
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -67,36 +71,102 @@ export default function CameraScreen() {
         const video = await cameraRef.current?.recordAsync({
           maxDuration: 5 // in seconds
         });
-        console.log(video?.uri);
+        setUri(video?.uri);
+
       } finally {
+        
+
         setIsRecording(false); // This ensures isRecording is set to false after recording
       }
     }
+
     
 
   };
 
+
+  const saveUri = async () =>{
+    const formData = new FormData;
+    const fileName = uri?.split('/').pop()
+    formData.append('file',{
+        uri: uri,
+        type: `video/${fileName?.split('.').pop()}`,
+        name: fileName,
+    });
+    const { data, error } = await supabase.storage.from('videos').upload(fileName, formData, {
+        cacheControl: '3600000000',
+        upsert: false
+    });
+    if(error) console.error(error);
+    const { error: videoError } = await supabase.from('Video').insert({
+        title: "test_title",
+        uri: data?.path,
+        user_id: user?.id
+    })
+    if(videoError) console.error(videoError)
+    setUri("")
+}
+
+const deleteUri = () =>{
+    setUri("")
+}
+
   const takePicture = async () => {
     const picture = await cameraRef.current?.takePictureAsync();
-    console.log(picture?.uri)
+    setUri(picture?.uri);
+
+
 
   }
 
   return ((cameraMode? (<CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing}>
+    {uri && (
+    <View style={StyleSheet.create({
+      deleteContainer: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        zIndex: 1
+      }
+    }).deleteContainer}>
+      <TouchableOpacity onPress={() => deleteUri()}>
+        <Ionicons name='close-circle' size={40} color="white"/>
+      </TouchableOpacity>
+    </View>
+  )}
     <View className='flex-1 justify-end'>
     <View className='flex-row items-center justify-around mb-10'>
     <TouchableOpacity className='items-end justify-end' onPress={()=> setCameraMode(false)}>
         <Ionicons name='videocam' size={50} color="white"/>
       </TouchableOpacity>
-    <TouchableOpacity className='items-end justify-end' onPress={()=> takePicture()}>
+      {!uri?(<TouchableOpacity className='items-end justify-end' onPress={()=> takePicture()}>
         <Ionicons name='radio-button-on' size={100} color="white"/>
+      </TouchableOpacity>):(
+        <TouchableOpacity className='items-end justify-end' onPress={()=> saveUri()}>
+        <Ionicons name='checkmark-circle-outline' size={100} color="white"/>
       </TouchableOpacity>
+      )}
+    
       <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing}>
         <Ionicons name='camera-reverse' size={50} color="white"/>
       </TouchableOpacity>
       </View>
     </View>
   </CameraView>): (<CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing}>
+    {uri && (
+    <View style={StyleSheet.create({
+      deleteContainer: {
+        position: 'absolute',
+        top: 40,
+        left: 20,
+        zIndex: 1
+      }
+    }).deleteContainer}>
+      <TouchableOpacity onPress={deleteUri}>
+        <Ionicons name='close-circle' size={40} color="white"/>
+      </TouchableOpacity>
+    </View>
+  )}
     {isRecording && (
     <View style={StyleSheet.create({
       timerContainer: {
@@ -129,9 +199,21 @@ export default function CameraScreen() {
           size={100}
           maxDuration={5000} 
         />
-        <TouchableOpacity className='items-end justify-end' onPress={()=> recordVideo()}>
-            {!isRecording?<Ionicons name='radio-button-on' size={100} color="red"/>:<Ionicons name='stop-circle-outline' size={100} color="red"/> }
-          </TouchableOpacity>
+        <TouchableOpacity 
+  className='items-end justify-end' 
+  onPress={() => uri ? saveUri() : recordVideo()}
+>
+  {uri ? (
+    <Ionicons name='checkmark-circle-outline' size={100} color="white"/>
+  ) : (
+    !isRecording ? (
+      <Ionicons name='radio-button-on' size={100} color="red"/>
+    ) : (
+      <Ionicons name='stop-circle-outline' size={100} color="red"/>
+    )
+  )}
+</TouchableOpacity>
+        
           </View>
           <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing} disabled={isRecording} style={{ opacity: isRecording ? 0.5 : 1 }}>
             <Ionicons name='camera-reverse' size={50} color="white"/>
