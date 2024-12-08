@@ -26,10 +26,10 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <Stack>
+      <Stack screenOptions={{ gestureEnabled: false}}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="camera" options={{ headerShown: false }} />
+        <Stack.Screen name="(tabs)" options={{ headerShown: false,  }} />
+        <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right', }} />
 
         <Stack.Screen name="+not-found" />
       </Stack>
