@@ -3,6 +3,7 @@ import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
@@ -15,6 +16,7 @@ export default function CameraScreen() {
   const [elapsedTime, setElapsedTime] = useState(0);
   const [uri, setUri] = useState("")
   const { user } = useAuth() 
+  const router = useRouter()
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -104,7 +106,10 @@ export default function CameraScreen() {
         user_id: user?.id
     })
     if(videoError) console.error(videoError)
-    setUri("")
+    router.back()
+    setUri("");
+
+
 }
 
 const deleteUri = () =>{
@@ -120,7 +125,7 @@ const deleteUri = () =>{
   }
 
   return ((cameraMode? (<CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing}>
-    {uri && (
+    
     <View style={StyleSheet.create({
       deleteContainer: {
         position: 'absolute',
@@ -129,11 +134,11 @@ const deleteUri = () =>{
         zIndex: 1
       }
     }).deleteContainer}>
-      <TouchableOpacity onPress={() => deleteUri()}>
+      <TouchableOpacity onPress={uri?() => deleteUri(): ()=> router.back()}>
         <Ionicons name='close-circle' size={40} color="white"/>
       </TouchableOpacity>
     </View>
-  )}
+  
     <View className='flex-1 justify-end'>
     <View className='flex-row items-center justify-around mb-10'>
     <TouchableOpacity className='items-end justify-end' onPress={()=> setCameraMode(false)}>
@@ -153,7 +158,7 @@ const deleteUri = () =>{
       </View>
     </View>
   </CameraView>): (<CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing}>
-    {uri && (
+    
     <View style={StyleSheet.create({
       deleteContainer: {
         position: 'absolute',
@@ -162,11 +167,11 @@ const deleteUri = () =>{
         zIndex: 1
       }
     }).deleteContainer}>
-      <TouchableOpacity onPress={deleteUri}>
+      <TouchableOpacity onPress={uri? deleteUri: ()=>router.back()}>
         <Ionicons name='close-circle' size={40} color="white"/>
       </TouchableOpacity>
     </View>
-  )}
+
     {isRecording && (
     <View style={StyleSheet.create({
       timerContainer: {

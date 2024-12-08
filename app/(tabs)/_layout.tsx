@@ -1,10 +1,12 @@
-import { Tabs } from 'expo-router';
+import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 export default function TabLayout() {
   const [iconColor, setIconColor] = useState<'black' | 'white'>('black');
+  const router = useRouter()
+  
 
   
 
@@ -30,13 +32,19 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="camera"
+        name="empty"
         options={{
           title: '',
           tabBarIcon: () => 
           <View style={{ position: 'absolute', top: -24, left: '50%', transform: [{ translateX: -37.5 }], width: 75, alignItems: 'center', justifyContent: 'center' }}>
             <Ionicons name="add-circle-sharp" size={75} color="black" />
           </View>
+        }}
+        listeners={{
+          tabPress: (e) =>{
+            e.preventDefault();
+            router.push('/camera')
+          }
         }}
       />
       <Tabs.Screen
