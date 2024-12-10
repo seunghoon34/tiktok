@@ -1,3 +1,4 @@
+import PreviewMedia from '@/components/previewMedia';
 import RecordingProgress from '@/components/recordingProgress';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -125,112 +126,125 @@ const deleteUri = () =>{
   }
 
   return (
-    <View style={{flex : 1}}>
-    {cameraMode? (<CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing}>
-    
-    <View style={StyleSheet.create({
-      deleteContainer: {
-        position: 'absolute',
-        top: 40,
-        left: 20,
-        zIndex: 1
-      }
-    }).deleteContainer}>
-      <TouchableOpacity onPress={uri?() => deleteUri(): ()=> router.back()}>
-        <Ionicons name='close-circle' size={40} color="white"/>
-      </TouchableOpacity>
-    </View>
-  
-    <View className='flex-1 justify-end'>
-    <View className='flex-row items-center justify-around mb-10'>
-    <TouchableOpacity className='items-end justify-end' onPress={()=> setCameraMode(false)}>
-        <Ionicons name='videocam' size={50} color="white"/>
-      </TouchableOpacity>
-      {!uri?(<TouchableOpacity className='items-end justify-end' onPress={()=> takePicture()}>
-        <Ionicons name='radio-button-on' size={100} color="white"/>
-      </TouchableOpacity>):(
-        <TouchableOpacity className='items-end justify-end' onPress={()=> saveUri()}>
-        <Ionicons name='checkmark-circle-outline' size={100} color="white"/>
-      </TouchableOpacity>
-      )}
-    
-      <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing}>
-        <Ionicons name='camera-reverse' size={50} color="white"/>
-      </TouchableOpacity>
-      </View>
-    </View>
-  </CameraView>): (<CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing}>
-    
-    <View style={StyleSheet.create({
-      deleteContainer: {
-        position: 'absolute',
-        top: 40,
-        left: 20,
-        zIndex: 1
-      }
-    }).deleteContainer}>
-      <TouchableOpacity onPress={uri? deleteUri: ()=>router.back()}>
-        <Ionicons name='close-circle' size={40} color="white"/>
-      </TouchableOpacity>
-    </View>
-
-    {isRecording && (
-    <View style={StyleSheet.create({
-      timerContainer: {
-        position: 'absolute',
-        top: 60,
-        width: '100%',
-        alignItems: 'center',
-        zIndex: 1
-      }
-    }).timerContainer}>
-      <Text style={StyleSheet.create({
-        timerText: {
-          color: 'white',
-          fontSize: 20,
-          fontWeight: 'bold'
-        }
-      }).timerText}>
-        {formatTime(elapsedTime)}
-      </Text>
-    </View>
-  )}
-        <View className='flex-1 justify-end'>
-        <View className='flex-row items-center justify-around mb-10'>
-        <TouchableOpacity className='items-end justify-end' onPress={()=> setCameraMode(true)} disabled={isRecording} style={{ opacity: isRecording ? 0.5 : 1 }}>
-            <Ionicons name='camera' size={50} color="white"/>
+  <View style={{flex: 1, backgroundColor: 'black' } }>
+    {uri ? (
+      <PreviewMedia
+        uri={uri}
+        cameraMode={cameraMode}
+        onDelete={deleteUri}
+        onSave={saveUri}
+      />
+    ) : cameraMode ? (
+      <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'}>
+        <View style={StyleSheet.create({
+          deleteContainer: {
+            position: 'absolute',
+            top: 40,
+            left: 20,
+            zIndex: 1
+          }
+        }).deleteContainer}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name='close-circle' size={40} color="white"/>
           </TouchableOpacity>
-          <View style={{ position: 'relative' }}>
-          <RecordingProgress 
-          isRecording={isRecording}
-          size={100}
-          maxDuration={5000} 
-        />
-        <TouchableOpacity 
-  className='items-end justify-end' 
-  onPress={() => uri ? saveUri() : recordVideo()}
->
-  {uri ? (
-    <Ionicons name='checkmark-circle-outline' size={100} color="white"/>
-  ) : (
-    !isRecording ? (
-      <Ionicons name='radio-button-on' size={100} color="red"/>
-    ) : (
-      <Ionicons name='stop-circle-outline' size={100} color="red"/>
-    )
-  )}
-</TouchableOpacity>
+        </View>
         
-          </View>
-          <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing} disabled={isRecording} style={{ opacity: isRecording ? 0.5 : 1 }}>
-            <Ionicons name='camera-reverse' size={50} color="white"/>
-          </TouchableOpacity>
+        <View className='flex-1 justify-end'>
+          <View className='flex-row items-center justify-around mb-10'>
+            <TouchableOpacity className='items-end justify-end' onPress={() => setCameraMode(false)}>
+              <Ionicons name='videocam' size={50} color="white"/>
+            </TouchableOpacity>
+            
+            <TouchableOpacity className='items-end justify-end' onPress={() => takePicture()}>
+              <Ionicons name='radio-button-on' size={100} color="white"/>
+            </TouchableOpacity>
+            
+            <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing}>
+              <Ionicons name='camera-reverse' size={50} color="white"/>
+            </TouchableOpacity>
           </View>
         </View>
-      </CameraView>)
-      
-  }
-  </View>);
+      </CameraView>
+    ) : (
+      <CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'}>
+        <View style={StyleSheet.create({
+          deleteContainer: {
+            position: 'absolute',
+            top: 40,
+            left: 20,
+            zIndex: 1
+          }
+        }).deleteContainer}>
+          <TouchableOpacity onPress={() => router.back()}>
+            <Ionicons name='close-circle' size={40} color="white"/>
+          </TouchableOpacity>
+        </View>
+
+        {isRecording && (
+          <View style={StyleSheet.create({
+            timerContainer: {
+              position: 'absolute',
+              top: 60,
+              width: '100%',
+              alignItems: 'center',
+              zIndex: 1
+            }
+          }).timerContainer}>
+            <Text style={StyleSheet.create({
+              timerText: {
+                color: 'white',
+                fontSize: 20,
+                fontWeight: 'bold'
+              }
+            }).timerText}>
+              {formatTime(elapsedTime)}
+            </Text>
+          </View>
+        )}
+
+        <View className='flex-1 justify-end'>
+          <View className='flex-row items-center justify-around mb-10'>
+            <TouchableOpacity 
+              className='items-end justify-end' 
+              onPress={() => setCameraMode(true)} 
+              disabled={isRecording} 
+              style={{ opacity: isRecording ? 0.5 : 1 }}
+            >
+              <Ionicons name='camera' size={50} color="white"/>
+            </TouchableOpacity>
+            
+            <View style={{ position: 'relative' }}>
+              <RecordingProgress
+                isRecording={isRecording}
+                size={100}
+                maxDuration={5000}
+              />
+              <TouchableOpacity
+                className='items-end justify-end'
+                onPress={recordVideo}
+              >
+                {!isRecording ? (
+                  <Ionicons name='radio-button-on' size={100} color="red"/>
+                ) : (
+                  <Ionicons name='stop-circle-outline' size={100} color="red"/>
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <TouchableOpacity 
+              className='items-end justify-end' 
+              onPress={toggleCameraFacing} 
+              disabled={isRecording} 
+              style={{ opacity: isRecording ? 0.5 : 1 }}
+            >
+              <Ionicons name='camera-reverse' size={50} color="white"/>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </CameraView>
+    )}
+  </View>
+);
 }
 
 const styles = StyleSheet.create({
