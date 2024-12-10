@@ -1,6 +1,6 @@
-import { View, Text, Dimensions, FlatList, Image, Pressable, Animated, AppStateStatus, AppState } from 'react-native';
+import { View, Text, Dimensions, FlatList, Image, Pressable, Animated, AppStateStatus, AppState, TouchableOpacity, RefreshControl } from 'react-native';
 import "../../global.css";
-import { Link, useFocusEffect } from 'expo-router';
+import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -14,6 +14,7 @@ interface MediaItem {
   type: 'video' | 'picture';  // Add a type field to distinguish between media types
   User: {
     username: string;
+    id: string
   };
   title: string;
 }
@@ -28,6 +29,15 @@ export default function HomeScreen() {
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const lastFocusTimeRef = useRef<number>(Date.now());
   const REFRESH_THRESHOLD = 1 * 60 * 1000;
+  const router = useRouter()
+
+  const [refreshing, setRefreshing] = useState(false);
+
+// Add refresh handler
+const onRefresh = useCallback(() => {
+  setRefreshing(true);
+  getVideos().then(() => setRefreshing(false));
+}, []);
   
 
 
@@ -93,14 +103,14 @@ export default function HomeScreen() {
   const getVideos = async () => {
     const { data, error } = await supabase
       .from('Video')
-      .select('*, User(username)')
+      .select('*, User(username, id)')
       .order('created_at', { ascending: false });
     
     // Add type checking based on file extension
     const mediaWithTypes = data?.map(item => ({
       ...item,
       type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
-      title: item.title
+      
     }));
     
     getSignedUrls(mediaWithTypes);
@@ -131,7 +141,9 @@ export default function HomeScreen() {
     const mediaStyle = {
       width: Dimensions.get('window').width,
       height: Dimensions.get('window').height,
-      flex: 1
+      flex: 1,
+      top: 0,
+
     };
 
     const isVisible = visibleItems.includes(index);
@@ -191,11 +203,26 @@ export default function HomeScreen() {
         <View style={{
           position: 'absolute',
           bottom: 50,
-          left: 20,
-          padding: 10  // Optional: adds some space from the edges
-        }}>
-          <Text className='text-3xl font-bold'>{item.User.username}</Text>
-          <Text className='text-3xl'>{item.title}</Text>
+          left: 10,
+          padding: 10,  // Optional: adds some space from the edges
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          width: '95%'
+        }}
+     
+        >
+          <View style={{flexDirection: 'row'}}>
+            <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
+          <Ionicons name="add-circle-sharp" size={50} color="black" />
+          </TouchableOpacity>
+          <View>
+          <Text className='text-2xl font-bold'>{item.User.username}</Text>
+          <Text className='text-2xl'>{item.title}</Text>
+          </View>
+          </View>
+          <TouchableOpacity>
+          <Ionicons name="heart-outline" size={50} color="red"/>
+          </TouchableOpacity>
         </View>
        
       </Pressable>
@@ -203,7 +230,7 @@ export default function HomeScreen() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-black">
+    <View className="flex-1  bg-black">
       <FlatList
       ref={flatListRef}
   data={videos}
@@ -212,16 +239,30 @@ export default function HomeScreen() {
   pagingEnabled={true}  // Enable snap scrolling
   snapToAlignment="center"
   decelerationRate="fast"
+  disableIntervalMomentum={true}
   showsVerticalScrollIndicator={false}
   snapToInterval={Dimensions.get('window').height} // Snap to full height
   viewabilityConfig={viewabilityConfig}
   onViewableItemsChanged={onViewableItemsChanged}
-  style={{ flex: 1 }}
-  contentContainerStyle={{ flexGrow: 1 }}
+  style={{ flex: 1, }}
+  contentContainerStyle={{ flexGrow: 1, paddingBottom: 0, paddingTop: 0}} // Ensure no paddingmargin: 0,  // Ensure no margin }}
   removeClippedSubviews={true} // Add this for better performance
   maxToRenderPerBatch={2} // Limit number of items rendered at once
   windowSize={3} // Reduce window size for better performance
+  refreshControl={
+    <RefreshControl
+      refreshing={refreshing}
+      onRefresh={onRefresh}
+      tintColor="#fff"  // Color of the loading spinner
+      title="Pull to refresh"  // Only shown on iOS
+      titleColor="#fff"
+      progressViewOffset={40}  // Adjust this value to position the refresh indicator
+    />
+  }
+  
+  
 />
+
     </View>
   );
 }
