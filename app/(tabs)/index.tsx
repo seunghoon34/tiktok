@@ -15,6 +15,7 @@ interface MediaItem {
   User: {
     username: string;
   };
+  title: string;
 }
 
 export default function HomeScreen() {
@@ -98,7 +99,8 @@ export default function HomeScreen() {
     // Add type checking based on file extension
     const mediaWithTypes = data?.map(item => ({
       ...item,
-      type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture'
+      type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
+      title: item.title
     }));
     
     getSignedUrls(mediaWithTypes);
@@ -141,6 +143,8 @@ export default function HomeScreen() {
         onPress={() => {setMute(!mute); showMuteIconWithFade()}}
         style={mediaStyle}
       >
+        <>
+
         {item.type === 'video' ? (
           <>
           <Video
@@ -183,6 +187,17 @@ export default function HomeScreen() {
             resizeMode="cover"
           />
         )}
+        </>
+        <View style={{
+          position: 'absolute',
+          bottom: 50,
+          left: 20,
+          padding: 10  // Optional: adds some space from the edges
+        }}>
+          <Text className='text-3xl font-bold'>{item.User.username}</Text>
+          <Text className='text-3xl'>{item.title}</Text>
+        </View>
+       
       </Pressable>
     );
   };
