@@ -21,7 +21,15 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Home',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"home-sharp":"home-outline"} size={24} color="black" />
+          tabBarIcon: () => 
+            <Ionicons name="add-circle-sharp" size={24} color="black" />
+          
+        }}
+        listeners={{
+          tabPress: (e) =>{
+            e.preventDefault();
+            router.push('/feed')
+          }
         }}
       />
       <Tabs.Screen
