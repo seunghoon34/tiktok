@@ -28,9 +28,10 @@ export default function RootLayout() {
     <AuthProvider>
       <Stack screenOptions={{ gestureEnabled: false}}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+        <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
+
         <Stack.Screen name="(tabs)" options={{ headerShown: false,  }} />
         <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
-        <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
 
 
         <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right', }} />

@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, FlatList, Image, Pressable, Animated, AppStateStatus, AppState, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, Text, Dimensions, FlatList, Image, Pressable, Animated, AppStateStatus, AppState, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
 import { Link, useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -31,6 +31,7 @@ export default function HomeScreen() {
   const router = useRouter()
 
   const [refreshing, setRefreshing] = useState(false);
+
 
 // Add refresh handler
 const onRefresh = useCallback(() => {
@@ -214,7 +215,9 @@ const onRefresh = useCallback(() => {
           <Ionicons name="add-circle-sharp" size={50} color="black" />
           </TouchableOpacity>
           <View>
+          <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
           <Text className='text-2xl font-bold'>{item.User.username}</Text>
+          </TouchableOpacity>
           <Text className='text-2xl'>{item.title}</Text>
           </View>
           </View>
@@ -260,6 +263,18 @@ const onRefresh = useCallback(() => {
   
   
 />
+<View 
+      style={{
+        position: 'absolute',
+        top: 50,
+        left: 20,
+        zIndex: 999,  // Higher zIndex to ensure it stays on top
+      }}
+    >
+      <TouchableOpacity onPress={() => router.back()}>
+        <Ionicons name='chevron-back' size={40} color="white"/>
+      </TouchableOpacity>
+    </View>
 
     </View>
   );
