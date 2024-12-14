@@ -16,6 +16,7 @@ interface MediaItem {
     id: string
   };
   title: string;
+  id: string;
 }
 
 export default function HomeScreen() {
@@ -29,7 +30,7 @@ export default function HomeScreen() {
   const lastFocusTimeRef = useRef<number>(Date.now());
   const REFRESH_THRESHOLD = 1 * 60 * 1000;
   const router = useRouter()
-
+  const [like, setLike] = useState(false)  
   const [refreshing, setRefreshing] = useState(false);
 
 
@@ -115,6 +116,24 @@ const onRefresh = useCallback(() => {
     
     getSignedUrls(mediaWithTypes);
   };
+
+  const likeVideo = async ({ item }:{item:MediaItem}) => {
+    const { data, error } = await supabase
+      .from('Like')
+      .insert({
+        user_id: user.id,
+        video_id: item.id,
+        video_user_id: item.User.id 
+
+      })
+      if(error) {
+        console.error(error)
+      }
+      else{
+        setLike(true)
+      }
+      console.log(user.id, item.id, item.User.id)
+  }
 
   const [showMuteIcon, setShowMuteIcon] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -221,8 +240,8 @@ const onRefresh = useCallback(() => {
           <Text className='text-2xl'>{item.title}</Text>
           </View>
           </View>
-          <TouchableOpacity>
-          <Ionicons name="heart-outline" size={50} color="red"/>
+          <TouchableOpacity onPress={()=>likeVideo( {item} )}>
+          {!like?<Ionicons name="heart-outline" size={50} color="red"/>:<Ionicons name="heart" size={50} color="red"/>}
           </TouchableOpacity>
         </View>
        
