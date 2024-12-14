@@ -8,6 +8,8 @@ export const AuthContext = createContext({
     signIn: async (email: string, password: string) =>{},
     signUp: async (username: string, email: string, password: string) =>{},
     signOut: async () =>{},
+    likes: [],
+    getLikes: async (userId: string) => {},
 });
 
 export const useAuth = () => useContext(AuthContext)
@@ -15,11 +17,21 @@ export const useAuth = () => useContext(AuthContext)
 export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [user, setUser] = useState(null);
     const router = useRouter()
+    const [likes,setLikes] = useState([])
+
+    const getLikes = async (userId: string) => {
+        if(!user) return
+        const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
+        setLikes(data)
+        if (error) return console.error(error);
+        return data 
+    }
 
     const getUser = async (id:string) => {
         const { data, error } = await supabase.from("User").select("*").eq("id",id).single();
         if(error) throw error
         setUser(data)
+        getLikes(data.id)
         router.push('/(tabs)')
 
     }
@@ -77,7 +89,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     },[])
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signUp, signOut }}>
+        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes }}>
             {children}
         </AuthContext.Provider>
     );

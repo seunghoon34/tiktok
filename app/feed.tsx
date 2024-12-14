@@ -1,57 +1,48 @@
-import { View, Text, Dimensions, FlatList, Image, Pressable, Animated, AppStateStatus, AppState, TouchableOpacity, RefreshControl, StyleSheet } from 'react-native';
-import { Link, useFocusEffect, useRouter } from 'expo-router';
+import { View, FlatList, Dimensions, AppStateStatus, AppState, TouchableOpacity, RefreshControl } from 'react-native';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Video, ResizeMode } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
-
-// Add type for media item
+import { MediaItemComponent } from '@/components/mediaItem';
 interface MediaItem {
   uri: string;
   signedUrl: string;
-  type: 'video' | 'picture';  // Add a type field to distinguish between media types
+  type: 'video' | 'picture';
   User: {
     username: string;
-    id: string
+    id: string;
   };
   title: string;
   id: string;
 }
 
 export default function HomeScreen() {
-  const { signOut, user } = useAuth();
+  const { user } = useAuth();
   const [videos, setVideos] = useState<MediaItem[]>([]);
-  const videoRef = useRef<Video>(null);
-  const [mute, setMute] = useState(false)
+  const [mute, setMute] = useState(false);
   const [visibleItems, setVisibleItems] = useState<number[]>([]);
   const flatListRef = useRef<FlatList>(null);
   const [isScreenFocused, setIsScreenFocused] = useState(true);
   const lastFocusTimeRef = useRef<number>(Date.now());
   const REFRESH_THRESHOLD = 1 * 60 * 1000;
-  const router = useRouter()
-  const [like, setLike] = useState(false)  
+  const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
 
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    getVideos().then(() => setRefreshing(false));
+  }, []);
 
-// Add refresh handler
-const onRefresh = useCallback(() => {
-  setRefreshing(true);
-  getVideos().then(() => setRefreshing(false));
-}, []);
-  
-
-
-  
   const viewabilityConfig = useRef({
     itemVisiblePercentThreshold: 50,
     minimumViewTime: 300,
   }).current;
 
-  const onViewableItemsChanged = useCallback(({ changed, viewableItems }) => {
+  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
     const visibleIndexes = viewableItems.map(item => item.index);
     setVisibleItems(visibleIndexes);
-  }, [])
+  }, []);
 
   useFocusEffect(
     useCallback(() => {
@@ -63,7 +54,6 @@ const onRefresh = useCallback(() => {
         flatListRef.current?.scrollToOffset({ offset: 0, animated: false });
       }
       return () => {
-        // This runs when screen loses focus
         lastFocusTimeRef.current = Date.now();
         setIsScreenFocused(false);
       };
@@ -71,7 +61,7 @@ const onRefresh = useCallback(() => {
   );
 
   useEffect(() => {
-    getVideos()
+    getVideos();
     const subscription = AppState.addEventListener('change', (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' || nextAppState === 'inactive') {
         setIsScreenFocused(false);
@@ -84,7 +74,6 @@ const onRefresh = useCallback(() => {
       subscription.remove();
     };
   }, []);
-
 
   const getSignedUrls = async (media: MediaItem[]) => {
     const { data, error } = await supabase.storage
@@ -107,194 +96,68 @@ const onRefresh = useCallback(() => {
       .select('*, User(username, id)')
       .order('created_at', { ascending: false });
     
-    // Add type checking based on file extension
     const mediaWithTypes = data?.map(item => ({
       ...item,
       type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
-      
     }));
     
     getSignedUrls(mediaWithTypes);
   };
 
-  const likeVideo = async ({ item }:{item:MediaItem}) => {
-    const { data, error } = await supabase
-      .from('Like')
-      .insert({
-        user_id: user.id,
-        video_id: item.id,
-        video_user_id: item.User.id 
-
-      })
-      if(error) {
-        console.error(error)
-      }
-      else{
-        setLike(true)
-      }
-      console.log(user.id, item.id, item.User.id)
-  }
-
-  const [showMuteIcon, setShowMuteIcon] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  // Function to handle icon animation
-  const showMuteIconWithFade = () => {
-    setShowMuteIcon(true);
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.delay(1000), // Show icon for 1 second
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setShowMuteIcon(false));
-  };
-
   const renderMediaItem = ({ item, index }: { item: MediaItem; index: number }) => {
-    const mediaStyle = {
-      width: Dimensions.get('window').width,
-      height: Dimensions.get('window').height,
-      top: 0,
-
-    };
-
     const isVisible = visibleItems.includes(index);
-    const shouldPlayVideo = isVisible && isScreenFocused;
-
-  
     return (
-      <Pressable 
-        onPress={() => {setMute(!mute); showMuteIconWithFade()}}
-        style={mediaStyle}
-      >
-        <>
-
-        {item.type === 'video' ? (
-          <>
-          <Video
-            source={{ uri: item.signedUrl }}
-            style={[mediaStyle, { position: 'absolute' }]}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            shouldPlay={shouldPlayVideo}
-            isMuted={mute}
-          />
-          {showMuteIcon && (
-              <Animated.View style={[{
-                position: 'absolute',
-                top: '50%',
-                left: '50%',
-                transform: [
-                  { translateX: -25 }, // Half of icon size
-                  { translateY: -25 }, // Half of icon size
-                  
-                ],
-                backgroundColor: 'rgba(0,0,0,0.5)',
-                borderRadius: 50,
-                padding: 15,
-                zIndex: 10,
-              }, {
-                opacity: fadeAnim
-              }]}>
-                <Ionicons 
-                  name={mute ? 'volume-mute' : 'volume-high'} 
-                  size={25} 
-                  color="white"
-                />
-              </Animated.View>
-            )}
-          </>
-        ) : (
-          <Image
-            source={{ uri: item.signedUrl }}
-            style={mediaStyle}
-            resizeMode="cover"
-          />
-        )}
-        </>
-        <View style={{
-          position: 'absolute',
-          bottom: 50,
-          left: 10,
-          padding: 10,  // Optional: adds some space from the edges
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          width: '95%'
-        }}
-     
-        >
-          <View style={{flexDirection: 'row'}}>
-            <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-          <Ionicons name="add-circle-sharp" size={50} color="black" />
-          </TouchableOpacity>
-          <View>
-          <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-          <Text className='text-2xl font-bold'>{item.User.username}</Text>
-          </TouchableOpacity>
-          <Text className='text-2xl'>{item.title}</Text>
-          </View>
-          </View>
-          <TouchableOpacity onPress={()=>likeVideo( {item} )}>
-          {!like?<Ionicons name="heart-outline" size={50} color="red"/>:<Ionicons name="heart" size={50} color="red"/>}
-          </TouchableOpacity>
-        </View>
-       
-      </Pressable>
+      <MediaItemComponent
+        item={item}
+        isVisible={isVisible}
+        isScreenFocused={isScreenFocused}
+        mute={mute}
+        onMuteChange={() => setMute(!mute)}
+      />
     );
   };
 
   return (
-    <View className="flex-1  bg-black">
+    <View className="flex-1 bg-black">
       <FlatList
-      ref={flatListRef}
-  data={videos}
-  renderItem={renderMediaItem}
-  keyExtractor={(item) => item.uri}
-  pagingEnabled={true}  // Enable snap scrolling
-  snapToAlignment="center"
-  decelerationRate="fast"
-  disableIntervalMomentum={true}
-  showsVerticalScrollIndicator={false}
-  snapToInterval={Dimensions.get('window').height} // Snap to full height
-  viewabilityConfig={viewabilityConfig}
-  onViewableItemsChanged={onViewableItemsChanged}
-  style={{ flex: 1, }}
-  contentContainerStyle={{ paddingVertical:0 }} // Ensure no paddingmargin: 0,  // Ensure no margin }}
-  removeClippedSubviews={true} // Add this for better performance
-  maxToRenderPerBatch={2} // Limit number of items rendered at once
-  windowSize={3} // Reduce window size for better performance
-  refreshControl={
-    <RefreshControl
-      refreshing={refreshing}
-      onRefresh={onRefresh}
-      tintColor="#fff"  // Color of the loading spinner
-      title="Pull to refresh"  // Only shown on iOS
-      titleColor="#fff"
-      progressViewOffset={40}  // Adjust this value to position the refresh indicator
-    />
-  }
-  
-  
-/>
-<View 
-      style={{
+        ref={flatListRef}
+        data={videos}
+        renderItem={renderMediaItem}
+        keyExtractor={(item) => item.uri}
+        pagingEnabled={true}
+        snapToAlignment="center"
+        decelerationRate="fast"
+        disableIntervalMomentum={true}
+        showsVerticalScrollIndicator={false}
+        snapToInterval={Dimensions.get('window').height}
+        viewabilityConfig={viewabilityConfig}
+        onViewableItemsChanged={onViewableItemsChanged}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingVertical: 0 }}
+        removeClippedSubviews={true}
+        maxToRenderPerBatch={2}
+        windowSize={3}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#fff"
+            title="Pull to refresh"
+            titleColor="#fff"
+            progressViewOffset={40}
+          />
+        }
+      />
+      <View style={{
         position: 'absolute',
         top: 50,
         left: 20,
-        zIndex: 999,  // Higher zIndex to ensure it stays on top
-      }}
-    >
-      <TouchableOpacity onPress={() => router.back()}>
-        <Ionicons name='chevron-back' size={40} color="white"/>
-      </TouchableOpacity>
-    </View>
-
+        zIndex: 999,
+      }}>
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name='chevron-back' size={40} color="white"/>
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
