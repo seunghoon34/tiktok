@@ -55,6 +55,15 @@ export const handleVideoLike = async (
 
         if (matchError) throw matchError;
 
+        const [chatUser1, chatUser2] = [user1_id, user2_id].sort();
+  const { data: chat, error: chatError } = await supabase
+    .from('Chat')
+    .insert({
+      user1_id: chatUser1,
+      user2_id: chatUser2
+    })
+    .single();
+
         const { data: users, error: usersError } = await supabase
   .from('User')
   .select('id, username')

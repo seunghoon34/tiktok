@@ -25,7 +25,9 @@ model User {
   matchesAsUser1 Match[] @relation("UserOneMatches")
   matchesAsUser2 Match[] @relation("UserTwoMatches")
   comments   Comment[]
-  chats      Chat[]
+  chatsAsUser1 Chat[] @relation("UserOneChats")
+  chatsAsUser2 Chat[] @relation("UserTwoChats")
+  messages Message[]
   expo_push_token String?
   notifications Notification[]
 }
@@ -74,13 +76,25 @@ model Comment {
 }
 
 model Chat {
-  id           String   @id @default(dbgenerated("uuid_generate_v4()"))
-  user_id      String
-  user         User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  chat_user_id String
-  users_key    String
-  text         String
-  created_at   DateTime @default(now())
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  user1_id String
+  user2_id String
+  created_at DateTime @default(now())
+  messages Message[]
+  user1 User @relation("UserOneChats", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2 User @relation("UserTwoChats", fields: [user2_id], references: [id], onDelete: Cascade)
+
+  @@unique([user1_id, user2_id])
+}
+
+model Message {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  chat_id String
+  sender_id String
+  content String
+  created_at DateTime @default(now())
+  chat Chat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [sender_id], references: [id], onDelete: Cascade)
 }
 
 model Notification {
