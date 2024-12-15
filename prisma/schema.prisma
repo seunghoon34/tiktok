@@ -22,7 +22,8 @@ model User {
   created_at DateTime   @default(now())
   videos     Video[]
   likes      Like[]
-  followers  Follower[]
+  matchesAsUser1 Match[] @relation("UserOneMatches")
+  matchesAsUser2 Match[] @relation("UserTwoMatches")
   comments   Comment[]
   chats      Chat[]
 }
@@ -48,12 +49,15 @@ model Like {
   created_at    DateTime @default(now())
 }
 
-model Follower {
-  id               String   @id @default(dbgenerated("uuid_generate_v4()"))
-  user_id          String
-  user             User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  follower_user_id String
-  created_at       DateTime @default(now())
+model Match {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  user1_id String
+  user2_id String
+  user1 User @relation("UserOneMatches", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2 User @relation("UserTwoMatches", fields: [user2_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@unique([user1_id, user2_id])
 }
 
 model Comment {

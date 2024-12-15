@@ -32,7 +32,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         if(error) throw error
         setUser(data)
         getLikes(data.id)
-        router.push('/(tabs)')
+        router.push('/(tabs)/profile')
 
     }
 

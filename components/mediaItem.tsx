@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useRef, useState } from 'react';
 import { Video, ResizeMode } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { handleVideoLike } from '@/utils/videoMatching';
 
 interface MediaItemProps {
   item: {
@@ -37,15 +38,22 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   };
 
   const likeVideo = async () => {
-    const { data, error } = await supabase
-      .from('Like')
-      .insert({
-        user_id: user.id,
-        video_id: item.id,
-        video_user_id: item.User.id 
-      });
-
-    if(!error) getLikes(user?.id)
+    try {
+      const result = await handleVideoLike(
+        user.id,
+        item.id,
+        item.User.id
+      );
+  
+      if (result.status === 'matched') {
+        console.log("Match: ",result.users[0],'and ', result.users[1])
+       
+      }
+  
+      getLikes(user?.id);
+    } catch (error) {
+      console.error('Error liking video:', error);
+    }
   };
 
   const unLikeVideo = async () => {
