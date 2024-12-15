@@ -1,5 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import { supabase } from '@/utils/supabase';
+import { Platform } from 'react-native';
+
 
 export async function registerForPushNotifications(userId: string) {
     console.log("Starting push notification registration");
@@ -45,60 +47,59 @@ export async function registerForPushNotifications(userId: string) {
       }
   }
 
-  import { Platform } from 'react-native';
 
-export async function sendMatchNotifications(
-  user1Id: string,
-  user1Username: string,
-  user2Id: string,
-  user2Username: string
-) {
-  try {
-    // Fetch both users' push tokens
-    const { data: usersData, error: usersError } = await supabase
-      .from('User')
-      .select('id, username, expo_push_token')
-      .in('id', [user1Id, user2Id]);
-
-    if (usersError) {
-      console.error('Failed to fetch push tokens:', usersError);
-      return;
-    }
-
-    // Send notifications to both users
-    for (const userData of usersData) {
-      const pushToken = userData.expo_push_token;
-      if (!pushToken) {
-        console.warn(`No push token found for userId ${userData.id}`);
-        continue;
+  export async function sendMatchNotifications(
+    user1Id: string,
+    user1Username: string,
+    user2Id: string,
+    user2Username: string
+  ) {
+    try {
+      // Fetch both users' push tokens
+      const { data: usersData, error: usersError } = await supabase
+        .from('User')
+        .select('id, username, expo_push_token')
+        .in('id', [user1Id, user2Id]);
+  
+      if (usersError) {
+        console.error('Failed to fetch push tokens:', usersError);
+        return;
       }
-
-      const username = userData.id === user1Id ? user2Username : user1Username;
-      
-      console.log(`Sending notification to userId: ${userData.id}, pushToken: ${pushToken}`);
-      
-      // Send to Expo's push service instead of scheduling locally
-      const message = {
-        to: pushToken,
-        sound: 'default',
-        title: "New Match! 🎉",
-        body: `You matched with ${username}!`,
-        data: { type: 'match', matchedUser: username },
-      };
-
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
-
-      console.log(`Push notification sent to ${userData.username}`);
+  
+      // Send notifications to both users
+      for (const userData of usersData) {
+        const pushToken = userData.expo_push_token;
+        if (!pushToken) {
+          console.warn(`No push token found for userId ${userData.id}`);
+          continue;
+        }
+  
+        const username = userData.id === user1Id ? user2Username : user1Username;
+        
+        console.log(`Sending notification to userId: ${userData.id}, pushToken: ${pushToken}`);
+        
+        // Send to Expo's push service instead of scheduling locally
+        const message = {
+          to: pushToken,
+          sound: 'default',
+          title: "New Match! 🎉",
+          body: `You matched with ${username}!`,
+          data: { type: 'match', matchedUser: username },
+        };
+  
+        await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            Accept: 'application/json',
+            'Accept-encoding': 'gzip, deflate',
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(message),
+        });
+  
+        console.log(`Push notification sent to ${userData.username}`);
+      }
+    } catch (error) {
+      console.error('Error sending match notifications:', error);
     }
-  } catch (error) {
-    console.error('Error sending match notifications:', error);
   }
-}
