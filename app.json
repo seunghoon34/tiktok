@@ -8,6 +8,12 @@
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "extra": {
+      "eas": {
+        "projectId": "3bf3ab47-6348-425d-8db5-cf045f6a7184"
+      }
+    }
+  },
     "ios": {
       "supportsTablet": true
     },
@@ -15,7 +21,11 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +43,16 @@
         }
       ],
       [
+        "expo-notifications",
+        {
+          "icon": "./local/path/to/your/app-icon.png",
+          "color": "#ffffff",
+          "sounds": [
+            "./local/path/to/your/notification-sound.wav"
+          ]
+        }
+      ],
+      [
         "expo-splash-screen",
         {
           "image": "./assets/images/splash-icon.png",
@@ -44,6 +64,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "3bf3ab47-6348-425d-8db5-cf045f6a7184"
+      }
+    },
+    "owner": "seunghoon34"
   }
-}
+

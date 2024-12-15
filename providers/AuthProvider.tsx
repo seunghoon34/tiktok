@@ -1,6 +1,9 @@
+import { registerForPushNotifications } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState} from 'react'
+import * as Device from 'expo-device';
+
 
 
 export const AuthContext = createContext({
@@ -87,6 +90,18 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             authData.subscription.unsubscribe();
         };
     },[])
+
+    useEffect(() => {
+        if (user) {
+          // Log the device info and current user
+          console.log('Device registering notification:', {
+            username: user.username,
+            userId: user.id,
+            deviceName: Device.deviceName, // You'll need to import Device from expo-device
+          });
+          registerForPushNotifications(user.id);
+        }
+      }, [user]);
 
     return (
         <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes }}>

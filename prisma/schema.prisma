@@ -26,6 +26,8 @@ model User {
   matchesAsUser2 Match[] @relation("UserTwoMatches")
   comments   Comment[]
   chats      Chat[]
+  expo_push_token String?
+  notifications Notification[]
 }
 
 model Video {
@@ -79,4 +81,13 @@ model Chat {
   users_key    String
   text         String
   created_at   DateTime @default(now())
+}
+
+model Notification {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  user_id String
+  message String
+  read Boolean @default(false)
+  created_at DateTime @default(now())
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }

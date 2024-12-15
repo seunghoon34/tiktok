@@ -4,6 +4,8 @@ import { useEffect } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import { AuthProvider } from '@/providers/AuthProvider';
+import * as Notifications from 'expo-notifications';
+
 
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -12,6 +14,14 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+  });
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
   });
 
   useEffect(() => {

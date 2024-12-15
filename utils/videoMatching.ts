@@ -1,4 +1,5 @@
 import { supabase } from '@/utils/supabase';
+import { sendMatchNotification, sendMatchNotifications } from './notifications';
 
 export const handleVideoLike = async (
   userId: string,
@@ -54,6 +55,27 @@ export const handleVideoLike = async (
 
         if (matchError) throw matchError;
 
+        const { data: users, error: usersError } = await supabase
+  .from('User')
+  .select('id, username')
+  .in('id', [userId, videoUserId]);
+
+if (usersError) throw usersError;
+
+const currentUser = users.find(u => u.id === userId);
+const videoOwner = users.find(u => u.id === videoUserId);
+
+console.log(currentUser)
+console.log(videoOwner)
+
+// Replace the two sendMatchNotification calls with one sendMatchNotifications call
+await sendMatchNotifications(
+  currentUser.id,
+  currentUser.username,
+  videoOwner.id,
+  videoOwner.username
+);
+        
         return {
           status: 'matched',
           message: "It's a match!",
