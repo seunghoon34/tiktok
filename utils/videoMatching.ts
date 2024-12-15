@@ -55,7 +55,9 @@ export const handleVideoLike = async (
 
         if (matchError) throw matchError;
 
-        const [chatUser1, chatUser2] = [user1_id, user2_id].sort();
+        
+
+      const [chatUser1, chatUser2] = [user1_id, user2_id].sort();
   const { data: chat, error: chatError } = await supabase
     .from('Chat')
     .insert({
@@ -64,6 +66,22 @@ export const handleVideoLike = async (
     })
     .single();
 
+    if (chatError) throw chatError;
+    const { data: chatData, error: fetchChatError } = await supabase
+    .from('Chat')
+    .select('*')
+    .eq('user1_id', chatUser1)
+    .eq('user2_id', chatUser2)
+    .single();
+
+  if (fetchChatError) throw fetchChatError;
+  if (!chatData) {
+    console.error("Chat not found after creation");
+    return;
+  }
+
+    
+
         const { data: users, error: usersError } = await supabase
   .from('User')
   .select('id, username')
@@ -71,19 +89,28 @@ export const handleVideoLike = async (
 
 if (usersError) throw usersError;
 
+
+
 const currentUser = users.find(u => u.id === userId);
 const videoOwner = users.find(u => u.id === videoUserId);
 
 console.log(currentUser)
 console.log(videoOwner)
+console.log("chat: ",chatData)
 
 // Replace the two sendMatchNotification calls with one sendMatchNotifications call
-await sendMatchNotifications(
-  currentUser.id,
-  currentUser.username,
-  videoOwner.id,
-  videoOwner.username
-);
+try {
+  await sendMatchNotifications(
+    currentUser.id,
+    currentUser.username,
+    videoOwner.id,
+    videoOwner.username,
+    chatData.id
+  );
+  console.log("Match notification sent successfully");
+} catch (notificationError) {
+  console.error("Error sending match notification:", notificationError);
+}
         
         return {
           status: 'matched',

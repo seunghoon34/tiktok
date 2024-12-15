@@ -1,4 +1,4 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView } from 'react-native';
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -100,39 +100,42 @@ export default function ChatScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-
-    <View className="flex-1 bg-white">
-      <Header 
-        title={otherUser?.username || 'Chat'} 
-        color="black" 
-        goBack={true}
-      />
-      <FlatList
-        data={messages}
-        renderItem={({ item }) => (
-          <View className={`p-2 m-2 max-w-[80%] rounded-lg ${
-            item.sender_id === user.id ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'
-          }`}>
-            <Text className={item.sender_id === user.id ? 'text-white' : 'text-black'}>
-              {item.content}
-            </Text>
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+        <View className="flex-1 bg-white">
+          <Header 
+            title={otherUser?.username || 'Chat'} 
+            color="black" 
+            goBack={true}
+          />
+          <FlatList
+            data={messages}
+            renderItem={({ item }) => (
+              <View className={`p-2 m-2 max-w-[80%] rounded-lg ${
+                item.sender_id === user.id ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'
+              }`}>
+                <View className="flex-row">
+                  <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
+                    {item.content}
+                  </Text>
+                </View>
+              </View>
+            )}
+            keyExtractor={(item) => item.id}
+            className="flex-1"
+          />
+          <View className="p-4 border-t border-gray-200 flex-row items-center">
+            <TextInput
+              className="flex-1 bg-gray-100 p-2 rounded-full mr-2"
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type a message..."
+            />
+            <TouchableOpacity onPress={sendMessage}>
+              <Ionicons name="send" size={24} color="blue" />
+            </TouchableOpacity>
           </View>
-        )}
-        keyExtractor={(item) => item.id}
-        className="flex-1"
-      />
-      <View className="p-4 border-t border-gray-200 flex-row items-center">
-        <TextInput
-          className="flex-1 bg-gray-100 p-2 rounded-full mr-2"
-          value={newMessage}
-          onChangeText={setNewMessage}
-          placeholder="Type a message..."
-        />
-        <TouchableOpacity onPress={sendMessage}>
-          <Ionicons name="send" size={24} color="blue" />
-        </TouchableOpacity>
-      </View>
-    </View>
+        </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

@@ -52,7 +52,8 @@ export async function registerForPushNotifications(userId: string) {
     user1Id: string,
     user1Username: string,
     user2Id: string,
-    user2Username: string
+    user2Username: string,
+    chatId: string
   ) {
     try {
       // Fetch both users' push tokens
@@ -84,7 +85,7 @@ export async function registerForPushNotifications(userId: string) {
           sound: 'default',
           title: "New Match! 🎉",
           body: `You matched with ${username}!`,
-          data: { type: 'match', matchedUser: username },
+          data: { type: 'match', matchedUser: username, chatId: chatId },
         };
   
         await fetch('https://exp.host/--/api/v2/push/send', {
@@ -101,5 +102,45 @@ export async function registerForPushNotifications(userId: string) {
       }
     } catch (error) {
       console.error('Error sending match notifications:', error);
+    }
+  }
+
+  export async function sendMessageNotification(
+    senderId: string,
+    senderUsername: string,
+    receiverId: string,
+    chatId: string
+  ) {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('User')
+        .select('expo_push_token')
+        .eq('id', receiverId)
+        .single();
+  
+      if (userError || !userData?.expo_push_token) return;
+  
+      const message = {
+        to: userData.expo_push_token,
+        sound: 'default',
+        title: "New Message! 💬",
+        body: `New message from ${senderUsername}`,
+        data: { 
+          type: 'message',
+          chatId: chatId
+        },
+      };
+  
+      await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      });
+    } catch (error) {
+      console.error('Error sending message notification:', error);
     }
   }

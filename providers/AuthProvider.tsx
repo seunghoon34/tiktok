@@ -1,8 +1,13 @@
-import { registerForPushNotifications } from '@/utils/notifications';
+import { registerForPushNotifications, sendMatchNotifications, sendMessageNotification } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState} from 'react'
 import * as Device from 'expo-device';
+import * as Notifications from 'expo-notifications';
+
+
+
+
 
 
 
@@ -23,18 +28,27 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [likes,setLikes] = useState([])
 
     const getLikes = async (userId: string) => {
-        if(!user) return
+        console.log('getLikes called with userId:', userId); // Added logging
+        if(!user) {
+            console.log('No user found, exiting getLikes'); // Added logging
+            return;
+        }
         const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
-        setLikes(data)
-        if (error) return console.error(error);
-        return data 
+        setLikes(data);
+        if (error) {
+            console.error('Error fetching likes:', error); // Added logging
+            return;
+        }
+        console.log('Likes fetched:', data); // Added logging
+        return data;
     }
 
     const getUser = async (id:string) => {
         const { data, error } = await supabase.from("User").select("*").eq("id",id).single();
         if(error) throw error
-        setUser(data)
-        getLikes(data.id)
+        await setUser(data);        
+        await getLikes(data.id);
+        console.log(data)
         router.push('/(tabs)/profile')
 
     }
@@ -102,6 +116,84 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
           registerForPushNotifications(user.id);
         }
       }, [user]);
+
+      useEffect(() => {
+        if (!user) return;
+    
+        const subscription = supabase
+          .channel('global_messages')
+          .on(
+            'postgres_changes',
+            {
+              event: 'INSERT',
+              schema: 'public',
+              table: 'Message'
+            },
+            async (payload) => {
+              // Only notify if the message is for current user and they didn't send it
+              if (payload.new.chat_id) {
+                const { data: chat } = await supabase
+                  .from('Chat')
+                  .select('user1_id, user2_id')
+                  .eq('id', payload.new.chat_id)
+                  .single();
+    
+                // Check if user is part of this chat and not the sender
+                if (chat && 
+                    (chat.user1_id === user.id || chat.user2_id === user.id) && 
+                    payload.new.sender_id !== user.id) {
+                  
+                  // Get sender's username
+                  const { data: senderData } = await supabase
+                    .from('User')
+                    .select('username')
+                    .eq('id', payload.new.sender_id)
+                    .single();
+    
+                  // Send notification
+                  await sendMessageNotification(
+                    payload.new.sender_id,
+                    senderData.username,
+                    user.id,
+                    payload.new.chat_id
+                  );
+                }
+              }
+            }
+          )
+          .subscribe();
+    
+        return () => {
+          subscription.unsubscribe();
+        };
+      }, [user]);
+
+      useEffect(() => {
+        if (!user) return;
+      
+        // Set up notification tap handler
+        const subscription = Notifications.addNotificationResponseReceivedListener(response => {
+            try {
+              const data = response.notification.request.content.data;
+              
+              if (data.type === 'match' || data.type === 'message') {
+                if (data.chatId) {
+                  router.push(`/chat/${data.chatId}`);
+                }
+              }
+            } catch (error) {
+              console.error('Error handling notification tap:', error);
+            }
+          });
+      
+        return () => subscription.remove();
+      }, [user]);
+
+      useEffect(() => {
+        if (user && user.id) {
+            getLikes(user.id);
+        }
+    }, [user]);
 
     return (
         <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes }}>
