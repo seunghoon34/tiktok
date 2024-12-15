@@ -1,5 +1,5 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView } from 'react-native';
-import { useEffect, useState } from 'react';
+import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useLocalSearchParams } from 'expo-router';
@@ -12,11 +12,42 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const { user } = useAuth();
   const [otherUser, setOtherUser] = useState(null);
+  const { setActiveChatId } = useAuth();
+  const flatListRef = useRef();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  useEffect(() => {
+    setActiveChatId(id);
+    return () => setActiveChatId(null);
+  }, [id]);
+
+  useEffect(() => {
+    const keyboardWillShow = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+      (e) => {
+        setKeyboardHeight(e.endCoordinates.height);
+        setTimeout(() => {
+          flatListRef.current?.scrollToEnd({ animated: true });
+        }, 100);
+      }
+    );
+
+    const keyboardWillHide = Keyboard.addListener(
+      Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+      () => {
+        setKeyboardHeight(0);
+      }
+    );
+
+    return () => {
+      keyboardWillShow.remove();
+      keyboardWillHide.remove();
+    };
+  }, []);
 
   useEffect(() => {
     if (!id || !user) return;
 
-    // Fetch initial messages
     const fetchMessages = async () => {
       const { data: chatData } = await supabase
         .from('Chat')
@@ -39,11 +70,13 @@ export default function ChatScreen() {
         .order('created_at', { ascending: true });
 
       setMessages(messagesData);
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 100);
     };
 
     fetchMessages();
 
-    // Set up real-time subscription for new messages
     const subscription = supabase
       .channel(`chat:${id}`)
       .on(
@@ -55,7 +88,6 @@ export default function ChatScreen() {
           filter: `chat_id=eq.${id}`
         },
         async (payload) => {
-          // Fetch the complete message data including sender info
           const { data: messageData } = await supabase
             .from('Message')
             .select(`
@@ -67,6 +99,9 @@ export default function ChatScreen() {
 
           if (messageData) {
             setMessages(current => [...current, messageData]);
+            setTimeout(() => {
+              flatListRef.current?.scrollToEnd({ animated: true });
+            }, 100);
           }
         }
       )
@@ -75,9 +110,7 @@ export default function ChatScreen() {
     return () => {
       subscription.unsubscribe();
     };
-}, [id, user]);
-
-  
+  }, [id, user]);
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
@@ -99,43 +132,60 @@ export default function ChatScreen() {
   };
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-        <View className="flex-1 bg-white">
-          <Header 
-            title={otherUser?.username || 'Chat'} 
-            color="black" 
-            goBack={true}
-          />
-          <FlatList
-            data={messages}
-            renderItem={({ item }) => (
-              <View className={`p-2 m-2 max-w-[80%] rounded-lg ${
-                item.sender_id === user.id ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'
-              }`}>
-                <View className="flex-row">
-                  <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
-                    {item.content}
-                  </Text>
-                </View>
-              </View>
-            )}
-            keyExtractor={(item) => item.id}
-            className="flex-1"
-          />
-          <View className="p-4 border-t border-gray-200 flex-row items-center">
-            <TextInput
-              className="flex-1 bg-gray-100 p-2 rounded-full mr-2"
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type a message..."
+    <View className="flex-1 bg-white">
+      <SafeAreaView edges={['top']} className="flex-1 bg-white">
+        <KeyboardAvoidingView 
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <View className="flex-1">
+            <Header 
+              title={otherUser?.username || 'Chat'} 
+              color="black" 
+              goBack={true}
             />
-            <TouchableOpacity onPress={sendMessage}>
-              <Ionicons name="send" size={24} color="blue" />
-            </TouchableOpacity>
+            <FlatList
+              ref={flatListRef}
+              data={messages}
+              renderItem={({ item }) => (
+                <View className={`p-2 m-2 max-w-[80%] rounded-lg ${
+                  item.sender_id === user.id ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'
+                }`}>
+                  <View className="flex-row">
+                    <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
+                      {item.content}
+                    </Text>
+                  </View>
+                </View>
+              )}
+              keyExtractor={(item) => item.id}
+              className="flex-1"
+              contentContainerStyle={{ paddingBottom: keyboardHeight * 0.5 }}
+              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+            />
+            <View className="px-4 py-2 border-t border-gray-200 flex-row items-center bg-white">
+              <TextInput
+                className="flex-1 bg-gray-100 px-4 py-2 rounded-full mr-2 min-h-[40px] max-h-[40px]"
+                value={newMessage}
+                onChangeText={setNewMessage}
+                placeholder="Type a message..."
+                onFocus={() => {
+                  setTimeout(() => {
+                    flatListRef.current?.scrollToEnd({ animated: true });
+                  }, 100);
+                }}
+              />
+              <TouchableOpacity 
+                onPress={sendMessage}
+                className="h-10 w-10 items-center justify-center"
+              >
+                <Ionicons name="send" size={24} color="blue" />
+              </TouchableOpacity>
+            </View>
           </View>
-        </View>
-      </KeyboardAvoidingView>
-    </SafeAreaView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    </View>
   );
 }

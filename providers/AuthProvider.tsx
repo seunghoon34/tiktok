@@ -18,6 +18,8 @@ export const AuthContext = createContext({
     signOut: async () =>{},
     likes: [],
     getLikes: async (userId: string) => {},
+    setActiveChatId: (chatId: string | null) => {},  // Changed to match function name
+
 });
 
 export const useAuth = () => useContext(AuthContext)
@@ -26,6 +28,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [user, setUser] = useState(null);
     const router = useRouter()
     const [likes,setLikes] = useState([])
+    const [currentChatId, setCurrentChatId] = useState(null);   
 
     const getLikes = async (userId: string) => {
         console.log('getLikes called with userId:', userId); // Added logging
@@ -95,6 +98,11 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         router.push('/(auth)')
     };
 
+    const setActiveChatId = (chatId: string | null) => {
+        setCurrentChatId(chatId);
+        console.log("current chat id: ", currentChatId)
+    };
+
     useEffect(()=>{
         const { data: authData } = supabase.auth.onAuthStateChange((event, session) =>{
             if(!session) return router.push('/(auth)');
@@ -139,9 +147,11 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                   .single();
     
                 // Check if user is part of this chat and not the sender
+                console.log("send chat id: ", currentChatId)
                 if (chat && 
                     (chat.user1_id === user.id || chat.user2_id === user.id) && 
-                    payload.new.sender_id !== user.id) {
+                    payload.new.sender_id !== user.id
+                    && payload.new.chat_id !== currentChatId) {
                   
                   // Get sender's username
                   const { data: senderData } = await supabase
@@ -196,7 +206,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     }, [user]);
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes }}>
+        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes , setActiveChatId}}>
             {children}
         </AuthContext.Provider>
     );
