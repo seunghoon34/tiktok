@@ -5,6 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MediaItemComponent } from '@/components/mediaItem';
+import LoadingScreen from '@/components/loading';
 interface MediaItem {
   uri: string;
   signedUrl: string;
@@ -28,6 +29,7 @@ export default function HomeScreen() {
   const REFRESH_THRESHOLD = 1 * 60 * 1000;
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
@@ -91,17 +93,26 @@ export default function HomeScreen() {
   };
 
   const getVideos = async () => {
-    const { data, error } = await supabase
-      .from('Video')
-      .select('*, User(username, id)')
-      .order('created_at', { ascending: false });
-    
-    const mediaWithTypes = data?.map(item => ({
-      ...item,
-      type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
-    }));
-    
-    getSignedUrls(mediaWithTypes);
+    try {
+      setIsLoading(true);
+      const { data, error } = await supabase
+        .from('Video')
+        .select('*, User(username, id)')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      
+      const mediaWithTypes = data?.map(item => ({
+        ...item,
+        type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
+      }));
+      
+      await getSignedUrls(mediaWithTypes);
+    } catch (error) {
+      console.error('Error fetching videos:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderMediaItem = ({ item, index }: { item: MediaItem; index: number }) => {
@@ -119,6 +130,7 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-black">
+        {isLoading?(<LoadingScreen/>):(
       <FlatList
         ref={flatListRef}
         data={videos}
@@ -146,8 +158,10 @@ export default function HomeScreen() {
             titleColor="#fff"
             progressViewOffset={40}
           />
+        
         }
       />
+    )}
       <View style={{
         position: 'absolute',
         top: 50,
