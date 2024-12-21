@@ -2,7 +2,7 @@ import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, Keyboa
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
-import { useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 
@@ -20,6 +20,15 @@ export default function ChatScreen() {
     setActiveChatId(id);
     return () => setActiveChatId(null);
   }, [id]);
+
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Small delay to ensure render is complete
+      setTimeout(() => {
+        flatListRef.current?.scrollToEnd({ animated: false });
+      }, 300);
+    }
+  }, [messages]); // This will trigger whenever messages update
 
   useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
@@ -70,9 +79,7 @@ export default function ChatScreen() {
         .order('created_at', { ascending: true });
 
       setMessages(messagesData);
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 100);
+      
     };
 
     fetchMessages();
@@ -148,21 +155,34 @@ export default function ChatScreen() {
             <FlatList
               ref={flatListRef}
               data={messages}
-              renderItem={({ item }) => (
-                <View className={`p-2 m-2 max-w-[80%] rounded-lg ${
-                  item.sender_id === user.id ? 'bg-blue-500 self-end' : 'bg-gray-200 self-start'
-                }`}>
-                  <View className="flex-row">
-                    <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
-                      {item.content}
-                    </Text>
+              renderItem={({ item }) => {
+                return (
+                  <View className={`flex-row items-start m-2 max-w-[80%] ${item.sender_id === user.id ? 'self-end' : 'self-start'}`}>
+                    {item.sender_id !== user.id && (
+                      <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+                        <Ionicons name="person-circle-outline" size={40} color="gray" className="mr-2 self-start" />
+                      </TouchableOpacity>
+                    )}
+                    <View className={`p-2 rounded-lg ${
+                      item.sender_id === user.id ? 'bg-blue-500' : 'bg-gray-200'
+                    }`}>
+                      <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
+                        {item.content}
+                      </Text>
+                    </View>
                   </View>
-                </View>
-              )}
+                );
+              }}
               keyExtractor={(item) => item.id}
               className="flex-1"
               contentContainerStyle={{ paddingBottom: keyboardHeight * 0.5 }}
+              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
               onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
+              initialNumToRender={messages.length} // Render all messages initially
+              maintainVisibleContentPosition={{ // Keep position when keyboard appears
+                minIndexForVisible: 0,
+              }}
+              className="flex-1"
             />
             <View className="px-4 py-2 border-t border-gray-200 flex-row items-center bg-white">
               <TextInput
