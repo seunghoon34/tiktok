@@ -29,7 +29,8 @@ model User {
   chatsAsUser2 Chat[] @relation("UserTwoChats")
   messages Message[]
   expo_push_token String?
-  notifications Notification[]
+  sent_notifications      Notification[] @relation("SentNotifications")
+  received_notifications  Notification[] @relation("ReceivedNotifications")
 }
 
 model Video {
@@ -98,10 +99,20 @@ model Message {
 }
 
 model Notification {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-  user_id String
-  message String
-  read Boolean @default(false)
-  created_at DateTime @default(now())
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  id          String   @id @default(dbgenerated("uuid_generate_v4()"))
+  type        NotificationType  // Using an enum for type safety
+  from_user   String   
+  to_user     String   
+  read        Boolean  @default(false)
+  created_at  DateTime @default(now())
+  
+  // Relations
+  sender    User @relation("SentNotifications", fields: [from_user], references: [id], onDelete: Cascade)
+  receiver  User @relation("ReceivedNotifications", fields: [to_user], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  SHOT
+  MATCH
+  PROFILE_VIEW
 }

@@ -19,6 +19,15 @@ export const handleVideoLike = async (
 
     if (likeError) throw likeError;
 
+    const { error: shotNotificationError } = await supabase
+      .from('Notification')
+      .insert({
+        type: 'SHOT',
+        from_user: userId,
+        to_user: videoUserId,
+      });
+    if (shotNotificationError) throw shotNotificationError;
+
     // 2. Check if the other user has liked any of current user's videos
     const { data: otherUserLikes, error: checkError } = await supabase
       .from('Like')
@@ -54,6 +63,22 @@ export const handleVideoLike = async (
           .single();
 
         if (matchError) throw matchError;
+
+        const { error: matchNotificationsError } = await supabase
+        .from('Notification')
+        .insert([
+          {
+            type: 'MATCH',
+            from_user: userId,
+            to_user: videoUserId,
+          },
+          {
+            type: 'MATCH',
+            from_user: videoUserId,
+            to_user: userId,
+          }
+        ]);
+      if (matchNotificationsError) throw matchNotificationsError;
 
         
 
