@@ -83,27 +83,31 @@ export const handleVideoLike = async (
         
 
       const [chatUser1, chatUser2] = [user1_id, user2_id].sort();
-  const { data: chat, error: chatError } = await supabase
-    .from('Chat')
-    .insert({
-      user1_id: chatUser1,
-      user2_id: chatUser2
-    })
-    .single();
-
-    if (chatError) throw chatError;
-    const { data: chatData, error: fetchChatError } = await supabase
-    .from('Chat')
-    .select('*')
-    .eq('user1_id', chatUser1)
-    .eq('user2_id', chatUser2)
-    .single();
-
-  if (fetchChatError) throw fetchChatError;
-  if (!chatData) {
-    console.error("Chat not found after creation");
-    return;
-  }
+      const { data: existingChat, error: existingChatError } = await supabase
+      .from('Chat')
+      .select('*')
+      .eq('user1_id', chatUser1)
+      .eq('user2_id', chatUser2)
+      .single();
+    
+    if (existingChatError && existingChatError.code !== 'PGRST116') throw existingChatError;
+    
+    // If chat doesn't exist, create it. Otherwise use existing chat
+    const chatData = existingChat || (await supabase
+      .from('Chat')
+      .insert({
+        user1_id: chatUser1,
+        user2_id: chatUser2
+      })
+      .select('*')
+      .single())
+      .data;
+    
+    if (!chatData) {
+      console.error("Chat not found and couldn't be created");
+      return;
+    }
+    
 
     
 
