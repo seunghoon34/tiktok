@@ -33,9 +33,9 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="friends"
+        name="activity"
         options={{
-          title: 'Notifications',
+          title: 'Activties',
           tabBarIcon: ({ focused }) => <Ionicons name={focused?"people":"people-outline"} size={24} color="black" />
         }}
       />
