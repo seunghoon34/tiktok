@@ -7,11 +7,15 @@ import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDate } from '@/utils/formatDate';
 import { useFocusEffect } from '@react-navigation/native';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState([]);
   const { user } = useAuth();
   const [isPremium, setIsPremium] = useState(false)
+
+  const { setUnreadCount } = useNotifications(); // Use the context instead of local state
+
 
   useFocusEffect(
     useCallback(() => {
@@ -57,6 +61,9 @@ export default function ActivityScreen() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
+
+      const unreadNotifications = data.filter(notification => !notification.read).length;
+      setUnreadCount(unreadNotifications);  // This updates the shared state
 
       // Transform the data to match our component's expectations
       const formattedNotifications = data.map(notification => ({
@@ -105,6 +112,8 @@ export default function ActivityScreen() {
       setNotifications(prevNotifications =>
         prevNotifications.map(notif => ({ ...notif, read: true }))
       );
+      setUnreadCount(0);
+
     } catch (error) {
       console.error('Error marking notifications as read:', error);
     }
@@ -163,7 +172,7 @@ export default function ActivityScreen() {
   <SafeAreaView className="flex-1 bg-white">
     <View className="px-4 py-2  border-gray-200">
       <View className="flex-row items-center justify-between">
-        <Text className="font-bold" style={{fontSize:32}}>Activity</Text>
+        <Text className="font-bold" style={{fontSize:32}}>Activities</Text>
         <TouchableOpacity onPress={markAllAsRead}>
           <Text className="text-blue-500">Mark all as read</Text>
         </TouchableOpacity>

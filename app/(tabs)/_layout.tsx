@@ -2,10 +2,12 @@ import { Tabs, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Text, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useNotifications } from '@/providers/NotificationProvider';
 
 export default function TabLayout() {
   const [iconColor, setIconColor] = useState<'black' | 'white'>('black');
   const router = useRouter()
+  const { unreadCount, setUnreadCount } = useNotifications()
   
 
   
@@ -15,14 +17,16 @@ export default function TabLayout() {
       screenOptions={{
         tabBarActiveTintColor: '#000',
         headerShown: false,
-        
+        tabBarStyle: {
+          paddingTop: 10, // Added padding to the top of the tab bar
+        },
       }}>
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: '',
           tabBarIcon: () => 
-            <Ionicons name="add-circle-sharp" size={24} color="black" />
+            <Ionicons name="film-outline" size={30} color="black" />
           
         }}
         listeners={{
@@ -33,20 +37,32 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
-        name="activity"
-        options={{
-          title: 'Activties',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"people":"people-outline"} size={24} color="black" />
-        }}
-      />
+  name="activity"
+  options={{
+    title: '',
+    tabBarIcon: ({ focused }) => (
+      <View>
+        <Ionicons name={focused ? "heart" : "heart-outline"} size={30} color="black" />
+        {unreadCount > 0 && (
+          <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+            <Text className="text-white text-xs font-bold">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </Text>
+          </View>
+        )}
+      </View>
+    )
+  }}
+/>
       <Tabs.Screen
         name="empty"
         options={{
           title: '',
-          tabBarIcon: () => 
-          <View style={{ position: 'absolute', top: -24, left: '50%', transform: [{ translateX: -37.5 }], width: 75, alignItems: 'center', justifyContent: 'center' }}>
-            <Ionicons name="add-circle-sharp" size={75} color="black" />
-          </View>
+          tabBarIcon: ({ focused }) => (
+            <View className="items-center justify-center w-7 h-7 border-2 border-black rounded-md">
+              <Ionicons name="add" size={20} color="black" style={{ fontWeight: 'bold' }}/>
+            </View>
+          )          
         }}
         listeners={{
           tabPress: (e) =>{
@@ -58,15 +74,15 @@ export default function TabLayout() {
       <Tabs.Screen
         name="inbox"
         options={{
-          title: 'Inbox',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"chatbox-ellipses":"chatbox-ellipses-outline"} size={24} color="black" />
+          title: '',
+          tabBarIcon: ({ focused }) => <Ionicons name={focused?"chatbubble-ellipses":"chatbubble-ellipses-outline"} size={30} color="black" />
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
-          title: 'Profile',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={24} color="black" />
+          title: '',
+          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={30} color="black" />
         }}
       />
       

@@ -5,6 +5,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import 'react-native-reanimated';
 import { AuthProvider } from '@/providers/AuthProvider';
 import * as Notifications from 'expo-notifications';
+import { NotificationProvider } from '@/providers/NotificationProvider';
 
 
 
@@ -36,6 +37,7 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
+      <NotificationProvider>
       <Stack screenOptions={{ gestureEnabled: false}}>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
@@ -50,6 +52,7 @@ export default function RootLayout() {
 
         <Stack.Screen name="+not-found" />
       </Stack>
+      </NotificationProvider>
     </AuthProvider>
 
   );
