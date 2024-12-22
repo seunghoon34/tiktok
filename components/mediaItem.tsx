@@ -6,6 +6,8 @@ import { useRef, useState } from 'react';
 import { Video, ResizeMode } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { handleVideoLike } from '@/utils/videoMatching';
+import LoadingScreen from '@/components/loading';
+import React from 'react';
 
 interface MediaItemProps {
   item: {
@@ -27,6 +29,7 @@ interface MediaItemProps {
 
 export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onMuteChange }: MediaItemProps) => {
   const [showMuteIcon, setShowMuteIcon] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const router = useRouter();
   const { user, likes, getLikes } = useAuth();
@@ -35,6 +38,14 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
     top: 0,
+  };
+
+  const handleLoadStart = () => {
+    setIsLoading(true);
+  };
+
+  const handleLoadEnd = () => {
+    setIsLoading(false);
   };
 
   const likeVideo = async () => {
@@ -46,8 +57,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       );
   
       if (result.status === 'matched') {
-        console.log("Match: ",result.users[0],'and ', result.users[1])
-       
+        console.log("Match: ",result.users[0],'and ', result.users[1]);
       }
   
       getLikes(user?.id);
@@ -57,11 +67,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   };
 
   const unLikeVideo = async () => {
-    const { data , error } = await supabase
+    const { data, error } = await supabase
       .from('Like')
-      .delete().eq('user_id', user?.id).eq('video_id', item.id)
-      if(!error) getLikes(user?.id)
-
+      .delete()
+      .eq('user_id', user?.id)
+      .eq('video_id', item.id);
+    if (!error) getLikes(user?.id);
   };
 
   const showMuteIconWithFade = () => {
@@ -86,6 +97,18 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       onPress={() => {onMuteChange(); showMuteIconWithFade()}}
       style={mediaStyle}
     >
+      {isLoading && (
+        <View style={{
+          position: 'absolute',
+          width: Dimensions.get('window').width,
+          height: Dimensions.get('window').height,
+          zIndex: 1,
+          backgroundColor: 'black'
+        }}>
+          <LoadingScreen />
+        </View>
+      )}
+      
       {item.type === 'video' ? (
         <>
           <Video
@@ -95,6 +118,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             isLooping
             shouldPlay={isVisible && isScreenFocused}
             isMuted={mute}
+            onLoadStart={handleLoadStart}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && !status.isBuffering) {
+                handleLoadEnd();
+              }
+            }}
           />
           {showMuteIcon && (
             <Animated.View style={[{
@@ -125,8 +154,11 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           source={{ uri: item.signedUrl }}
           style={mediaStyle}
           resizeMode="cover"
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
         />
       )}
+      
       <View style={{
         position: 'absolute',
         bottom: 50,
@@ -148,17 +180,14 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           </View>
         </View>
         {likes.filter((like: any) => like.video_id === item.id).length > 0 ? (
-            <TouchableOpacity onPress={unLikeVideo}>
-                <Ionicons name="heart" size={50} color="red"/>
-            </TouchableOpacity> 
-
-        ):
-        (
-            <TouchableOpacity onPress={likeVideo}>
-                <Ionicons name="heart-outline" size={50} color="red"/>
-            </TouchableOpacity>  
+          <TouchableOpacity onPress={unLikeVideo}>
+            <Ionicons name="heart" size={50} color="red"/>
+          </TouchableOpacity> 
+        ) : (
+          <TouchableOpacity onPress={likeVideo}>
+            <Ionicons name="heart-outline" size={50} color="red"/>
+          </TouchableOpacity>  
         )}
-       
       </View>
     </Pressable>
   );
