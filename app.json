@@ -39,7 +39,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./local/path/to/your/app-icon.png",
+          "icon": "./local/path/to/your/S2-2.png",
           "color": "#ffffff",
           "sounds": [
             "./local/path/to/your/notification-sound.wav"

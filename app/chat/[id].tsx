@@ -17,6 +17,22 @@ export default function ChatScreen() {
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
   useEffect(() => {
+    if (!id || !user) return;
+  
+    // Mark messages as read when entering chat
+    const markMessagesAsRead = async () => {
+      await supabase
+        .from('Message')
+        .update({ read: true })
+        .eq('chat_id', id)
+        .neq('sender_id', user.id);
+    };
+  
+    markMessagesAsRead();
+    // ... rest of your existing chat fetch code
+  }, [id, user]);
+
+  useEffect(() => {
     setActiveChatId(id);
     return () => setActiveChatId(null);
   }, [id]);

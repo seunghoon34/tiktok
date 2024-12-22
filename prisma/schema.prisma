@@ -94,6 +94,7 @@ model Message {
   sender_id String
   content String
   created_at DateTime @default(now())
+  read       Boolean  @default(false)
   chat Chat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
   sender User @relation(fields: [sender_id], references: [id], onDelete: Cascade)
 }

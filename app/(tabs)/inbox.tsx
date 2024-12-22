@@ -70,56 +70,82 @@ export default function InboxScreen() {
   const { user } = useAuth();
   const router = useRouter();
 
+  const fetchChats = async () => {
+    const { data, error } = await supabase
+      .from('Chat')
+      .select(`
+        id,
+        user1:user1_id (id, username),
+        user2:user2_id (id, username)
+      `)
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+      .limit(10);
+
+    if (error) {
+      console.error('Error fetching chats:', error);
+      return;
+    }
+
+    const chatsWithDetails = await Promise.all(data.map(async (chat) => {
+      const { data: messagesData } = await supabase
+        .from('Message')
+        .select('content, created_at')
+        .eq('chat_id', chat.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const { count } = await supabase
+        .from('Message')
+        .select('*', { count: 'exact' })
+        .eq('chat_id', chat.id)
+        .eq('read', false)
+        .neq('sender_id', user.id);
+
+      return {
+        ...chat,
+        lastMessage: messagesData[0] || null,
+        unreadCount: count || 0
+      };
+    }));
+
+    const sortedChats = chatsWithDetails.sort((a, b) => {
+      const aLastMessageTime = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+      const bLastMessageTime = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+      return bLastMessageTime - aLastMessageTime;
+    });
+
+    setChats(sortedChats);
+  };
+
+  // Set up real-time subscription
+  useEffect(() => {
+    if (!user) return;
+  
+    const subscription = supabase
+      .channel('chat_updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'Message'
+        },
+        () => {
+          fetchChats(); // Refetch chats when messages change
+        }
+      )
+      .subscribe();
+  
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
   useFocusEffect(
     useCallback(() => {
-      if (!user) return;
-
-      const fetchChats = async () => {
-        const { data, error } = await supabase
-          .from('Chat')
-          .select(`
-            id,
-            user1:user1_id (id, username),
-            user2:user2_id (id, username)
-          `)
-          .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-          .limit(10);
-
-        if (error) {
-          console.error('Error fetching chats:', error);
-          return;
-        }
-
-        console.log('Fetched chats:', data);
-
-        // Fetch the last message for each chat
-        const chatsWithLastMessage = await Promise.all(data.map(async (chat) => {
-          const { data: messagesData } = await supabase
-            .from('Message')
-            .select('content, created_at')
-            .eq('chat_id', chat.id)
-            .order('created_at', { ascending: false })
-            .limit(1);
-
-          return {
-            ...chat,
-            lastMessage: messagesData[0] || null, // Get the last message or null if none
-          };
-        }));
-
-        // Sort chats by the last message's created_at timestamp in descending order
-        const sortedChats = chatsWithLastMessage.sort((a, b) => {
-          const aLastMessageTime = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-          const bLastMessageTime = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-          return bLastMessageTime - aLastMessageTime; // Newest first
-        });
-
-        console.log('Chats with last message:', sortedChats);
-
-        setChats(sortedChats);
-      };
-
-      fetchChats();
+      if (user) {
+        fetchChats();
+      }
     }, [user])
   );
 
@@ -149,26 +175,36 @@ export default function InboxScreen() {
 
           return (
             <TouchableOpacity
-              className="p-4 border-b border-gray-100"
-              onPress={() => router.push(`/chat/${chat.id}`)}
-            >
-              <View className="flex-row items-center justify-between">
-                <View className="flex-row items-center">
-                  <Ionicons name="person-circle-outline" size={40} color="gray" />
-                  <View className="ml-3">
-                    <Text className="text-lg font-semibold">{otherUser.username}</Text>
-                    {lastMessage && (
-                      <Text className="text-gray-500">{truncatedMessage}</Text> // Use truncated message
-                    )}
-                  </View>
-                </View>
-                {lastMessage && (
-                  <Text className="text-gray-400 text-sm">
-                    {formatDate(lastMessage.created_at)}
-                  </Text>
-                )}
-              </View>
-            </TouchableOpacity>
+    className="p-4 border-b border-gray-100"
+    onPress={() => router.push(`/chat/${chat.id}`)}
+  >
+    <View className="flex-row items-start justify-between">
+      <View className="flex-row">
+        <Ionicons name="person-circle-outline" size={40} color="gray" />
+        <View className="ml-3">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-lg font-semibold">{otherUser.username}</Text>
+          </View>
+          {lastMessage && (
+            <Text className="text-gray-500">{truncatedMessage}</Text>
+          )}
+        </View>
+      </View>
+
+      <View className="items-end">
+        {lastMessage && (
+          <Text className="text-gray-400 text-sm mb-1">
+            {formatDate(lastMessage.created_at)}
+          </Text>
+        )}
+        {chat.unreadCount > 0 && (
+          <View className="bg-blue-500 rounded-full px-2 py-0.5">
+            <Text className="text-white text-sm">{chat.unreadCount}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  </TouchableOpacity>
           );
         }}
         keyExtractor={(item) => item.id}
