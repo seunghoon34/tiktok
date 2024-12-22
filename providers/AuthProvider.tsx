@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState} from 'react'
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
 
 
 
@@ -103,15 +104,33 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         console.log("current chat id: ", currentChatId)
     };
 
-    useEffect(()=>{
-        const { data: authData } = supabase.auth.onAuthStateChange((event, session) =>{
-            if(!session) return router.push('/(auth)');
-            getUser(session.user.id);
-        });
-        return () => {
-            authData.subscription.unsubscribe();
+    useEffect(() => {
+        const handleAuthStateChange = async (session) => {
+          try {
+            if (session) {
+              await getUser(session.user.id);
+              // Keep splash screen visible during initialization
+              setTimeout(async () => {
+                await SplashScreen.hideAsync();
+              }, 2000); // Show splash for 2 seconds after login
+            } else {
+              router.push('/(auth)');
+              await SplashScreen.hideAsync(); // Hide for login screen
+            }
+          } catch (error) {
+            console.error('Error handling auth state:', error);
+            await SplashScreen.hideAsync();
+          }
         };
-    },[])
+      
+        const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
+          handleAuthStateChange(session);
+        });
+      
+        return () => {
+          authData.subscription.unsubscribe();
+        };
+      }, []);
 
     useEffect(() => {
         if (user) {

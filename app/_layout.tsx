@@ -7,8 +7,6 @@ import { AuthProvider } from '@/providers/AuthProvider';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 
-
-
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
@@ -26,9 +24,18 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
+    const prepare = async () => {
+      if (loaded) {
+        try {
+          // Don't hide splash screen here - let AuthProvider handle it
+          // await SplashScreen.hideAsync();
+        } catch (error) {
+          console.error('Error preparing app:', error);
+        }
+      }
+    };
+
+    prepare();
   }, [loaded]);
 
   if (!loaded) {
@@ -38,22 +45,16 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <NotificationProvider>
-      <Stack screenOptions={{ gestureEnabled: false}}>
-        <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-        <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
-
-        <Stack.Screen name="(tabs)" options={{ headerShown: false,  }} />
-        <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right',}}/>
-
-
-        <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right', }} />
-        <Stack.Screen name="chat/[id]" options={{ headerShown: false,  }} />
-
-
-        <Stack.Screen name="+not-found" />
-      </Stack>
+        <Stack screenOptions={{ gestureEnabled: false}}>
+          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+          <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
+          <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
+          <Stack.Screen name="chat/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="+not-found" />
+        </Stack>
       </NotificationProvider>
     </AuthProvider>
-
   );
 }

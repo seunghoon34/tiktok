@@ -4,16 +4,10 @@
     "slug": "tiktok",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/S2-2.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
-    "extra": {
-      "eas": {
-        "projectId": "3bf3ab47-6348-425d-8db5-cf045f6a7184"
-      }
-    }
-  },
     "ios": {
       "supportsTablet": true
     },
@@ -55,7 +49,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/shootscreen.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
@@ -75,4 +69,4 @@
     },
     "owner": "seunghoon34"
   }
-
+}

@@ -65,7 +65,7 @@ const formatDate = (dateString) => {
 
 
 
-export default function ChatsScreen() {
+export default function InboxScreen() {
   const [chats, setChats] = useState([]);
   const { user } = useAuth();
   const router = useRouter();

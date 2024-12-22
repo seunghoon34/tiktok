@@ -98,6 +98,7 @@ export default function HomeScreen() {
       const { data, error } = await supabase
         .from('Video')
         .select('*, User(username, id)')
+        .neq('user_id', user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
