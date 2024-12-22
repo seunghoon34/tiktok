@@ -12,14 +12,33 @@ import { useNotifications } from '@/providers/NotificationProvider';
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState([]);
   const { user } = useAuth();
-  const [isPremium, setIsPremium] = useState(false)
+  const [isPremium, setIsPremium] = useState(false);
+  const { setUnreadCount } = useNotifications();
 
-  const { setUnreadCount } = useNotifications(); // Use the context instead of local state
+  const markAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('Notification')
+        .update({ read: true })
+        .eq('to_user', user.id)
+        .eq('read', false); // Only update unread notifications
 
+      if (error) throw error;
+
+      // Update local state to reflect changes
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notif => ({ ...notif, read: true }))
+      );
+      setUnreadCount(0);
+    } catch (error) {
+      console.error('Error marking notifications as read:', error);
+    }
+  };
 
   useFocusEffect(
     useCallback(() => {
       fetchNotifications();
+      markAsRead(); // Automatically mark as read when screen comes into focus
     }, [user])
   );
 
@@ -45,7 +64,6 @@ export default function ActivityScreen() {
     };
   }, [user]);
 
-
   const fetchNotifications = async () => {
     try {
       const { data, error } = await supabase
@@ -63,9 +81,8 @@ export default function ActivityScreen() {
       if (error) throw error;
 
       const unreadNotifications = data.filter(notification => !notification.read).length;
-      setUnreadCount(unreadNotifications);  // This updates the shared state
+      setUnreadCount(unreadNotifications);
 
-      // Transform the data to match our component's expectations
       const formattedNotifications = data.map(notification => ({
         id: notification.id,
         type: notification.type,
@@ -82,7 +99,6 @@ export default function ActivityScreen() {
     }
   };
 
-  // Format the notification content based on type
   const getNotificationContent = (type, username) => {
     switch (type) {
       case 'SHOT':
@@ -96,47 +112,16 @@ export default function ActivityScreen() {
     }
   };
 
-  // Format the time (you can reuse your existing formatDate function here)
-
-  // Mark all notifications as read
-  const markAllAsRead = async () => {
-    try {
-      const { error } = await supabase
-        .from('Notification')
-        .update({ read: true })
-        .eq('to_user', user.id);
-
-      if (error) throw error;
-
-      // Update local state to reflect changes
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notif => ({ ...notif, read: true }))
-      );
-      setUnreadCount(0);
-
-    } catch (error) {
-      console.error('Error marking notifications as read:', error);
-    }
-  };
-
-  useEffect(() => {
-    if (user) {
-      fetchNotifications();
-    }
-  }, [user]);
-
   const renderNotification = ({ item }) => (
     <TouchableOpacity 
       className={`p-4 border-b border-gray-100 ${!item.read ? 'bg-blue-50' : ''}`}
     >
       <View className="flex-row items-center">
-        {/* Profile Picture Placeholder */}
         <View className="h-12 w-12 rounded-full bg-gray-200 items-center justify-center mr-3">
           <Ionicons name="person" size={24} color="#9CA3AF" />
         </View>
   
         <View className="flex-1">
-          {/* Top row with message and time */}
           <View className="flex-row justify-between items-start">
             <Text className={`text-base flex-1 ${!item.read ? 'font-semibold' : ''}`}>
               {item.content}
@@ -146,7 +131,6 @@ export default function ActivityScreen() {
             </Text>
           </View>
   
-          {/* Action buttons */}
           {item.actionable && (
             <View className="flex-row mt-2">
               {item.type === 'shot' ? (
@@ -168,23 +152,20 @@ export default function ActivityScreen() {
     </TouchableOpacity>
   );
 
- return (
-  <SafeAreaView className="flex-1 bg-white">
-    <View className="px-4 py-2  border-gray-200">
-      <View className="flex-row items-center justify-between">
-        <Text className="font-bold" style={{fontSize:32}}>Activities</Text>
-        <TouchableOpacity onPress={markAllAsRead}>
-          <Text className="text-blue-500">Mark all as read</Text>
-        </TouchableOpacity>
+  return (
+    <SafeAreaView className="flex-1 bg-white">
+      <View className="px-4 py-2 border-gray-200">
+        <View className="flex-row items-center justify-between">
+          <Text className="font-bold" style={{fontSize:32}}>Activities</Text>
+        </View>
       </View>
-    </View>
 
-    <FlatList
-      data={notifications}
-      renderItem={renderNotification}
-      keyExtractor={item => item.id}
-      className="flex-1"
-    />
-  </SafeAreaView>
-);
+      <FlatList
+        data={notifications}
+        renderItem={renderNotification}
+        keyExtractor={item => item.id}
+        className="flex-1"
+      />
+    </SafeAreaView>
+  );
 }

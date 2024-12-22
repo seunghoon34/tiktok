@@ -1,10 +1,11 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ScrollView } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
+import CustomHeader from '@/components/customHeader';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -15,6 +16,23 @@ export default function ChatScreen() {
   const { setActiveChatId } = useAuth();
   const flatListRef = useRef();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  const scrollViewRef = useRef<ScrollView>(null);
+
+  
+
+  useEffect(() => {
+    // Use a small timeout to ensure the new content is rendered
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: false });
+    }, 0);
+  }, [messages]);
+
+  const formatMessageTime = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+  
 
   useEffect(() => {
     if (!id || !user) return;
@@ -86,13 +104,15 @@ export default function ChatScreen() {
       setOtherUser(chatData.user1.id === user.id ? chatData.user2 : chatData.user1);
 
       const { data: messagesData } = await supabase
-        .from('Message')
-        .select(`
-          *,
-          sender:sender_id (id, username)
-        `)
-        .eq('chat_id', id)
-        .order('created_at', { ascending: true });
+  .from('Message')
+  .select(`
+    *,
+    sender:sender_id (id, username),
+    read,
+    created_at
+  `)
+  .eq('chat_id', id)
+  .order('created_at', { ascending: true });
 
       setMessages(messagesData);
       
@@ -151,68 +171,92 @@ export default function ChatScreen() {
       return;
     }
 
+    setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: true });
+    }, 0);
+
     setNewMessage('');
+  };
+
+  const backFunction = () => {
+    // Scroll to bottom without animation before navigating back
+    
+    // Small timeout to ensure scroll completes before navigation
+    setTimeout(() => {
+      router.back();
+    }, 50);
   };
 
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1 bg-white">
-        <KeyboardAvoidingView 
+        <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 10}
         >
           <View className="flex-1">
-            <Header 
-              title={otherUser?.username || 'Chat'} 
-              color="black" 
-              goBack={true}
+            <CustomHeader
+              title={otherUser?.username || 'Chat'}
+              color="black"
+              onpress={backFunction}
             />
-            <FlatList
-              ref={flatListRef}
-              data={messages}
-              renderItem={({ item }) => {
-                return (
-                  <View className={`flex-row items-start m-2 max-w-[80%] ${item.sender_id === user.id ? 'self-end' : 'self-start'}`}>
-                    {item.sender_id !== user.id && (
-                      <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
-                        <Ionicons name="person-circle-outline" size={40} color="gray" className="mr-2 self-start" />
-                      </TouchableOpacity>
-                    )}
-                    <View className={`p-2 rounded-lg ${
-                      item.sender_id === user.id ? 'bg-blue-500' : 'bg-gray-200'
-                    }`}>
-                      <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
-                        {item.content}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              }}
-              keyExtractor={(item) => item.id}
-              className="flex-1"
-              contentContainerStyle={{ paddingBottom: keyboardHeight * 0.5 }}
-              onContentSizeChange={() => flatListRef.current?.scrollToEnd({ animated: false })}
-              onLayout={() => flatListRef.current?.scrollToEnd({ animated: false })}
-              initialNumToRender={messages.length} // Render all messages initially
-              maintainVisibleContentPosition={{ // Keep position when keyboard appears
-                minIndexForVisible: 0,
-              }}
-              className="flex-1"
-            />
+         <ScrollView
+  ref={scrollViewRef}
+  className="flex-1"
+  contentContainerStyle={{ paddingBottom: 20 }}
+>
+  {messages.map((item) => (
+    <View 
+      key={item.id}
+      className={`m-2 ${item.sender_id === user.id ? 'self-end flex-row-reverse' : 'self-start flex-row'}`}
+    >
+      {/* Avatar for other user */}
+      {item.sender_id !== user.id && (
+        <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+          <Ionicons name="person-circle-outline" size={40} color="gray" className="mr-2" />
+        </TouchableOpacity>
+      )}
+
+      {/* Message bubble */}
+      <View className={`p-2 rounded-lg max-w-[80%] ${
+        item.sender_id === user.id ? 'bg-blue-500 ml-2' : 'bg-gray-200 mr-2'
+      }`}>
+        <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
+          {item.content}
+        </Text>
+      </View>
+
+      {/* Time and Read status */}
+      <View className='mt-2'>
+        <Text className="text-gray-500 text-xs text-right h-4" >
+          {item.sender_id === user.id && item.read ? 'Read' : ' '}
+        </Text>
+        <Text className="text-gray-500 text-xs">
+          {formatMessageTime(item.created_at)}
+        </Text>
+      </View>
+    </View>
+  ))}
+</ScrollView>
+            
             <View className="px-4 py-2 border-t border-gray-200 flex-row items-center bg-white">
-              <TextInput
-                className="flex-1 bg-gray-100 px-4 py-2 rounded-full mr-2 min-h-[40px] max-h-[40px]"
-                value={newMessage}
-                onChangeText={setNewMessage}
-                placeholder="Type a message..."
-                onFocus={() => {
-                  setTimeout(() => {
-                    flatListRef.current?.scrollToEnd({ animated: true });
-                  }, 100);
-                }}
-              />
-              <TouchableOpacity 
+            <TextInput
+              className="flex-1 bg-gray-100 px-4 py-2 rounded-full mr-2 min-h-[40px]" // Removed max-h
+              value={newMessage}
+              onChangeText={setNewMessage}
+              placeholder="Type a message..."
+              multiline={true} // Add this
+              numberOfLines={1} // This sets initial number of lines
+              style={{ maxHeight: 100,
+                borderRadius: 20, // Add fixed border radius instead of rounded-full
+                textAlignVertical: 'center',
+              }} // Limit maximum height if needed
+              onFocus={() => {
+                scrollViewRef.current?.scrollToEnd({ animated: false });
+              }}
+            />
+              <TouchableOpacity
                 onPress={sendMessage}
                 className="h-10 w-10 items-center justify-center"
               >
