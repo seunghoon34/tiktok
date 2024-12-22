@@ -149,7 +149,7 @@ export default function ChatsScreen() {
 
           return (
             <TouchableOpacity
-              className="p-4 border-b border-gray-200"
+              className="p-4 border-b border-gray-100"
               onPress={() => router.push(`/chat/${chat.id}`)}
             >
               <View className="flex-row items-center justify-between">
