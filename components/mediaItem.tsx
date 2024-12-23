@@ -66,6 +66,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
 
   const likeVideo = async () => {
     try {
+      const newLike = {
+        video_id: item.id,
+        user_id: user.id
+      };
+
+      getLikes(user?.id, [newLike]); // You'll need to modify getLikes to accept optional immediate likes
       const result = await handleVideoLike(
         user.id,
         item.id,
@@ -76,19 +82,25 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         console.log("Match: ",result.users[0],'and ', result.users[1]);
       }
   
-      getLikes(user?.id);
+      
     } catch (error) {
-      console.error('Error liking video:', error);
-    }
+      getLikes(user?.id);
+      console.error('Error liking video:', error);    }
   };
 
   const unLikeVideo = async () => {
+    try{
+    const filteredLikes = likes.filter((like: any) => like.video_id !== item.id);
+    getLikes(user?.id, filteredLikes);
     const { data, error } = await supabase
       .from('Like')
       .delete()
       .eq('user_id', user?.id)
       .eq('video_id', item.id);
-    if (!error) getLikes(user?.id);
+    if (error) throw(error)
+    } catch(error) {
+      getLikes(user?.id);
+    }
   };
 
   const showMuteIconWithFade = () => {

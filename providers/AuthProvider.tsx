@@ -31,20 +31,20 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [likes,setLikes] = useState([])
     const [currentChatId, setCurrentChatId] = useState(null);   
 
-    const getLikes = async (userId: string) => {
-        console.log('getLikes called with userId:', userId); // Added logging
+    const getLikes = async (userId: string, immediateUpdate?: any[]) => {
         if(!user) {
-            console.log('No user found, exiting getLikes'); // Added logging
             return;
         }
+        if (immediateUpdate) {
+            setLikes(immediateUpdate);
+            return;
+          }
         const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
-        setLikes(data);
         if (error) {
-            console.error('Error fetching likes:', error); // Added logging
             return;
         }
-        console.log('Likes fetched:', data); // Added logging
-        return data;
+        setLikes(data || []);
+
     }
 
     const getUser = async (id:string) => {
