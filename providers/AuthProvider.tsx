@@ -20,6 +20,7 @@ export const AuthContext = createContext({
     likes: [],
     getLikes: async (userId: string) => {},
     setActiveChatId: (chatId: string | null) => {},  // Changed to match function name
+    currentChatId: null
 
 });
 
@@ -100,8 +101,9 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     };
 
     const setActiveChatId = (chatId: string | null) => {
+        console.log("Setting active chat id to:", chatId); // Add this log
+
         setCurrentChatId(chatId);
-        console.log("current chat id: ", currentChatId)
     };
 
     useEffect(() => {
@@ -158,6 +160,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             },
             async (payload) => {
               // Only notify if the message is for current user and they didn't send it
+              console.log("New message received in chat:", payload.new.chat_id);
+            console.log("Current active chat:", currentChatId);
               if (payload.new.chat_id) {
                 const { data: chat } = await supabase
                   .from('Chat')
@@ -166,20 +170,17 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                   .single();
     
                 // Check if user is part of this chat and not the sender
-                console.log("send chat id: ", currentChatId)
                 if (chat && 
                     (chat.user1_id === user.id || chat.user2_id === user.id) && 
-                    payload.new.sender_id !== user.id
-                    && payload.new.chat_id !== currentChatId) {
+                    payload.new.sender_id !== user.id && 
+                    payload.new.chat_id !== currentChatId) { // This condition should now work correctly
                   
-                  // Get sender's username
                   const { data: senderData } = await supabase
                     .from('User')
                     .select('username')
                     .eq('id', payload.new.sender_id)
                     .single();
-    
-                  // Send notification
+      
                   await sendMessageNotification(
                     payload.new.sender_id,
                     senderData.username,
@@ -195,7 +196,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         return () => {
           subscription.unsubscribe();
         };
-      }, [user]);
+      }, [user, currentChatId]);
 
       useEffect(() => {
         if (!user) return;
@@ -225,7 +226,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     }, [user]);
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes , setActiveChatId}}>
+        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes , setActiveChatId, currentChatId}}>
             {children}
         </AuthContext.Provider>
     );

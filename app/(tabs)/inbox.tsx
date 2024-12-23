@@ -149,7 +149,6 @@ export default function InboxScreen() {
     }, [user])
   );
 
-  console.log('Rendered chats:', chats);
 
   const getOtherUser = (chat) => {
     return chat.user1.id === user.id ? chat.user2 : chat.user1;
@@ -163,8 +162,7 @@ export default function InboxScreen() {
         data={chats}
         renderItem={({ item: chat }) => {
           if (chat.lastMessage) {
-            console.log('Original Supabase date:', chat.lastMessage.created_at);
-            console.log('Converted local date:', new Date(chat.lastMessage.created_at).toLocaleString());
+           
           }
           const otherUser = getOtherUser(chat);
           const lastMessage = chat.lastMessage;

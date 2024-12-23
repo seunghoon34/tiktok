@@ -11,9 +11,8 @@ export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const { id } = useLocalSearchParams();
-  const { user } = useAuth();
+  const { user, setActiveChatId } = useAuth();
   const [otherUser, setOtherUser] = useState(null);
-  const { setActiveChatId } = useAuth();
   const flatListRef = useRef();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
 
