@@ -8,6 +8,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { handleVideoLike } from '@/utils/videoMatching';
 import LoadingScreen from '@/components/loading';
 import React from 'react';
+import { Modalize } from 'react-native-modalize';
+import { Portal } from 'react-native-portalize';
 
 interface MediaItemProps {
   item: {
@@ -33,6 +35,20 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const router = useRouter();
   const { user, likes, getLikes } = useAuth();
+  const modalRef = useRef<Modalize>(null);
+
+  const handleReport = async (type: 'shot' | 'user') => {
+    try {
+      if (type === 'shot') {
+        console.log("report shot")
+      } else {
+        console.log("user")
+      }
+      modalRef.current?.close();
+    } catch (error) {
+      console.error('Error reporting:', error);
+    }
+  };
 
   const mediaStyle = {
     width: Dimensions.get('window').width,
@@ -97,6 +113,27 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       onPress={() => {onMuteChange(); showMuteIconWithFade()}}
       style={mediaStyle}
     >
+      <View style={{
+  position: 'absolute',
+  top: 60,
+  left: 0,
+  right: 0,
+  paddingHorizontal: 20,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  zIndex: 999,
+}}>
+  <TouchableOpacity onPress={() => router.back()}>
+    <Ionicons name='chevron-back' size={40} color="white"/>
+  </TouchableOpacity>
+  
+  <TouchableOpacity 
+    onPress={() => modalRef.current?.open()}
+  >
+    <Ionicons name="ellipsis-vertical" size={30} color="white"/>
+  </TouchableOpacity>
+</View>
+    
       {isLoading && (
         <View style={{
           position: 'absolute',
@@ -187,7 +224,48 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             <Ionicons name="heart-outline" size={50} color="red"/>
           </TouchableOpacity>  
         )}
+        
+        
       </View>
+      <Portal>
+  <Modalize
+    ref={modalRef}
+    adjustToContentHeight
+    modalStyle={{ 
+      backgroundColor: '#1f1f1f',
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    }}
+    closeOnOverlayTap
+    handleStyle={{ backgroundColor: '#636363', width: 40 }}
+  >
+    <View className="py-2 pb-10">
+      <TouchableOpacity 
+        className="flex-row items-center px-4 py-3 active:bg-gray-800"
+        onPress={() => handleReport('shot')}
+      >
+        <Ionicons name="flag-outline" size={24} color="white" className="mr-3" />
+        <Text className="text-white text-[16px]">Report Content</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        className="flex-row items-center px-4 py-3 active:bg-gray-800"
+        onPress={() => handleReport('user')}
+      >
+        <Ionicons name="person-outline" size={24} color="white" className="mr-3" />
+        <Text className="text-white text-[16px]">Report {item.User.username}</Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity 
+        className="flex-row items-center px-4 py-3 active:bg-gray-800"
+        onPress={() => modalRef.current?.close()}
+      >
+        <Ionicons name="close-outline" size={24} color="white" className="mr-3" />
+        <Text className="text-white text-[16px]">Cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </Modalize>
+</Portal>
     </Pressable>
   );
 };

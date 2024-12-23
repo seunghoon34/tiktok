@@ -6,6 +6,9 @@ import 'react-native-reanimated';
 import { AuthProvider } from '@/providers/AuthProvider';
 import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/providers/NotificationProvider';
+import { Host, Portal } from 'react-native-portalize';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
+
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -43,6 +46,8 @@ export default function RootLayout() {
   }
 
   return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+    <Host>
     <AuthProvider>
       <NotificationProvider>
         <Stack screenOptions={{ gestureEnabled: false}}>
@@ -56,5 +61,7 @@ export default function RootLayout() {
         </Stack>
       </NotificationProvider>
     </AuthProvider>
+    </Host>
+    </GestureHandlerRootView>
   );
 }

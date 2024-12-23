@@ -163,16 +163,7 @@ export default function HomeScreen() {
         }
       />
     )}
-      <View style={{
-        position: 'absolute',
-        top: 50,
-        left: 20,
-        zIndex: 999,
-      }}>
-        <TouchableOpacity onPress={() => router.back()}>
-          <Ionicons name='chevron-back' size={40} color="white"/>
-        </TouchableOpacity>
-      </View>
+     
     </View>
   );
 }
