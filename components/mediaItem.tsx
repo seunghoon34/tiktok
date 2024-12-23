@@ -170,13 +170,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       }}>
         <View style={{flexDirection: 'row'}}>
           <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-            <Ionicons name="add-circle-sharp" size={50} color="black" />
+            <Ionicons name="person-circle-outline" size={50} color="white" />
           </TouchableOpacity>
-          <View>
+          <View className='mt-1 ml-1'>
             <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-              <Text className='text-2xl font-bold'>{item.User.username}</Text>
+              <Text className='text-2xl font-bold text-white'>{item.User.username}</Text>
             </TouchableOpacity>
-            <Text className='text-2xl'>{item.title}</Text>
           </View>
         </View>
         {likes.filter((like: any) => like.video_id === item.id).length > 0 ? (

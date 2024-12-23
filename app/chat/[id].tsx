@@ -121,34 +121,76 @@ export default function ChatScreen() {
     fetchMessages();
 
     const subscription = supabase
-      .channel(`chat:${id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'Message',
-          filter: `chat_id=eq.${id}`
-        },
-        async (payload) => {
-          const { data: messageData } = await supabase
+    .channel(`chat:${id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'Message',
+        filter: `chat_id=eq.${id}`
+      },
+      async (payload) => {
+        // If the new message is from the other user, mark it as read immediately
+        if (payload.new.sender_id !== user.id) {
+          await supabase
             .from('Message')
-            .select(`
-              *,
-              sender:sender_id (id, username)
-            `)
-            .eq('id', payload.new.id)
-            .single();
-
-          if (messageData) {
-            setMessages(current => [...current, messageData]);
-            setTimeout(() => {
-              flatListRef.current?.scrollToEnd({ animated: true });
-            }, 100);
-          }
+            .update({ read: true })
+            .eq('id', payload.new.id);
         }
-      )
-      .subscribe();
+
+        const { data: messageData } = await supabase
+          .from('Message')
+          .select(`
+            *,
+            sender:sender_id (id, username),
+            read,
+            created_at
+          `)
+          .eq('id', payload.new.id)
+          .single();
+
+        if (messageData) {
+          setMessages(current => [...current, messageData]);
+          setTimeout(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: true });
+          }, 100);
+        }
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'Message',
+        filter: `chat_id=eq.${id}`
+      },
+      async (payload) => {
+        // Fetch the complete updated message data
+        const { data: messageData } = await supabase
+          .from('Message')
+          .select(`
+            *,
+            sender:sender_id (id, username),
+            read,
+            created_at
+          `)
+          .eq('id', payload.new.id)
+          .single();
+    
+        if (messageData) {
+          setMessages(current => 
+            current.map(msg => 
+              msg.id === messageData.id 
+                ? messageData  // Replace with complete updated message
+                : msg
+            )
+          );
+        }
+      }
+    )
+    .subscribe();
 
     return () => {
       subscription.unsubscribe();
