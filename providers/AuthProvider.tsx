@@ -91,14 +91,25 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     };
 
     const signOut = async () => {
-        console.log("signout")
-        const { error } = await supabase.auth.signOut();
-        if(error) console.log(error)
-        if (error) throw error;
-        setUser(null)
-
-        router.push('/(auth)')
-    };
+        try {
+          await SplashScreen.preventAutoHideAsync();
+          const { error } = await supabase.auth.signOut();
+          if (error) throw error;
+          setUser(null);
+          router.push('/(auth)');
+        } catch (error) {
+          console.log(error);
+        } finally {
+          // Hide splash after a brief delay
+          setTimeout(async () => {
+            try {
+              await SplashScreen.hideAsync();
+            } catch (error) {
+              console.log("Error hiding splash screen:", error);
+            }
+          }, 500);
+        }
+      };
 
     const setActiveChatId = (chatId: string | null) => {
         console.log("Setting active chat id to:", chatId); // Add this log
@@ -110,14 +121,29 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         const handleAuthStateChange = async (session) => {
           try {
             if (session) {
+              // Show splash screen while getting user data
+              await SplashScreen.preventAutoHideAsync();
               await getUser(session.user.id);
-              // Keep splash screen visible during initialization
+              
+              // Hide splash after a short delay (for smoother transition)
               setTimeout(async () => {
-                await SplashScreen.hideAsync();
-              }, 2000); // Show splash for 2 seconds after login
+                try {
+                  await SplashScreen.hideAsync();
+                } catch (error) {
+                  console.log("Error hiding splash screen:", error);
+                }
+              }, 1000); // 1 second delay
             } else {
+              // For logout/no session
               router.push('/(auth)');
-              await SplashScreen.hideAsync(); // Hide for login screen
+              // Brief splash screen on logout
+              setTimeout(async () => {
+                try {
+                  await SplashScreen.hideAsync();
+                } catch (error) {
+                  console.log("Error hiding splash screen:", error);
+                }
+              }, 500); // half second delay for logout
             }
           } catch (error) {
             console.error('Error handling auth state:', error);
@@ -136,12 +162,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     useEffect(() => {
         if (user) {
-          // Log the device info and current user
-          console.log('Device registering notification:', {
-            username: user.username,
-            userId: user.id,
-            deviceName: Device.deviceName, // You'll need to import Device from expo-device
-          });
+         
           registerForPushNotifications(user.id);
         }
       }, [user]);

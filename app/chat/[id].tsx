@@ -261,7 +261,7 @@ export default function ChatScreen() {
 
       {/* Message bubble */}
       <View className={`p-2 rounded-lg max-w-[80%] ${
-        item.sender_id === user.id ? 'bg-blue-500 ml-2' : 'bg-gray-200 mr-2'
+        item.sender_id === user.id ? 'bg-red-400 ml-2' : 'bg-gray-100 mr-2'
       }`}>
         <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
           {item.content}

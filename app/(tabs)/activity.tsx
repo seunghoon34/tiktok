@@ -12,7 +12,7 @@ import { useNotifications } from '@/providers/NotificationProvider';
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState([]);
   const { user } = useAuth();
-  const [isPremium, setIsPremium] = useState(false);
+  const [isPremium, setIsPremium] = useState(true);
   const { setUnreadCount } = useNotifications();
 
   const markAsRead = async () => {
