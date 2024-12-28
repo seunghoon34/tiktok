@@ -15,7 +15,7 @@ export default function ProfileScreen() {
     {
       icon: "person-outline",
       title: "Edit Profile",
-      onPress: () => router.push('/edit-profile'),
+      onPress: () => router.push('/editprofile'),
     },
     {
       icon: "notifications-outline",
@@ -64,7 +64,7 @@ export default function ProfileScreen() {
             </View>
             <TouchableOpacity 
               className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2"
-              onPress={() => router.push('/edit-profile')}
+              onPress={() => router.push('/editprofile')}
             >
               <Ionicons name="camera" size={16} color="white" />
             </TouchableOpacity>
@@ -80,7 +80,7 @@ export default function ProfileScreen() {
             <View className="flex-row justify-between items-center">
               <Text className="text-gray-600 font-medium mb-2">About</Text>
               <TouchableOpacity 
-                onPress={() => router.push('/edit-profile')}
+                onPress={() => router.push('/editprofile')}
                 className="mb-2"
               >
                 <Ionicons name="pencil" size={16} color="#3B82F6" />
@@ -90,13 +90,20 @@ export default function ProfileScreen() {
               {description}
             </Text>
           </View>
-          
+          <View className='flex-row gap-3'>
           <TouchableOpacity 
             className="mt-4 px-6 py-2 bg-blue-500 rounded-full"
-            onPress={() => router.push('/edit-profile')}
+            onPress={() => router.push('/editprofile')}
           >
             <Text className="text-white font-medium">Edit Profile</Text>
           </TouchableOpacity>
+          <TouchableOpacity 
+            className="mt-4 px-6 py-2 bg-blue-500 rounded-full"
+            onPress={() => router.push('/createprofile')}
+          >
+            <Text className="text-white font-medium">create Profile</Text>
+          </TouchableOpacity>
+          </View>
         </View>
 
         {/* Stats Section */}
