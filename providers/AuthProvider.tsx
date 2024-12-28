@@ -37,7 +37,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             return;
         }
         if (immediateUpdate) {
-            setLikes(immediateUpdate);
+            // Merge existing likes with new like
+            setLikes(prevLikes => [...prevLikes, ...immediateUpdate]);
             return;
           }
         const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
@@ -45,6 +46,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             return;
         }
         setLikes(data || []);
+        console.log(likes)
 
     }
 

@@ -36,6 +36,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const router = useRouter();
   const { user, likes, getLikes } = useAuth();
   const modalRef = useRef<Modalize>(null);
+  const lastTap = useRef<number>(0);
+  const DOUBLE_TAP_DELAY = 300; // milliseconds
+  const [showHeart, setShowHeart] = useState(false);
+  const heartScale = useRef(new Animated.Value(0)).current;
+  const heartOpacity = useRef(new Animated.Value(0)).current;
+
 
   const handleReport = async (type: 'shot' | 'user') => {
     try {
@@ -65,6 +71,8 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   };
 
   const likeVideo = async () => {
+    if (likes.filter((like: any) => like.video_id === item.id).length === 0) {
+
     try {
       const newLike = {
         video_id: item.id,
@@ -81,11 +89,13 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       if (result.status === 'matched') {
         console.log("Match: ",result.users[0],'and ', result.users[1]);
       }
+      showHeartAnimation()
   
       
     } catch (error) {
       getLikes(user?.id);
       console.error('Error liking video:', error);    }
+    }
   };
 
   const unLikeVideo = async () => {
@@ -120,9 +130,105 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     ]).start(() => setShowMuteIcon(false));
   };
 
+  const handlePress = () => {
+    const now = Date.now();
+    const DOUBLE_PRESS_DELAY = DOUBLE_TAP_DELAY;
+    
+    if (lastTap.current && (now - lastTap.current) < DOUBLE_PRESS_DELAY) {
+      // Double tap detected
+      lastTap.current = 0;
+      handleLikeWithAnimation();
+    } else {
+      // Single tap
+      lastTap.current = now;
+      setTimeout(() => {
+        if (lastTap.current === now) {
+          // If it wasn't a double tap, handle mute
+          onMuteChange();
+          showMuteIconWithFade();
+        }
+      }, DOUBLE_PRESS_DELAY);
+    }
+  };
+
+  const showHeartAnimation = () => {
+    setShowHeart(true);
+    
+    // Reset animation values
+    heartScale.setValue(0);
+    heartOpacity.setValue(1);
+  
+    // Animate the heart
+    Animated.parallel([
+      Animated.sequence([
+        // Spring animation to scale up
+        Animated.spring(heartScale, {
+          toValue: 1,
+          speed: 15,
+          useNativeDriver: true,
+        }),
+        // Slight bounce effect
+        Animated.timing(heartScale, {
+          toValue: 0.9,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+        // Spring back to full size
+        Animated.spring(heartScale, {
+          toValue: 1,
+          speed: 15,
+          useNativeDriver: true,
+        }),
+      ]),
+      // Fade out animation
+      Animated.sequence([
+        Animated.delay(500),
+        Animated.timing(heartOpacity, {
+          toValue: 0,
+          duration: 200,
+          useNativeDriver: true,
+        }),
+      ]),
+    ]).start(() => {
+      setShowHeart(false);
+    });
+  };
+
+  const handleLikeWithAnimation = async () => {
+    const isLiked = likes.filter((like: any) => like.video_id === item.id).length > 0;
+    setTimeout(() => {
+      showHeartAnimation();
+    }, 200);
+    if (!isLiked) {
+      try {
+        const newLike = {
+          video_id: item.id,
+          user_id: user.id
+        };
+
+        getLikes(user?.id, [newLike]);
+        const result = await handleVideoLike(
+          user.id,
+          item.id,
+          item.User.id
+        );
+    
+        if (result.status === 'matched') {
+          console.log("Match: ", result.users[0], 'and ', result.users[1]);
+        }
+      } catch (error) {
+        getLikes(user?.id);
+        console.error('Error liking video:', error);
+      }
+    }
+    
+    // Show animation regardless of whether we liked or not
+    
+  };
+
   return (
     <Pressable 
-      onPress={() => {onMuteChange(); showMuteIconWithFade()}}
+      onPress={handlePress}
       style={mediaStyle}
     >
       <View style={{
@@ -228,17 +334,40 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           </View>
         </View>
         {likes.filter((like: any) => like.video_id === item.id).length > 0 ? (
-          <TouchableOpacity onPress={unLikeVideo}>
-            <Ionicons name="heart" size={50} color="red"/>
+          <TouchableOpacity onPress={async () => {
+            await unLikeVideo();
+            await getLikes(user?.id); // Force refresh likes after unlike
+          }}
+        >
+            <Ionicons name="heart" size={40} color="#ff5757"/>
           </TouchableOpacity> 
         ) : (
           <TouchableOpacity onPress={likeVideo}>
-            <Ionicons name="heart-outline" size={50} color="red"/>
+            <Ionicons name="heart-outline" size={40} color="white"/>
           </TouchableOpacity>  
         )}
         
         
       </View>
+      {showHeart && (
+  <Animated.View
+    style={[{
+      position: 'absolute',
+      top: '50%',
+      left: '50%',
+      transform: [
+        { translateX: -40 },
+        { translateY: -40 },
+        { scale: heartScale }
+      ],
+      zIndex: 11,
+    }, {
+      opacity: heartOpacity
+    }]}
+  >
+    <Ionicons name="heart" size={80} color="#ff5757" />
+  </Animated.View>
+)}
       <Portal>
   <Modalize
     ref={modalRef}

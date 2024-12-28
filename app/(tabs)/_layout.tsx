@@ -19,11 +19,23 @@ export default function TabLayout() {
 
   const getTotalUnreadMessages = async () => {
     if (!user) return 0;
+  
+    // Get all chats where the user is either user1 or user2
+    const { data: userChats } = await supabase
+      .from('Chat')
+      .select('id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id})`);
+  
+    if (!userChats) return 0;
+  
+    // Get unread messages from these chats
     const { count } = await supabase
       .from('Message')
       .select('*', { count: 'exact' })
       .eq('read', false)
-      .neq('sender_id', user.id);
+      .neq('sender_id', user.id)
+      .in('chat_id', userChats.map(chat => chat.id));
+  
     return count || 0;
   };
 
