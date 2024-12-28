@@ -201,7 +201,7 @@ export default function InboxScreen() {
           </Text>
         )}
         {chat.unreadCount > 0 && (
-          <View className="bg-blue-500 rounded-full px-2 py-0.5">
+          <View className="bg-red-400 rounded-full px-2 py-0.5">
             <Text className="text-white text-sm">{chat.unreadCount}</Text>
           </View>
         )}

@@ -103,7 +103,7 @@ export default function TabLayout() {
       <View>
         <Ionicons name={focused ? "heart" : "heart-outline"} size={30} color="black" />
         {unreadCount > 0 && (
-          <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+          <View className="absolute -top-1 -right-2 bg-red-400 rounded-full min-w-[18px] h-[18px] items-center justify-center">
             <Text className="text-white text-xs font-bold">
               {unreadCount > 99 ? '99+' : unreadCount}
             </Text>
@@ -142,7 +142,7 @@ export default function TabLayout() {
                 color="black" 
               />
               {unreadMessages > 0 && (
-                <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+                <View className="absolute -top-1 -right-2 bg-red-400 rounded-full min-w-[18px] h-[18px] items-center justify-center">
                   <Text className="text-white text-xs font-bold">
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </Text>
