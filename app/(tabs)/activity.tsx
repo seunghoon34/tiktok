@@ -8,62 +8,142 @@ import { useAuth } from '@/providers/AuthProvider';
 import { formatDate } from '@/utils/formatDate';
 import { useFocusEffect } from '@react-navigation/native';
 import { useNotifications } from '@/providers/NotificationProvider';
+import { useRouter } from 'expo-router';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState([]);
   const { user } = useAuth();
   const [isPremium, setIsPremium] = useState(true);
   const { setUnreadCount } = useNotifications();
+  const router = useRouter();
 
-  const markAsRead = async () => {
+
+  const markSingleAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('Notification')
+        .update({ read: true })
+        .eq('id', notificationId);
+
+      if (error) throw error;
+
+      // Update local state
+      setNotifications(prevNotifications =>
+        prevNotifications.map(notif => 
+          notif.id === notificationId ? { ...notif, read: true } : notif
+        )
+      );
+      
+      // Update unread count
+      const unreadCount = notifications.filter(n => !n.read && n.id !== notificationId).length;
+      setUnreadCount(unreadCount);
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
+
+  const markAllAsRead = async () => {
     try {
       const { error } = await supabase
         .from('Notification')
         .update({ read: true })
         .eq('to_user', user.id)
-        .eq('read', false); // Only update unread notifications
+        .eq('read', false);
 
       if (error) throw error;
 
-      // Update local state to reflect changes
+      // Update local state
       setNotifications(prevNotifications =>
         prevNotifications.map(notif => ({ ...notif, read: true }))
       );
       setUnreadCount(0);
     } catch (error) {
-      console.error('Error marking notifications as read:', error);
+      console.error('Error marking all notifications as read:', error);
     }
   };
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchNotifications();
-      markAsRead(); // Automatically mark as read when screen comes into focus
-    }, [user])
-  );
+ 
 
   useEffect(() => {
     if (!user) return;
-
+  
     fetchNotifications(); // Initial fetch
+  
+    // Set up real-time subscription
+    const subscription = supabase
+      .channel('notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen for all events (insert, update, delete)
+          schema: 'public',
+          table: 'Notification',
+          filter: `to_user=eq.${user.id}` // Only listen for notifications to this user
+        },
+        (payload) => {
+          // Handle different events
+          switch (payload.eventType) {
+            case 'INSERT':
+              fetchNotifications(); // Fetch all notifications when new one arrives
+              break;
+            case 'UPDATE':
+              // Update the specific notification in state
+              setNotifications(prev => prev.map(notif => 
+                notif.id === payload.new.id ? {
+                  ...notif,
+                  read: payload.new.read
+                } : notif
+              ));
+              break;
+            case 'DELETE':
+              // Remove the notification from state
+              setNotifications(prev => 
+                prev.filter(notif => notif.id !== payload.old.id)
+              );
+              break;
+          }
+        }
+      )
+      .subscribe();
+
+      const appStateSubscription = AppState.addEventListener('change', nextAppState => {
+        if (nextAppState === 'active') {
+          fetchNotifications();
+        }
+      });
     
-    // Set up interval
-    const interval = setInterval(fetchNotifications, 10000);
+      // Cleanup
+      return () => {
+        subscription.unsubscribe();
+        appStateSubscription.remove();
+      };
+    }, [user]);
 
-    // Handle app state changes
-    const subscription = AppState.addEventListener('change', nextAppState => {
-      if (nextAppState === 'active') {
-        fetchNotifications();
+  const findChatId = async (userId1: string, userId2: string) => {
+    const { data, error } = await supabase
+      .from('Chat')
+      .select('id')
+      .or(`and(user1_id.eq.${userId1},user2_id.eq.${userId2}),and(user1_id.eq.${userId2},user2_id.eq.${userId1})`);
+    
+    if (error || !data?.length) return null;
+    return data[0].id;
+  };
+
+  const handleNotificationPress = async (item) => {
+    // Mark as read first
+    if (!item.read) {
+      await markSingleAsRead(item.id);
+    }
+
+    // Then navigate based on type
+    if (item.type === 'SHOT') {
+      router.push(`/user?user_id=${item.userId}`);
+    } else if (item.type === 'MATCH') {
+      const chatId = await findChatId(user.id, item.userId);
+      if (chatId) {
+        router.push(`/chat/${chatId}`);
       }
-    });
-
-    // Cleanup
-    return () => {
-      clearInterval(interval);
-      subscription.remove();
-    };
-  }, [user]);
-
+    }
+  };
   const fetchNotifications = async () => {
     try {
       const { data, error } = await supabase
@@ -88,6 +168,7 @@ export default function ActivityScreen() {
         type: notification.type,
         read: notification.read,
         username: notification.sender.username,
+        userId: notification.sender.id,
         time: formatDate(notification.created_at),
         actionable: notification.type === 'SHOT' || notification.type === 'MATCH',
         content: getNotificationContent(notification.type, notification.sender.username)
@@ -115,6 +196,7 @@ export default function ActivityScreen() {
   const renderNotification = ({ item }) => (
     <TouchableOpacity 
       className={`p-4 border-b border-gray-100 ${!item.read ? 'bg-blue-50' : ''}`}
+      onPress={()=>handleNotificationPress(item)}
     >
       <View className="flex-row items-center">
         <View className="h-12 w-12 rounded-full bg-gray-200 items-center justify-center mr-3">
@@ -157,6 +239,14 @@ export default function ActivityScreen() {
       <View className="px-4 py-2 border-gray-200">
         <View className="flex-row items-center justify-between">
           <Text className="font-bold" style={{fontSize:32}}>Activities</Text>
+          {notifications.some(n => !n.read) && (
+            <TouchableOpacity 
+              onPress={markAllAsRead}
+              
+            >
+              <Text className="text-red-400">Mark all as read</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
