@@ -75,6 +75,7 @@ export default function InboxScreen() {
       .from('Chat')
       .select(`
         id,
+        created_at,
         user1:user1_id (id, username),
         user2:user2_id (id, username)
       `)
@@ -109,9 +110,13 @@ export default function InboxScreen() {
     }));
 
     const sortedChats = chatsWithDetails.sort((a, b) => {
-      const aLastMessageTime = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
-      const bLastMessageTime = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
-      return bLastMessageTime - aLastMessageTime;
+      const aTime = a.lastMessage 
+        ? new Date(a.lastMessage.created_at).getTime() 
+        : new Date(a.created_at).getTime();
+      const bTime = b.lastMessage 
+        ? new Date(b.lastMessage.created_at).getTime() 
+        : new Date(b.created_at).getTime();
+      return bTime - aTime;
     });
 
     setChats(sortedChats);
