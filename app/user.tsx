@@ -1,65 +1,91 @@
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
-import { useAuth } from '@/providers/AuthProvider';
-import { Link, useLocalSearchParams, usePathname, useRouter } from 'expo-router';
+import { View, Text, TouchableOpacity, SafeAreaView, Image } from 'react-native';
+import { useAuth } from '@/providers/AuthProvider'; 
+import { Link, useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useEffect, useState } from 'react';
 import Header from '@/components/header';
 
-// Define User type
-interface User {
-  id: string;
-  username: string;
-  // add other user fields you need
-}
-
 export default function UserScreen() {
-  const params = useLocalSearchParams();
-  const [user, setUser] = useState<User | null>(null);
-  const router = useRouter()
+ const params = useLocalSearchParams();
+ const [profile, setProfile] = useState(null);
+ const router = useRouter();
 
-  const getUser = async () => {
+ useEffect(() => {
+  const getProfile = async () => {
     const { data, error } = await supabase
-      .from('User')
-      .select('*')
-      .eq('id', params.user_id)
+      .from('UserProfile')
+      .select(`
+        *,
+        user:User (
+          username
+        )
+      `)
+      .eq('user_id', params.user_id)
       .single();
-
-    if (error) {
-      console.error('Error fetching user:', error);
-      return null;
+ 
+    if (data) {
+      const { data: urlData } = await supabase.storage
+        .from('avatars')
+        .createSignedUrl(data.profilepicture, 3600);
+      if (urlData) {
+        setProfile({...data, profilepicture: urlData.signedUrl});
+      }
     }
-    return data;
   };
+  getProfile();
+ }, [params.user_id]);
+ 
 
-  useEffect(() => {
-    const loadUser = async () => {
-      const userData = await getUser();
-      setUser(userData);
-    };
-    
-    loadUser();
-  }, [params.user_id]);
+ if (!profile) {
+   return (
+     <SafeAreaView className="flex-1 bg-white">
+       <Header title="" color="black" goBack={true} />
+       <Text>Loading...</Text>
+     </SafeAreaView>
+   );
+ }
 
-  if (!user) {
-    return (
-      <View className="flex-1 bg-white">
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
+ const getAge = (birthdate) => {
+   return new Date().getFullYear() - new Date(birthdate).getFullYear();
+ };
 
-  return (
-    <SafeAreaView className="flex-1 bg-white">
-      <Header 
-        title={user.username || ''} // Add empty string as fallback
-        color="black" 
-        goBack={true}
-      />
-      <View className="flex-1 items-center">
-        <Text className='text-black font-bold text-3xl'>
-          {user.username}
+ return (
+   <SafeAreaView className="flex-1 bg-white">
+     <Header title={profile.user.username} color="black" goBack={true} />
+     <View className='h-full bg-white'>
+     <View className="h-96 w-full">
+       {profile.profilepicture ? (
+         <Image
+           source={{ uri: profile.profilepicture }}
+           className="w-full h-full"
+         />
+       ) : (
+         <View className="w-full h-full bg-gray-300 items-center justify-center">
+           <Text className="text-4xl text-gray-400">No Image</Text>
+         </View>
+       )}
+     </View>
+
+     <View className="p-4 mx-2 bg-white mt-5 shadow-sm  rounded-3xl">
+      <View className="flex-row items-center gap-4 mb-4">
+        <Text className="text-3xl font-bold flex-1">
+          {profile.name}  <Text className='font-normal text-gray-600'>
+            {getAge(profile.birthdate)}
+          </Text>
         </Text>
       </View>
-    </SafeAreaView>
-  );
+      </View>
+
+       <View className="p-4 mx-2 bg-white mt-5 shadow-sm  rounded-3xl">
+        <Text className='text-xl font-bold'>About Me</Text>
+         <Text className="text-gray-600 text-lg">
+           {profile.aboutme || "No description yet"}
+         </Text>
+       </View>
+
+       
+     </View>
+     
+   </SafeAreaView>
+ );
 }
