@@ -171,16 +171,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
           router.push('/(auth)');
         } catch (error) {
           console.log(error);
-        } finally {
-          // Hide splash after a brief delay
-          setTimeout(async () => {
-            try {
-              await SplashScreen.hideAsync();
-            } catch (error) {
-              console.log("Error hiding splash screen:", error);
-            }
-          }, 500);
-        }
+        } 
       };
 
     const setActiveChatId = (chatId: string | null) => {
