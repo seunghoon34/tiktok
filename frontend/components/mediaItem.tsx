@@ -95,7 +95,6 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     if (likes.filter((like: any) => like.video_id === item.id).length === 0) {
       showHeartAnimation()
 
-
     try {
       const newLike = {
         video_id: item.id,
@@ -112,7 +111,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       if (result.status === 'matched') {
         console.log("Match: ",result.users[0],'and ', result.users[1]);
       }
-      showHeartAnimation()
+      
   
       
     } catch (error) {

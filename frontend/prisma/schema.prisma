@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DIRECT_URL")
+  extensions = [uuidOssp(map: "uuid-ossp")]
+}
+
+model User {
+  id         String     @id @unique
+  email      String     @unique
+  username       String    @unique
+  created_at DateTime   @default(now())
+  videos     Video[]
+  likes      Like[]
+  matchesAsUser1 Match[] @relation("UserOneMatches")
+  matchesAsUser2 Match[] @relation("UserTwoMatches")
+  comments   Comment[]
+  chatsAsUser1 Chat[] @relation("UserOneChats")
+  chatsAsUser2 Chat[] @relation("UserTwoChats")
+  messages Message[]
+  expo_push_token String?
+  sent_notifications      Notification[] @relation("SentNotifications")
+  received_notifications  Notification[] @relation("ReceivedNotifications")
+  userProfile UserProfile[]
+}
+
+model UserProfile {
+  user_id String
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  profilepicture String
+  name String
+  birthdate DateTime
+  aboutme String
+
+  @@unique([user_id])
+}
+
+model Video {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()"))
+  title      String
+  uri        String
+  user_id    String
+  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  likes      Like[]
+  created_at DateTime  @default(now())
+  comments   Comment[]
+}
+
+model Like {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()"))
+  user_id       String
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  video_id      String
+  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
+  video_user_id String
+  created_at    DateTime @default(now())
+}
+
+model Match {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  user1_id String
+  user2_id String
+  user1 User @relation("UserOneMatches", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2 User @relation("UserTwoMatches", fields: [user2_id], references: [id], onDelete: Cascade)
+  created_at DateTime @default(now())
+
+  @@unique([user1_id, user2_id])
+}
+
+model Comment {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()"))
+  user_id       String
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  video_id      String
+  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
+  video_user_id String
+  text          String
+  created_at    DateTime @default(now())
+}
+
+model Chat {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  user1_id String
+  user2_id String
+  created_at DateTime @default(now())
+  messages Message[]
+  user1 User @relation("UserOneChats", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2 User @relation("UserTwoChats", fields: [user2_id], references: [id], onDelete: Cascade)
+
+  @@unique([user1_id, user2_id])
+}
+
+model Message {
+  id String @id @default(dbgenerated("uuid_generate_v4()"))
+  chat_id String
+  sender_id String
+  content String
+  created_at DateTime @default(now())
+  read       Boolean  @default(false)
+  chat Chat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  sender User @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id          String   @id @default(dbgenerated("uuid_generate_v4()"))
+  type        NotificationType  // Using an enum for type safety
+  from_user   String   
+  to_user     String   
+  read        Boolean  @default(false)
+  created_at  DateTime @default(now())
+  
+  // Relations
+  sender    User @relation("SentNotifications", fields: [from_user], references: [id], onDelete: Cascade)
+  receiver  User @relation("ReceivedNotifications", fields: [to_user], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  SHOT
+  MATCH
+  PROFILE_VIEW
+}
