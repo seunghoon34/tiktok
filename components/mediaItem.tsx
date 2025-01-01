@@ -2,7 +2,7 @@ import { View, Text, Dimensions, Image, Pressable, Animated, TouchableOpacity } 
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
-import { useRef, useState } from 'react';
+import { useRef, useState, useEffect } from 'react';
 import { Video, ResizeMode } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { handleVideoLike } from '@/utils/videoMatching';
@@ -42,8 +42,32 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const heartScale = useRef(new Animated.Value(0)).current;
   const heartOpacity = useRef(new Animated.Value(0)).current;
   const [modalView, setModalView] = useState<'menu' | 'confirmReport' | 'confirmBlock'>('menu');
+  const [userProfile, setUserProfile] = useState(null);
 
+  useEffect(() => {
+    const getUserProfile = async () => {
+      const { data, error } = await supabase
+        .from('UserProfile')
+        .select(`
+          *,
+          user:User (
+            username
+          )
+        `)
+        .eq('user_id', item.User.id)
+        .single();
 
+      if (data) {
+        const { data: urlData } = await supabase.storage
+          .from('avatars')
+          .createSignedUrl(data.profilepicture, 3600);
+        if (urlData) {
+          setUserProfile({...data, profilepicture: urlData.signedUrl});
+        }
+      }
+    };
+    getUserProfile();
+  }, [item.User.id]);
 
   const handleAction = (action: 'report' | 'block') => {
     if (action === 'report') {
@@ -322,9 +346,20 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       }}>
         <View style={{flexDirection: 'row'}}>
           <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-            <Ionicons name="person-circle-outline" size={50} color="white" />
+            {userProfile?.profilepicture ? (
+              <Image 
+                source={{ uri: userProfile.profilepicture }}
+                className="w-[50px] h-[50px] rounded-full"
+              />
+            ) : (
+              <Ionicons 
+                name="person-circle-outline" 
+                size={50} 
+                color="white" 
+              />
+            )}
           </TouchableOpacity>
-          <View className='mt-1 ml-1'>
+          <View className='mt-2 ml-2'>
             <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
               <Text className='text-2xl font-bold text-white'>{item.User.username}</Text>
             </TouchableOpacity>

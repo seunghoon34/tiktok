@@ -109,8 +109,9 @@
             }
     
             console.log("Profile created successfully.");
-            router.back(); // Navigate back
             setImage(null); // Reset the image state
+            router.push('/(tabs)/profile'); // Navigate back
+
         } catch (error) {
             console.error("An error occurred:", error.message);
         } finally {

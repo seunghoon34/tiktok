@@ -16,6 +16,7 @@ export default function ActivityScreen() {
   const [isPremium, setIsPremium] = useState(true);
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
+  const [userProfiles, setUserProfiles] = useState({});
 
 
   const markSingleAsRead = async (notificationId: string) => {
@@ -200,7 +201,14 @@ export default function ActivityScreen() {
     >
       <View className="flex-row items-center">
         <View className="h-12 w-12 rounded-full bg-gray-200 items-center justify-center mr-3">
-          <Ionicons name="person" size={24} color="#9CA3AF" />
+          {userProfiles[item.userId] ? (
+            <Image 
+              source={{ uri: userProfiles[item.userId] }}
+              className="h-12 w-12 rounded-full"
+            />
+          ) : (
+            <Ionicons name="person" size={24} color="#9CA3AF" />
+          )}
         </View>
   
         <View className="flex-1">
@@ -233,6 +241,44 @@ export default function ActivityScreen() {
       </View>
     </TouchableOpacity>
   );
+
+  useEffect(() => {
+    const fetchUserProfiles = async () => {
+      const userIds = notifications.map(notification => notification.userId);
+      // Remove duplicates
+      const uniqueUserIds = [...new Set(userIds)];
+      
+      const profiles = {};
+      
+      await Promise.all(uniqueUserIds.map(async (userId) => {
+        const { data } = await supabase
+          .from('UserProfile')
+          .select(`
+            *,
+            user:User (
+              username
+            )
+          `)
+          .eq('user_id', userId)
+          .single();
+
+        if (data) {
+          const { data: urlData } = await supabase.storage
+            .from('avatars')
+            .createSignedUrl(data.profilepicture, 3600);
+          if (urlData) {
+            profiles[userId] = urlData.signedUrl;
+          }
+        }
+      }));
+
+      setUserProfiles(profiles);
+    };
+
+    if (notifications.length > 0) {
+      fetchUserProfiles();
+    }
+  }, [notifications]);
 
   return (
     <SafeAreaView className="flex-1 bg-white">

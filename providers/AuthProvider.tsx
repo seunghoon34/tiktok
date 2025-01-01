@@ -50,15 +50,57 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     }
 
-    const getUser = async (id:string) => {
-        const { data, error } = await supabase.from("User").select("*").eq("id",id).single();
-        if(error) throw error
-        await setUser(data);        
-        await getLikes(data.id);
-        console.log(data)
-        router.push('/(tabs)/profile')
+    const getUser = async (id: string) => {
+        try {
+            console.log('Fetching user with ID:', id); // Debug log
 
-    }
+            // First verify the user exists
+            const { data, error } = await supabase
+                .from("User")
+                .select("*")
+                .eq("id", id);
+            
+            console.log('User query result:', { data, error }); // Debug log
+
+            if (error) throw error;
+            if (!data || data.length === 0) {
+                console.log('No user found, retrying in 2 seconds...'); // Debug log
+                // If user not found, wait and retry once
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                const retryResult = await supabase
+                    .from("User")
+                    .select("*")
+                    .eq("id", id);
+                
+                console.log('Retry result:', retryResult); // Debug log
+                
+                if (retryResult.error || !retryResult.data || retryResult.data.length === 0) {
+                    throw new Error('User not found after retry');
+                }
+                await setUser(retryResult.data[0]);
+                await getLikes(retryResult.data[0].id);
+            } else {
+                await setUser(data[0]);
+                await getLikes(data[0].id);
+            }
+
+            // Check if user has a profile
+            const { data: profileData } = await supabase
+                .from('UserProfile')
+                .select('*')
+                .eq('user_id', id)
+                .single();
+
+            if (!profileData) {
+                router.push('/createprofile');
+            } else {
+                router.push('/(tabs)/profile');
+            }
+        } catch (error) {
+            console.error('Detailed error in getUser:', error); // More detailed error logging
+            router.push('/createprofile');
+        }
+    };
 
     const signIn = async (email: string, password: string) => {
         console.log(email, password)
@@ -72,24 +114,52 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     };
 
     const signUp = async (username: string, email: string, password: string) => {
-        const { data, error } = await supabase.auth.signUp({
-            email: email,
-            password: password,
-          });
-          if (error) throw error;
-          
-          if (!data.user?.id) throw new Error('User ID is undefined');
-      
-          const { error: userError } = await supabase.from('User').insert({
-            id: data.user.id,
-            email: email,
-            username: username,
-          });
-          if (userError) console.log(userError);
-          if(userError) throw userError;
-          getUser(data.user.id)
-          router.back()
-          router.push('/(tabs)')
+        try {
+            console.log('Starting signup process...'); // Debug log
+
+            // First create the auth user
+            const { data: authData, error: authError } = await supabase.auth.signUp({
+                email: email,
+                password: password,
+            });
+            
+            console.log('Auth signup result:', { authData, authError }); // Debug log
+
+            if (authError) throw authError;
+            if (!authData.user?.id) throw new Error('User ID is undefined');
+
+            // Add a delay to ensure auth is completed
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            console.log('Creating user record...'); // Debug log
+
+            // Then create the user record
+            const { data: userData, error: userError } = await supabase
+                .from('User')
+                .insert({
+                    id: authData.user.id,
+                    email: email,
+                    username: username,
+                })
+                .select() // Add this to get the created user data
+                .single();
+            
+            console.log('User creation result:', { userData, userError }); // Debug log
+
+            if (userError) throw userError;
+
+            // Add another delay to ensure user record is created
+            await new Promise(resolve => setTimeout(resolve, 2000));
+
+            console.log('Fetching created user...'); // Debug log
+
+            // Now get the user
+            await getUser(authData.user.id);
+            
+        } catch (error) {
+            console.error('Detailed error in signUp:', error); // More detailed error logging
+            throw error;
+        }
     };
 
     const signOut = async () => {

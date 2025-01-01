@@ -1,4 +1,4 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ScrollView } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ScrollView, Image } from 'react-native';
 import { useEffect, useState, useRef } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -15,8 +15,11 @@ export default function ChatScreen() {
   const [otherUser, setOtherUser] = useState(null);
   const flatListRef = useRef();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [otherUserProfile, setOtherUserProfile] = useState(null);
 
   const scrollViewRef = useRef<ScrollView>(null);
+
+  
 
   
 
@@ -228,6 +231,33 @@ export default function ChatScreen() {
     }, 50);
   };
 
+  useEffect(() => {
+    if (!otherUser) return;
+
+    const getOtherUserProfile = async () => {
+      const { data, error } = await supabase
+        .from('UserProfile')
+        .select(`
+          *,
+          user:User (
+            username
+          )
+        `)
+        .eq('user_id', otherUser.id)
+        .single();
+
+      if (data) {
+        const { data: urlData } = await supabase.storage
+          .from('avatars')
+          .createSignedUrl(data.profilepicture, 3600);
+        if (urlData) {
+          setOtherUserProfile({...data, profilepicture: urlData.signedUrl});
+        }
+      }
+    };
+    getOtherUserProfile();
+  }, [otherUser]);
+
   return (
     <View className="flex-1 bg-white">
       <SafeAreaView edges={['top']} className="flex-1 bg-white">
@@ -255,7 +285,19 @@ export default function ChatScreen() {
       {/* Avatar for other user */}
       {item.sender_id !== user.id && (
         <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
-          <Ionicons name="person-circle-outline" size={40} color="gray" className="mr-2" />
+          {otherUserProfile?.profilepicture ? (
+            <Image 
+              source={{ uri: otherUserProfile.profilepicture }}
+              className="w-10 h-10 rounded-full mr-2"
+            />
+          ) : (
+            <Ionicons 
+              name="person-circle-outline" 
+              size={40} 
+              color="gray" 
+              className="mr-2" 
+            />
+          )}
         </TouchableOpacity>
       )}
 

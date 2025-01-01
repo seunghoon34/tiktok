@@ -8,6 +8,7 @@ import * as Notifications from 'expo-notifications';
 import { NotificationProvider } from '@/providers/NotificationProvider';
 import { Host, Portal } from 'react-native-portalize';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
+import { ProfileProvider } from '@/providers/ProfileProvider';
 
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -48,19 +49,21 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
     <Host>
     <AuthProvider>
-      <NotificationProvider>
-        <Stack screenOptions={{ gestureEnabled: false}}>
-          <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-          <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
-          <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
-          <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
-          <Stack.Screen name="createprofile" options={{ headerShown: true }} />
+      <ProfileProvider>
+        <NotificationProvider>
+          <Stack screenOptions={{ gestureEnabled: false}}>
+            <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+            <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
+            <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
+            <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
+            <Stack.Screen name="createprofile" options={{ headerShown: false }} />
 
-          <Stack.Screen name="+not-found" />
-        </Stack>
-      </NotificationProvider>
+            <Stack.Screen name="+not-found" />
+          </Stack>
+        </NotificationProvider>
+      </ProfileProvider>
     </AuthProvider>
     </Host>
     </GestureHandlerRootView>
