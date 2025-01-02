@@ -247,12 +247,11 @@ export default function ChatScreen() {
         .single();
 
       if (data) {
-        const { data: urlData } = await supabase.storage
+        const publicUrl = supabase.storage
           .from('avatars')
-          .createSignedUrl(data.profilepicture, 3600);
-        if (urlData) {
-          setOtherUserProfile({...data, profilepicture: urlData.signedUrl});
-        }
+          .getPublicUrl(data.profilepicture).data.publicUrl;
+          
+        setOtherUserProfile({...data, profilepicture: publicUrl});
       }
     };
     getOtherUserProfile();

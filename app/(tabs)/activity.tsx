@@ -263,12 +263,11 @@ export default function ActivityScreen() {
           .single();
 
         if (data) {
-          const { data: urlData } = await supabase.storage
+          const publicUrl = supabase.storage
             .from('avatars')
-            .createSignedUrl(data.profilepicture, 3600);
-          if (urlData) {
-            profiles[userId] = urlData.signedUrl;
-          }
+            .getPublicUrl(data.profilepicture).data.publicUrl;
+          
+          profiles[userId] = publicUrl;
         }
       }));
 

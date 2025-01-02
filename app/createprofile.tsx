@@ -18,6 +18,7 @@
     import { supabase } from '@/utils/supabase';
     import { router } from 'expo-router';
     import { useAuth } from '@/providers/AuthProvider';
+    import * as ImageManipulator from 'expo-image-manipulator';
 
 
     const CreateProfileScreen = () => {
@@ -49,7 +50,13 @@
         });
 
         if (!result.canceled) {
-        setImage(result.assets[0].uri);
+        // Compress the image after picking
+        const compressed = await ImageManipulator.manipulateAsync(
+            result.assets[0].uri,
+            [{ resize: { width: 800 } }], // Resize to max width of 800px
+            { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG } // 70% quality JPEG
+        );
+        setImage(compressed.uri);
         }
     };
 
@@ -64,15 +71,25 @@
         setIsSubmitting(true);
     
         try {
+            if (!image) {
+                throw new Error("Please select an image");
+            }
+
+            // Compress image again before upload (in case it was changed)
+            const compressed = await ImageManipulator.manipulateAsync(
+                image,
+                [{ resize: { width: 800 } }],
+                { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+            );
+
             // Extract file name and extension
-            const fileName = image?.split('/').pop();
-            const extension = fileName?.split('.').pop();
-    
+            const fileName = `${user?.id}-${Date.now()}.jpg`; // Create unique filename
+
             // Create a file object for the image
             const file = {
-                type: `image/${extension}`,
+                type: 'image/jpeg',
                 name: fileName,
-                uri: image
+                uri: compressed.uri
             };
     
             // Upload file to Supabase Storage

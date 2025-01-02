@@ -58,12 +58,11 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         .single();
 
       if (data) {
-        const { data: urlData } = await supabase.storage
+        const publicUrl = supabase.storage
           .from('avatars')
-          .createSignedUrl(data.profilepicture, 3600);
-        if (urlData) {
-          setUserProfile({...data, profilepicture: urlData.signedUrl});
-        }
+          .getPublicUrl(data.profilepicture).data.publicUrl;
+        
+        setUserProfile({...data, profilepicture: publicUrl});
       }
     };
     getUserProfile();

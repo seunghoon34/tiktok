@@ -15,6 +15,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
+import * as ImageManipulator from 'expo-image-manipulator';
 
 const EditProfileScreen = () => {
  const [image, setImage] = useState(null);
@@ -70,7 +71,12 @@ const EditProfileScreen = () => {
    });
 
    if (!result.canceled) {
-     setImage(result.assets[0].uri);
+     const compressed = await ImageManipulator.manipulateAsync(
+       result.assets[0].uri,
+       [{ resize: { width: 800 } }],
+       { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+     );
+     setImage(compressed.uri);
    }
  };
 
@@ -86,12 +92,17 @@ const EditProfileScreen = () => {
      let profilePicturePath = null;
 
      if (image && !image.startsWith('http')) {
-       const fileName = image?.split('/').pop();
-       const extension = fileName?.split('.').pop();
+       const compressed = await ImageManipulator.manipulateAsync(
+         image,
+         [{ resize: { width: 800 } }],
+         { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
+       );
+
+       const fileName = `${user?.id}-${Date.now()}.jpg`;
        const file = {
-         type: `image/${extension}`,
+         type: 'image/jpeg',
          name: fileName,
-         uri: image
+         uri: compressed.uri
        };
 
        const { data: uploadData, error: uploadError } = await supabase.storage
