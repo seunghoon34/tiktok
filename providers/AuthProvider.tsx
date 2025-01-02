@@ -20,8 +20,9 @@ export const AuthContext = createContext({
     likes: [],
     getLikes: async (userId: string) => {},
     setActiveChatId: (chatId: string | null) => {},  // Changed to match function name
-    currentChatId: null
-
+    currentChatId: null,
+    blockedUsers: [] as string[],
+    getBlockedUsers: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext)
@@ -31,6 +32,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const router = useRouter()
     const [likes,setLikes] = useState([])
     const [currentChatId, setCurrentChatId] = useState(null);   
+    const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
 
     const getLikes = async (userId: string, immediateUpdate?: any[]) => {
         if(!user) {
@@ -180,6 +182,62 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         setCurrentChatId(chatId);
     };
 
+    const getBlockedUsers = async () => {
+        if (!user) return [];
+        
+        try {
+            const { data: blockedData, error: blockError } = await supabase
+                .from('UserBlock')
+                .select('blocker_id, blocked_id')
+                .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+            if (blockError) throw blockError;
+
+            // Create array of user IDs to exclude (both blocked and blockers)
+            const excludeUserIds = blockedData?.reduce((acc: string[], block) => {
+                if (block.blocker_id === user.id) acc.push(block.blocked_id);
+                if (block.blocked_id === user.id) acc.push(block.blocker_id);
+                return acc;
+            }, []);
+
+            setBlockedUsers(excludeUserIds || []);
+            return excludeUserIds || [];
+        } catch (error) {
+            console.error('Error fetching blocked users:', error);
+            return [];
+        }
+    };
+
+    useEffect(() => {
+        if (user) {
+            getBlockedUsers();
+        }
+    }, [user]);
+
+    useEffect(() => {
+        if (!user) return;
+
+        const subscription = supabase
+            .channel('blocked_users_changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'UserBlock',
+                    filter: `or(blocker_id.eq.${user.id},blocked_id.eq.${user.id})`
+                },
+                () => {
+                    getBlockedUsers(); // Refresh blocked users list when changes occur
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [user]);
+
     useEffect(() => {
         const handleAuthStateChange = async (session) => {
           try {
@@ -310,7 +368,18 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     }, [user]);
 
     return (
-        <AuthContext.Provider value={{ user, signIn, signUp, signOut, likes, getLikes , setActiveChatId, currentChatId}}>
+        <AuthContext.Provider value={{ 
+            user, 
+            signIn, 
+            signUp, 
+            signOut, 
+            likes, 
+            getLikes, 
+            setActiveChatId, 
+            currentChatId,
+            blockedUsers,
+            getBlockedUsers,
+        }}>
             {children}
         </AuthContext.Provider>
     );

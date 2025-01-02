@@ -17,6 +17,7 @@ export default function ActivityScreen() {
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
   const [userProfiles, setUserProfiles] = useState({});
+  const { blockedUsers } = useAuth();
 
 
   const markSingleAsRead = async (notificationId: string) => {
@@ -157,6 +158,7 @@ export default function ActivityScreen() {
           sender:from_user (id, username)
         `)
         .eq('to_user', user.id)
+        .not('from_user', 'in', blockedUsers.length > 0 ? `(${blockedUsers.join(',')})` : '(0)')
         .order('created_at', { ascending: false });
 
       if (error) throw error;

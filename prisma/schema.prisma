@@ -32,6 +32,10 @@ model User {
   sent_notifications      Notification[] @relation("SentNotifications")
   received_notifications  Notification[] @relation("ReceivedNotifications")
   userProfile UserProfile[]
+  blockedUsers     UserBlock[] @relation("BlockerUser")
+  blockedByUsers   UserBlock[] @relation("BlockedUser")
+  reportsMade      Report[]    @relation("ReporterUser")
+  reportsReceived  Report[]    @relation("ReportedUser")
 }
 
 model UserProfile {
@@ -128,4 +132,51 @@ enum NotificationType {
   SHOT
   MATCH
   PROFILE_VIEW
+}
+
+model UserBlock {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()"))
+  blocker_id    String
+  blocked_id    String
+  created_at    DateTime @default(now())
+  blocker       User     @relation("BlockerUser", fields: [blocker_id], references: [id], onDelete: Cascade)
+  blocked       User     @relation("BlockedUser", fields: [blocked_id], references: [id], onDelete: Cascade)
+
+  @@unique([blocker_id, blocked_id])
+}
+
+model Report {
+  id            String       @id @default(dbgenerated("uuid_generate_v4()"))
+  reporter_id   String
+  reported_id   String
+  content_type  ContentType
+  content_id    String
+  reason        ReportReason
+  status        ReportStatus @default(PENDING)
+  description   String?
+  created_at    DateTime     @default(now())
+  resolved_at   DateTime?
+  
+  reporter      User         @relation("ReporterUser", fields: [reporter_id], references: [id], onDelete: Cascade)
+  reported      User         @relation("ReportedUser", fields: [reported_id], references: [id], onDelete: Cascade)
+}
+
+enum ContentType {
+  CONTENT
+  USER
+}
+
+enum ReportReason {
+  INAPPROPRIATE_CONTENT
+  HARASSMENT
+  SPAM
+  FAKE_PROFILE
+  OTHER
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  RESOLVED
+  DISMISSED
 }

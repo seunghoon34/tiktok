@@ -1,5 +1,5 @@
 import { Video, ResizeMode } from 'expo-av';
-import { StyleSheet, View, Image, TouchableOpacity } from 'react-native';
+import { StyleSheet, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 
 interface PreviewMediaProps {
@@ -7,13 +7,15 @@ interface PreviewMediaProps {
   cameraMode: boolean;
   onDelete: () => void;
   onSave: () => void;
+  isUploading: boolean;
 }
 
 export default function PreviewMedia({ 
   uri, 
   cameraMode, 
   onDelete, 
-  onSave 
+  onSave, 
+  isUploading 
 }: PreviewMediaProps) {
   if (!uri) return <View style={styles.previewContainer} />;
   
@@ -48,8 +50,16 @@ export default function PreviewMedia({
 
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
-        <TouchableOpacity onPress={onSave} style={styles.saveButton}>
-          <Ionicons name="checkmark-circle-outline" size={100} color="white" />
+        <TouchableOpacity 
+          onPress={onSave} 
+          style={styles.saveButton}
+          disabled={isUploading}
+        >
+          {isUploading ? (
+            <ActivityIndicator size="large" color="white" />
+          ) : (
+            <Ionicons name="checkmark-circle-outline" size={100} color="white" />
+          )}
         </TouchableOpacity>
       </View>
     </View>

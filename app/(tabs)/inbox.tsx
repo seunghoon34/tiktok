@@ -147,7 +147,7 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
 export default function InboxScreen() {
  const [chats, setChats] = useState([]);
  const { user } = useAuth();
-
+ const { blockedUsers } = useAuth();
  const fetchChats = async () => {
    const { data, error } = await supabase
      .from('Chat')
@@ -166,6 +166,8 @@ export default function InboxScreen() {
        )
      `)
      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+     .not('user1_id', 'in', `(${blockedUsers.join(',')})`)
+      .not('user2_id', 'in', `(${blockedUsers.join(',')})`)
      .limit(10);
 
    if (error) {

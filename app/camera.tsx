@@ -18,6 +18,7 @@ export default function CameraScreen() {
   const [uri, setUri] = useState("")
   const { user } = useAuth() 
   const router = useRouter()
+  const [isUploading, setIsUploading] = useState(false);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -89,28 +90,33 @@ export default function CameraScreen() {
 
 
   const saveUri = async () =>{
-    const formData = new FormData;
-    const fileName = uri?.split('/').pop()
-    formData.append('file',{
-        uri: uri,
-        type: `video/${fileName?.split('.').pop()}`,
-        name: fileName,
-    });
-    const { data, error } = await supabase.storage.from('videos').upload(fileName, formData, {
-        cacheControl: '3600000000',
-        upsert: false
-    });
-    if(error) console.error(error);
-    const { error: videoError } = await supabase.from('Video').insert({
-        title: "test_title",
-        uri: data?.path,
-        user_id: user?.id
-    })
-    if(videoError) console.error(videoError)
-    router.back()
-    setUri("");
-
-
+    setIsUploading(true);
+    try {
+        const formData = new FormData;
+        const fileName = uri?.split('/').pop()
+        formData.append('file',{
+            uri: uri,
+            type: `video/${fileName?.split('.').pop()}`,
+            name: fileName,
+        });
+        const { data, error } = await supabase.storage.from('videos').upload(fileName, formData, {
+            cacheControl: '3600000000',
+            upsert: false
+        });
+        if(error) console.error(error);
+        const { error: videoError } = await supabase.from('Video').insert({
+            title: "test_title",
+            uri: data?.path,
+            user_id: user?.id
+        })
+        if(videoError) console.error(videoError)
+        router.back()
+        setUri("");
+    } catch (error) {
+        console.error(error);
+    } finally {
+        setIsUploading(false);
+    }
 }
 
 const deleteUri = () =>{
@@ -133,6 +139,7 @@ const deleteUri = () =>{
         cameraMode={cameraMode}
         onDelete={deleteUri}
         onSave={saveUri}
+        isUploading={isUploading}
       />
     ) : cameraMode ? (
       <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'}>

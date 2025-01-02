@@ -7,13 +7,16 @@ import Header from '@/components/header';
 import { Ionicons } from '@expo/vector-icons';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
+import { reportContent, blockUser } from '@/utils/userModeration';
 
 export default function UserScreen() {
  const params = useLocalSearchParams();
  const [profile, setProfile] = useState(null);
  const router = useRouter();
  const modalRef = useRef<Modalize>(null);
- const [modalView, setModalView] = useState<'menu' | 'confirmBlock'>('menu');
+ const [modalView, setModalView] = useState<'menu' | 'confirmBlock' | 'reportReasons' | 'confirmReportReason'>('menu');
+ const [selectedReason, setSelectedReason] = useState<'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'SPAM' | 'FAKE_PROFILE' | 'OTHER' | null>(null);
+ const { user } = useAuth();
 
  useEffect(() => {
   const getProfile = async () => {
@@ -53,6 +56,11 @@ export default function UserScreen() {
  const getAge = (birthdate) => {
    return new Date().getFullYear() - new Date(birthdate).getFullYear();
  };
+
+ const handleReasonSelect = (reason: 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'SPAM' | 'FAKE_PROFILE' | 'OTHER') => {
+  setSelectedReason(reason);
+  setModalView('confirmReportReason');
+};
 
  return (
    <SafeAreaView className="flex-1 bg-white">
@@ -125,8 +133,16 @@ export default function UserScreen() {
        onClose={() => setModalView('menu')}
      >
        <View className="py-2 pb-10">
-         {modalView === 'menu' ? (
+         {modalView === 'menu' && (
            <>
+             <TouchableOpacity
+               className="flex-row items-center px-4 py-3 active:bg-gray-800"
+               onPress={() => setModalView('reportReasons')}
+             >
+               <Ionicons name="person-remove-outline" size={24} color="red" className="mr-3" />
+               <Text className="text-red-600 text-[16px]">Report {profile.user.username}</Text>
+             </TouchableOpacity>
+
              <TouchableOpacity
                className="flex-row items-center px-4 py-3 active:bg-gray-800"
                onPress={() => setModalView('confirmBlock')}
@@ -143,17 +159,94 @@ export default function UserScreen() {
                <Text className="text-white text-[16px]">Cancel</Text>
              </TouchableOpacity>
            </>
-         ) : (
+         )}
+
+         {modalView === 'reportReasons' && (
+           <View className="px-4 py-3">
+             <Text className="text-white text-lg mb-4">
+               Why are you reporting this user?
+             </Text>
+             
+             {(['INAPPROPRIATE_CONTENT', 'HARASSMENT', 'SPAM', 'FAKE_PROFILE', 'OTHER'] as const).map((reason) => (
+               <TouchableOpacity
+                 key={reason}
+                 className="active:bg-gray-800 rounded-lg py-3 mb-3"
+                 onPress={() => handleReasonSelect(reason)}
+               >
+                 <Text className="text-white text-center text-lg">
+                   {reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                 </Text>
+               </TouchableOpacity>
+             ))}
+             
+             <TouchableOpacity
+               className="active:bg-gray-800 rounded-lg py-3"
+               onPress={() => setModalView('menu')}
+             >
+               <Text className="text-white text-center text-lg">Cancel</Text>
+             </TouchableOpacity>
+           </View>
+         )}
+
+         {modalView === 'confirmReportReason' && (
+           <View className="px-4 py-3">
+             <Text className="text-white text-lg mb-4">
+               Are you sure you want to report {profile.user.username} for{' '}
+               {selectedReason?.toLowerCase().replace(/_/g, ' ')}?
+             </Text>
+             
+             <TouchableOpacity
+               className="bg-red-500 rounded-lg py-3 mb-3"
+               onPress={async () => {
+                 if (!selectedReason) return;
+                 try {
+                   const result = await reportContent(
+                     user.id,
+                     params.user_id,
+                     'USER',
+                     params.user_id,
+                     selectedReason
+                   );
+                   
+                   if (result.status === 'success') {
+                     modalRef.current?.close();
+                     setModalView('menu');
+                     setSelectedReason(null);
+                   }
+                 } catch (error) {
+                   console.error('Error reporting:', error);
+                 }
+               }}
+             >
+               <Text className="text-white text-center font-semibold text-lg">Submit Report</Text>
+             </TouchableOpacity>
+             
+             <TouchableOpacity
+               className="bg-gray-600 rounded-lg py-3"
+               onPress={() => setModalView('reportReasons')}
+             >
+               <Text className="text-white text-center text-lg">Go Back</Text>
+             </TouchableOpacity>
+           </View>
+         )}
+
+         {modalView === 'confirmBlock' && (
            <View className="px-4 py-3">
              <Text className="text-white text-lg mb-4">
                Are you sure you want to block {profile.user.username}?
              </Text>
              <TouchableOpacity
                className="bg-red-500 rounded-lg py-3 mb-3"
-               onPress={() => {
-                 // Handle block user logic here
-                 modalRef.current?.close();
-                 setModalView('menu');
+               onPress={async () => {
+                 try {
+                   const result = await blockUser(user.id, params.user_id);
+                   if (result.status === 'success' || result.status === 'already_blocked') {
+                     modalRef.current?.close();
+                     setModalView('menu');
+                   }
+                 } catch (error) {
+                   console.error('Error blocking user:', error);
+                 }
                }}
              >
                <Text className="text-white text-center font-semibold text-lg">Block User</Text>

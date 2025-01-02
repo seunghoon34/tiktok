@@ -30,10 +30,13 @@ export default function HomeScreen() {
   const router = useRouter();
   const [refreshing, setRefreshing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [videoIds, setVideoIds] = useState<Set<string>>(new Set());
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    getVideos().then(() => setRefreshing(false));
+    setVideos([]);
+    getVideos(false).then(() => setRefreshing(false));
   }, []);
 
   const viewabilityConfig = useRef({
@@ -77,7 +80,9 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const getSignedUrls = async (media: MediaItem[]) => {
+  const getSignedUrls = async (media: MediaItem[], loadMore = false) => {
+    if (!media || media.length === 0) return;
+
     const { data, error } = await supabase.storage
       .from('videos')
       .createSignedUrls(
@@ -85,20 +90,50 @@ export default function HomeScreen() {
         60 * 60 * 24
       );
 
-    let mediaUrls = media?.map((item) => {
-      item.signedUrl = data?.find((signedUrl) => signedUrl.path === item.uri)?.signedUrl;
-      return item;
-    });
-    setVideos(mediaUrls);
+    const timestamp = Date.now();
+    let mediaUrls = media?.map((item, index) => ({
+      ...item,
+      id: loadMore ? `${item.id}-${timestamp}-${index}` : item.id,
+      signedUrl: data?.find((signedUrl) => signedUrl.path === item.uri)?.signedUrl
+    }));
+    
+    setVideos(prev => [...prev, ...mediaUrls]);
+    console.log('Updated videos length:', videos.length + mediaUrls.length);
   };
 
-  const getVideos = async () => {
+  const getVideos = async (loadMore = false) => {
     try {
-      setIsLoading(true);
+      if (!loadMore) {
+        setIsLoading(true);
+      } else {
+        setLoadingMore(true);
+      }
+
+      // First, get list of blocked users (both directions - users we blocked and users who blocked us)
+      const { data: blockedUsers, error: blockError } = await supabase
+        .from('UserBlock')
+        .select('blocker_id, blocked_id')
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+      if (blockError) throw blockError;
+
+      // Create array of user IDs to exclude (both blocked and blockers)
+      const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
+        if (block.blocker_id === user.id) acc.push(block.blocked_id);
+        if (block.blocked_id === user.id) acc.push(block.blocker_id);
+        return acc;
+      }, []);
+
+      // Add current user's ID to exclude list (we already exclude this, but being explicit)
+      excludeUserIds.push(user.id);
+
+      // Get videos excluding blocked users
       const { data, error } = await supabase
         .from('Video')
         .select('*, User(username, id)')
-        .neq('user_id', user.id)
+        .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
+             excludeUserIds.length > 0 ? 'in' : 'eq', 
+             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -107,12 +142,14 @@ export default function HomeScreen() {
         ...item,
         type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
       }));
+
+      await getSignedUrls(mediaWithTypes, loadMore);
       
-      await getSignedUrls(mediaWithTypes);
     } catch (error) {
       console.error('Error fetching videos:', error);
     } finally {
       setIsLoading(false);
+      setLoadingMore(false);
     }
   };
 
@@ -129,41 +166,48 @@ export default function HomeScreen() {
     );
   };
 
+  const handleLoadMore = () => {
+    console.log("Loading more videos...");
+    if (isLoading || loadingMore) return;
+    getVideos(true);
+  };
+
   return (
     <View className="flex-1 bg-black">
-        {isLoading?(<LoadingScreen/>):(
-      <FlatList
-        ref={flatListRef}
-        data={videos}
-        renderItem={renderMediaItem}
-        keyExtractor={(item) => item.uri}
-        pagingEnabled={true}
-        snapToAlignment="center"
-        decelerationRate="fast"
-        disableIntervalMomentum={true}
-        showsVerticalScrollIndicator={false}
-        snapToInterval={Dimensions.get('window').height}
-        viewabilityConfig={viewabilityConfig}
-        onViewableItemsChanged={onViewableItemsChanged}
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingVertical: 0 }}
-        removeClippedSubviews={true}
-        maxToRenderPerBatch={2}
-        windowSize={3}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor="#fff"
-            title="Pull to refresh"
-            titleColor="#fff"
-            progressViewOffset={40}
-          />
-        
-        }
-      />
-    )}
-     
+      {isLoading && videos.length === 0 ? (<LoadingScreen/>) : (
+        <FlatList
+          ref={flatListRef}
+          data={videos}
+          renderItem={renderMediaItem}
+          keyExtractor={(item) => item.id}
+          pagingEnabled={true}
+          snapToAlignment="center"
+          decelerationRate="fast"
+          disableIntervalMomentum={true}
+          showsVerticalScrollIndicator={false}
+          snapToInterval={Dimensions.get('window').height}
+          viewabilityConfig={viewabilityConfig}
+          onViewableItemsChanged={onViewableItemsChanged}
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingVertical: 0 }}
+          removeClippedSubviews={true}
+          maxToRenderPerBatch={2}
+          windowSize={3}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor="#fff"
+              title="Pull to refresh"
+              titleColor="#fff"
+              progressViewOffset={40}
+            />
+          }
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          onEndReachedThresholdRelative={0.5}
+        />
+      )}
     </View>
   );
 }

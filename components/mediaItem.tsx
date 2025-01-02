@@ -10,6 +10,7 @@ import LoadingScreen from '@/components/loading';
 import React from 'react';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
+import { reportContent, blockUser } from '@/utils/userModeration';
 
 interface MediaItemProps {
   item: {
@@ -29,6 +30,10 @@ interface MediaItemProps {
   onMuteChange: () => void;
 }
 
+type ReportReason = 'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'SPAM' | 'FAKE_PROFILE' | 'OTHER';
+type ModalView = 'menu' | 'confirmReport' | 'confirmBlock' | 'reportReasons' | 'confirmReportReason';
+type ReportType = 'USER' | 'CONTENT';
+
 export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onMuteChange }: MediaItemProps) => {
   const [showMuteIcon, setShowMuteIcon] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,8 +46,10 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [showHeart, setShowHeart] = useState(false);
   const heartScale = useRef(new Animated.Value(0)).current;
   const heartOpacity = useRef(new Animated.Value(0)).current;
-  const [modalView, setModalView] = useState<'menu' | 'confirmReport' | 'confirmBlock'>('menu');
+  const [modalView, setModalView] = useState<ModalView>('menu');
   const [userProfile, setUserProfile] = useState(null);
+  const [reportType, setReportType] = useState<ReportType>('CONTENT');
+  const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -68,9 +75,13 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     getUserProfile();
   }, [item.User.id]);
 
-  const handleAction = (action: 'report' | 'block') => {
-    if (action === 'report') {
-      setModalView('confirmReport');
+  const handleAction = (action: 'reportContent' | 'reportUser' | 'block') => {
+    if (action === 'reportContent') {
+      setReportType('CONTENT');
+      setModalView('reportReasons');
+    } else if (action === 'reportUser') {
+      setReportType('USER');
+      setModalView('reportReasons');
     } else if (action === 'block') {
       setModalView('confirmBlock');
     }
@@ -246,6 +257,33 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     
   };
 
+  const handleReasonSelect = (reason: ReportReason) => {
+    setSelectedReason(reason);
+    setModalView('confirmReportReason');
+  };
+
+  const submitReport = async () => {
+    if (!selectedReason) return;
+    
+    try {
+      const result = await reportContent(
+        user.id,
+        item.User.id,
+        reportType,
+        reportType === 'CONTENT' ? item.id : item.User.id,
+        selectedReason
+      );
+      
+      if (result.status === 'success') {
+        modalRef.current?.close();
+        setModalView('menu');
+        setSelectedReason(null);
+      }
+    } catch (error) {
+      console.error('Error reporting:', error);
+    }
+  };
+
   return (
     <Pressable 
       onPress={handlePress}
@@ -417,7 +455,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         <>
           <TouchableOpacity
             className="flex-row items-center px-4 py-3 active:bg-gray-800"
-            onPress={() => handleAction('report')}
+            onPress={() => handleAction('reportContent')}
           >
             <Ionicons name="flag-outline" size={24} color="red" className="mr-3" />
             <Text className="text-red-600 text-[16px]">Report Content</Text>
@@ -425,6 +463,14 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
 
           <TouchableOpacity
             className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            onPress={() => handleAction('reportUser')}
+          >
+            <Ionicons name="person-remove-outline" size={24} color="red" className="mr-3" />
+            <Text className="text-red-600 text-[16px]">Report User</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="flex-row items-center px-4 py-3 active:bg-black"
             onPress={() => handleAction('block')}
           >
             <Ionicons name="ban-outline" size={24} color="red" className="mr-3" />
@@ -432,42 +478,78 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            className="flex-row items-center px-4 py-3 active:bg-black"
             onPress={() => modalRef.current?.close()}
           >
             <Ionicons name="close-outline" size={24} color="white" className="mr-3" />
             <Text className="text-white text-[16px]">Cancel</Text>
           </TouchableOpacity>
         </>
-      ) : modalView === 'confirmReport' ? (
+      ) : modalView === 'reportReasons' ? (
         <View className="px-4 py-3">
-          <Text className="text-white text-lg mb-4">Are you sure you want to report this content?</Text>
+          <Text className="text-white text-lg mb-4">
+            Why are you reporting this {reportType === 'CONTENT' ? 'content' : 'user'}?
+          </Text>
+          
+          {(['INAPPROPRIATE_CONTENT', 'HARASSMENT', 'SPAM', 'FAKE_PROFILE', 'OTHER'] as ReportReason[]).map((reason) => (
+            <TouchableOpacity
+              key={reason}
+              className="active:bg-gray-800 rounded-lg py-3 mb-3"
+              onPress={() => handleReasonSelect(reason)}
+            >
+              <Text className="text-white text-center text-lg">
+                {reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+              </Text>
+            </TouchableOpacity>
+          ))}
+          
           <TouchableOpacity
-            className="bg-red-500 rounded-lg py-3 mb-3"
-            onPress={() => {
-              // Handle report submission here
-              modalRef.current?.close();
-              setModalView('menu');
-            }}
-          >
-            <Text className="text-white text-center font-semibold text-lg">Report Content</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-gray-600 rounded-lg py-3"
+            className="active:bg-gray-800 rounded-lg py-3"
             onPress={() => setModalView('menu')}
           >
             <Text className="text-white text-center text-lg">Cancel</Text>
           </TouchableOpacity>
         </View>
-      ) : (
+      ) : modalView === 'confirmReportReason' ? (
+        <View className="px-4 py-3">
+          <Text className="text-white text-lg mb-4">
+            Are you sure you want to report this {reportType === 'CONTENT' ? 'content' : 'user'} for{' '}
+            {selectedReason?.toLowerCase().replace(/_/g, ' ')}?
+          </Text>
+          
+          <TouchableOpacity
+            className="bg-red-500 rounded-lg py-3 mb-3"
+            onPress={submitReport}
+          >
+            <Text className="text-white text-center font-semibold text-lg">Submit Report</Text>
+          </TouchableOpacity>
+          
+          <TouchableOpacity
+            className="bg-gray-600 rounded-lg py-3"
+            onPress={() => setModalView('reportReasons')}
+          >
+            <Text className="text-white text-center text-lg">Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      ) : modalView === 'confirmBlock' ? (
         <View className="px-4 py-3">
           <Text className="text-white text-lg mb-4">Are you sure you want to block {item.User.username}?</Text>
           <TouchableOpacity
             className="bg-red-500 rounded-lg py-3 mb-3"
-            onPress={() => {
-              // Handle block user logic here
-              modalRef.current?.close();
-              setModalView('menu');
+            onPress={async () => {
+              try {
+                const result = await blockUser(user.id, item.User.id);
+                if (result.status === 'success') {
+                  modalRef.current?.close();
+                  setModalView('menu');
+                } else if (result.status === 'already_blocked') {
+                  // Optionally handle already blocked case
+                  modalRef.current?.close();
+                  setModalView('menu');
+                }
+              } catch (error) {
+                console.error('Error blocking user:', error);
+              }
             }}
           >
             <Text className="text-white text-center font-semibold text-lg">Block User</Text>
@@ -479,7 +561,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             <Text className="text-white text-center text-lg">Cancel</Text>
           </TouchableOpacity>
         </View>
-      )}
+      ) : null}
     </View>
   </Modalize>
 </Portal>
