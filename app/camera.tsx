@@ -3,7 +3,7 @@ import RecordingProgress from '@/components/recordingProgress';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -19,6 +19,8 @@ export default function CameraScreen() {
   const { user } = useAuth() 
   const router = useRouter()
   const [isUploading, setIsUploading] = useState(false);
+  const [flashMode, setFlashMode] = useState<FlashMode>('off');
+  const [isTorchOn, setIsTorchOn] = useState(false);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -68,24 +70,20 @@ export default function CameraScreen() {
     if (isRecording) {
       setIsRecording(false);
       cameraRef.current?.stopRecording();
-
     } else {
       setIsRecording(true);
+      setIsTorchOn(true)
       try {
         const video = await cameraRef.current?.recordAsync({
-          maxDuration: 5 // in seconds
+          maxDuration: 5, // in seconds
         });
         setUri(video?.uri);
-
       } finally {
-        
+        setIsRecording(false);
+        setIsTorchOn(false)
 
-        setIsRecording(false); // This ensures isRecording is set to false after recording
       }
     }
-
-    
-
   };
 
 
@@ -131,6 +129,12 @@ const deleteUri = () =>{
 
   }
 
+  const toggleFlash = () => {
+   
+      setFlashMode(current => current === 'off' ? 'on' : 'off');
+    
+  };
+
   return (
   <View style={{flex: 1, backgroundColor: 'black' } }>
     {uri ? (
@@ -142,7 +146,7 @@ const deleteUri = () =>{
         isUploading={isUploading}
       />
     ) : cameraMode ? (
-      <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'}>
+      <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} flash={flashMode}>
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
@@ -153,6 +157,23 @@ const deleteUri = () =>{
         }).deleteContainer}>
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name='close-circle' size={40} color="white"/>
+          </TouchableOpacity>
+        </View>
+        
+        <View style={StyleSheet.create({
+          flashContainer: {
+            position: 'absolute',
+            top: 40,
+            right: 20,
+            zIndex: 1
+          }
+        }).flashContainer}>
+          <TouchableOpacity onPress={toggleFlash}>
+            <Ionicons 
+              name={flashMode === 'off' ? 'flash-off' : 'flash'} 
+              size={40} 
+              color="white"
+            />
           </TouchableOpacity>
         </View>
         
@@ -173,7 +194,7 @@ const deleteUri = () =>{
         </View>
       </CameraView>
     ) : (
-      <CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'}>
+      <CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} enableTorch={isTorchOn && flashMode == 'on'}>
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
@@ -208,6 +229,39 @@ const deleteUri = () =>{
             </Text>
           </View>
         )}
+        {facing === 'front' && flashMode == "on" && isRecording && (
+  <View 
+    style={{
+      position: 'absolute',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: '#E8F0FF',
+      opacity: 0.5,
+      zIndex: 999
+    }}
+    pointerEvents="none"
+  />
+)}
+
+        <View style={StyleSheet.create({
+          flashContainer: {
+            position: 'absolute',
+            top: 40,
+            right: 20,
+            zIndex: 1
+          }
+        }).flashContainer}>
+          <TouchableOpacity onPress={toggleFlash}>
+            <Ionicons 
+              name={flashMode === 'off' ? 'flash-off' : 'flash'} 
+              size={40} 
+              color="white"
+            />
+          </TouchableOpacity>
+        </View>
+        
 
         <View className='flex-1 justify-end'>
           <View className='flex-row items-center justify-around mb-10'>

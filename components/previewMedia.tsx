@@ -40,7 +40,7 @@ export default function PreviewMedia({
           <Video
             source={{ uri }}
             style={styles.preview}
-            useNativeControls
+            useNativeControls={false}
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay
