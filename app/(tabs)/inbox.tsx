@@ -147,91 +147,89 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
 export default function InboxScreen() {
  const [chats, setChats] = useState([]);
  const { user } = useAuth();
- const { blockedUsers } = useAuth();
+
  const fetchChats = async () => {
-   const { data, error } = await supabase
-     .from('Chat')
-     .select(`
-       id, 
-       created_at,
-       user1:user1_id (
+   try {
+     // First, get list of blocked users
+     const { data: blockedUsers, error: blockError } = await supabase
+       .from('UserBlock')
+       .select('blocker_id, blocked_id')
+       .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+     if (blockError) throw blockError;
+
+     // Create array of user IDs to exclude
+     const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
+       if (block.blocker_id === user.id) acc.push(block.blocked_id);
+       if (block.blocked_id === user.id) acc.push(block.blocker_id);
+       return acc;
+     }, []);
+
+     // Get chats excluding blocked users
+     const { data, error } = await supabase
+       .from('Chat')
+       .select(`
          id, 
-         username,
-         UserProfile (profilepicture)
-       ),
-       user2:user2_id (
-         id,
-         username,
-         UserProfile (profilepicture)
-       )
-     `)
-     .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-     .not('user1_id', 'in', `(${blockedUsers.join(',')})`)
-      .not('user2_id', 'in', `(${blockedUsers.join(',')})`)
-     .limit(10);
+         created_at,
+         user1:user1_id (
+           id, 
+           username,
+           UserProfile (profilepicture)
+         ),
+         user2:user2_id (
+           id,
+           username,
+           UserProfile (profilepicture)
+         )
+       `)
+       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+       .not(excludeUserIds.length > 0 ? 'user1_id' : 'id', 
+            excludeUserIds.length > 0 ? 'in' : 'eq', 
+            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+       .not(excludeUserIds.length > 0 ? 'user2_id' : 'id', 
+            excludeUserIds.length > 0 ? 'in' : 'eq', 
+            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+       .limit(10);
 
-   if (error) {
+     if (error) throw error;
+
+     const chatsWithDetails = await Promise.all(data.map(async (chat) => {
+       const { data: messagesData } = await supabase
+         .from('Message')
+         .select('content, created_at')
+         .eq('chat_id', chat.id)
+         .order('created_at', { ascending: false })
+         .limit(1);
+
+       const { count } = await supabase
+         .from('Message')
+         .select('*', { count: 'exact' })
+         .eq('chat_id', chat.id)
+         .eq('read', false)
+         .neq('sender_id', user.id);
+
+       return {
+         ...chat,
+         lastMessage: messagesData[0] || null,
+         unreadCount: count || 0
+       };
+     }));
+
+     const sortedChats = chatsWithDetails.sort((a, b) => {
+       const aTime = a.lastMessage 
+         ? new Date(a.lastMessage.created_at).getTime() 
+         : new Date(a.created_at).getTime();
+       const bTime = b.lastMessage 
+         ? new Date(b.lastMessage.created_at).getTime() 
+         : new Date(b.created_at).getTime();
+       return bTime - aTime;
+     });
+
+     setChats(sortedChats);
+   } catch (error) {
      console.error('Error fetching chats:', error);
-     return;
    }
-
-   const chatsWithDetails = await Promise.all(data.map(async (chat) => {
-     const { data: messagesData } = await supabase
-       .from('Message')
-       .select('content, created_at')
-       .eq('chat_id', chat.id)
-       .order('created_at', { ascending: false })
-       .limit(1);
-
-     const { count } = await supabase
-       .from('Message')
-       .select('*', { count: 'exact' })
-       .eq('chat_id', chat.id)
-       .eq('read', false)
-       .neq('sender_id', user.id);
-
-     return {
-       ...chat,
-       lastMessage: messagesData[0] || null,
-       unreadCount: count || 0
-     };
-   }));
-
-   const sortedChats = chatsWithDetails.sort((a, b) => {
-     const aTime = a.lastMessage 
-       ? new Date(a.lastMessage.created_at).getTime() 
-       : new Date(a.created_at).getTime();
-     const bTime = b.lastMessage 
-       ? new Date(b.lastMessage.created_at).getTime() 
-       : new Date(b.created_at).getTime();
-     return bTime - aTime;
-   });
-
-   setChats(sortedChats);
  };
-
- useEffect(() => {
-   if (!user) return;
- 
-   const subscription = supabase
-     .channel('chat_updates')
-     .on(
-       'postgres_changes',
-       {
-         event: '*',
-         schema: 'public',
-         table: 'Message'
-       },
-       () => {
-         fetchChats();
-       }
-     )
-     .subscribe();
- 
-   return () => {
-     subscription.unsubscribe();
-   };
- }, [user]);
 
  useFocusEffect(
    useCallback(() => {

@@ -108,6 +108,17 @@
     
             console.log("File uploaded successfully:", uploadData?.path);
     
+            // Update username in User table
+            const { error: userError } = await supabase
+                .from('User')
+                .update({ username: formData.username })
+                .eq('id', user?.id);
+
+            if (userError) {
+                console.error("Failed to update username:", userError.message);
+                throw new Error("Failed to update username.");
+            }
+
             // Insert profile data into UserProfile table
             const { error: profileError } = await supabase
                 .from('UserProfile')
@@ -115,7 +126,7 @@
                     name: formData.name,
                     birthdate: formData.birthdate,
                     aboutme: formData.aboutme,
-                    profilepicture: uploadData?.path, // Path to the uploaded image
+                    profilepicture: uploadData?.path,
                     user_id: user?.id
                 });
     

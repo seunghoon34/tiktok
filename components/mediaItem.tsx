@@ -11,6 +11,7 @@ import React from 'react';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
+import Toast from 'react-native-toast-message';
 
 interface MediaItemProps {
   item: {
@@ -278,9 +279,19 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         modalRef.current?.close();
         setModalView('menu');
         setSelectedReason(null);
+        Toast.show({
+          type: 'success',
+          text1: 'Report Submitted',
+          text2: 'Thank you for helping keep our community safe',
+        });
       }
     } catch (error) {
       console.error('Error reporting:', error);
+      Toast.show({
+        type: 'error',
+        text1: 'Error',
+        text2: 'Failed to submit report. Please try again.',
+      });
     }
   };
 
@@ -542,13 +553,27 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
                 if (result.status === 'success') {
                   modalRef.current?.close();
                   setModalView('menu');
+                  Toast.show({
+                    type: 'success',
+                    text1: 'User Blocked',
+                    text2: `You have blocked ${item.User.username}`,
+                  });
                 } else if (result.status === 'already_blocked') {
-                  // Optionally handle already blocked case
                   modalRef.current?.close();
                   setModalView('menu');
+                  Toast.show({
+                    type: 'info',
+                    text1: 'Already Blocked',
+                    text2: `${item.User.username} is already blocked`,
+                  });
                 }
               } catch (error) {
                 console.error('Error blocking user:', error);
+                Toast.show({
+                  type: 'error',
+                  text1: 'Error',
+                  text2: 'Failed to block user. Please try again.',
+                });
               }
             }}
           >
@@ -565,6 +590,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     </View>
   </Modalize>
 </Portal>
+      <Toast />
     </Pressable>
   );
 };

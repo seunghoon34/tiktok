@@ -15,7 +15,7 @@ import * as SplashScreen from 'expo-splash-screen';
 export const AuthContext = createContext({
     user: null,
     signIn: async (email: string, password: string) =>{},
-    signUp: async (username: string, email: string, password: string) =>{},
+    signUp: async (email: string, password: string) =>{},
     signOut: async () =>{},
     likes: [],
     getLikes: async (userId: string) => {},
@@ -115,51 +115,49 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     };
 
-    const signUp = async (username: string, email: string, password: string) => {
+    const signUp = async (email: string, password: string) => {
         try {
-            console.log('Starting signup process...'); // Debug log
+            console.log('Starting signup process...');
 
-            // First create the auth user
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
             });
             
-            console.log('Auth signup result:', { authData, authError }); // Debug log
+            console.log('Auth signup result:', { authData, authError });
 
             if (authError) throw authError;
             if (!authData.user?.id) throw new Error('User ID is undefined');
 
-            // Add a delay to ensure auth is completed
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            console.log('Creating user record...'); // Debug log
+            // Generate a temporary unique username using timestamp
+            const tempUsername = `user_${Date.now()}`;
 
-            // Then create the user record
+            console.log('Creating user record...');
+
             const { data: userData, error: userError } = await supabase
                 .from('User')
                 .insert({
                     id: authData.user.id,
                     email: email,
-                    username: username,
+                    username: tempUsername, // Add temporary username
                 })
-                .select() // Add this to get the created user data
+                .select()
                 .single();
             
-            console.log('User creation result:', { userData, userError }); // Debug log
+            console.log('User creation result:', { userData, userError });
 
             if (userError) throw userError;
 
-            // Add another delay to ensure user record is created
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            console.log('Fetching created user...'); // Debug log
+            console.log('Fetching created user...');
 
-            // Now get the user
             await getUser(authData.user.id);
             
         } catch (error) {
-            console.error('Detailed error in signUp:', error); // More detailed error logging
+            console.error('Detailed error in signUp:', error);
             throw error;
         }
     };
@@ -181,62 +179,6 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
         setCurrentChatId(chatId);
     };
-
-    const getBlockedUsers = async () => {
-        if (!user) return [];
-        
-        try {
-            const { data: blockedData, error: blockError } = await supabase
-                .from('UserBlock')
-                .select('blocker_id, blocked_id')
-                .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
-
-            if (blockError) throw blockError;
-
-            // Create array of user IDs to exclude (both blocked and blockers)
-            const excludeUserIds = blockedData?.reduce((acc: string[], block) => {
-                if (block.blocker_id === user.id) acc.push(block.blocked_id);
-                if (block.blocked_id === user.id) acc.push(block.blocker_id);
-                return acc;
-            }, []);
-
-            setBlockedUsers(excludeUserIds || []);
-            return excludeUserIds || [];
-        } catch (error) {
-            console.error('Error fetching blocked users:', error);
-            return [];
-        }
-    };
-
-    useEffect(() => {
-        if (user) {
-            getBlockedUsers();
-        }
-    }, [user]);
-
-    useEffect(() => {
-        if (!user) return;
-
-        const subscription = supabase
-            .channel('blocked_users_changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'UserBlock',
-                    filter: `or(blocker_id.eq.${user.id},blocked_id.eq.${user.id})`
-                },
-                () => {
-                    getBlockedUsers(); // Refresh blocked users list when changes occur
-                }
-            )
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [user]);
 
     useEffect(() => {
         const handleAuthStateChange = async (session) => {
@@ -377,8 +319,6 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             getLikes, 
             setActiveChatId, 
             currentChatId,
-            blockedUsers,
-            getBlockedUsers,
         }}>
             {children}
         </AuthContext.Provider>

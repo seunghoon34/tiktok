@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "tiktok",
-    "slug": "tiktok",
+    "name": "Shoot!",
+    "slug": "shoot",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/s2icon.png",
@@ -15,7 +15,10 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.seunghoon34.tiktok"
+      "bundleIdentifier": "com.seunghoon34.shoot",
+      "infoPlist": {
+    "UIBackgroundModes": ["remote-notification"]
+  }
     },
     "android": {
       "adaptiveIcon": {
@@ -25,10 +28,9 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.NOTIFICATIONS"
       ],
-      "package": "com.seunghoon34.tiktok"
+      "package": "com.seunghoon34.shoot"
     },
     "web": {
       "bundler": "metro",
@@ -50,9 +52,7 @@
         {
           "icon": "./assets/images/s2icon.png",
           "color": "#ffffff",
-          // "sounds": [
-          //   "./local/path/to/your/notification-sound.wav"
-          // ]
+         
         }
       ],
       [

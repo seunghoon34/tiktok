@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
+import Toast from 'react-native-toast-message';
 
 export default function UserScreen() {
  const params = useLocalSearchParams();
@@ -212,9 +213,19 @@ export default function UserScreen() {
                      modalRef.current?.close();
                      setModalView('menu');
                      setSelectedReason(null);
+                     Toast.show({
+                       type: 'success',
+                       text1: 'Report Submitted',
+                       text2: 'Thank you for helping keep our community safe',
+                     });
                    }
                  } catch (error) {
                    console.error('Error reporting:', error);
+                   Toast.show({
+                     type: 'error',
+                     text1: 'Error',
+                     text2: 'Failed to submit report. Please try again.',
+                   });
                  }
                }}
              >
@@ -243,9 +254,19 @@ export default function UserScreen() {
                    if (result.status === 'success' || result.status === 'already_blocked') {
                      modalRef.current?.close();
                      setModalView('menu');
+                     Toast.show({
+                       type: 'success',
+                       text1: 'User Blocked',
+                       text2: `You have blocked ${profile.user.username}`,
+                     });
                    }
                  } catch (error) {
                    console.error('Error blocking user:', error);
+                   Toast.show({
+                     type: 'error',
+                     text1: 'Error',
+                     text2: 'Failed to block user. Please try again.',
+                   });
                  }
                }}
              >
@@ -262,6 +283,7 @@ export default function UserScreen() {
        </View>
      </Modalize>
    </Portal>
+   <Toast />
  </SafeAreaView>
  );
 }

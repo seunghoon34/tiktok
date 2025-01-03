@@ -17,8 +17,6 @@ export default function ActivityScreen() {
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
   const [userProfiles, setUserProfiles] = useState({});
-  const { blockedUsers } = useAuth();
-
 
   const markSingleAsRead = async (notificationId: string) => {
     try {
@@ -148,6 +146,22 @@ export default function ActivityScreen() {
   };
   const fetchNotifications = async () => {
     try {
+      // First, get list of blocked users
+      const { data: blockedUsers, error: blockError } = await supabase
+        .from('UserBlock')
+        .select('blocker_id, blocked_id')
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+      if (blockError) throw blockError;
+
+      // Create array of user IDs to exclude
+      const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
+        if (block.blocker_id === user.id) acc.push(block.blocked_id);
+        if (block.blocked_id === user.id) acc.push(block.blocker_id);
+        return acc;
+      }, []);
+
+      // Get notifications excluding blocked users
       const { data, error } = await supabase
         .from('Notification')
         .select(`
@@ -158,8 +172,9 @@ export default function ActivityScreen() {
           sender:from_user (id, username)
         `)
         .eq('to_user', user.id)
-        .not('from_user', 'in', blockedUsers.length > 0 ? `(${blockedUsers.join(',')})` : '(0)')
-        .order('created_at', { ascending: false });
+        .not(excludeUserIds.length > 0 ? 'from_user' : 'id', 
+             excludeUserIds.length > 0 ? 'in' : 'eq', 
+             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id);
 
       if (error) throw error;
 

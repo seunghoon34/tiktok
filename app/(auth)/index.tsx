@@ -24,6 +24,7 @@ export default function LoginScreen() {
         {/* <Text className='text-black font-bold text-3xl text-center py-2 mb-2'>Log in</Text> */}
       <TextInput
         placeholder='Email'
+        placeholderTextColor="#666"
         className='bg-white p-4 rounded-lg border border-gray-300 w-full mb-3'
         value= {email}
         onChangeText={setEmail}
@@ -31,13 +32,14 @@ export default function LoginScreen() {
       <TextInput
       secureTextEntry={true}
         placeholder='Password'
+        placeholderTextColor="#666"
         className='bg-white p-4 rounded-lg border border-gray-300 w-full mb-3'
         value= {password}
         onChangeText={setPassword}
       />
       <View className='py-2'>
       <TouchableOpacity className='bg-red-500 px-4 py-2 rounded-lg' onPress={()=>signIn(email,password)}>
-        <Text className=' text-white font-bold text-2xl text-center'>Login</Text>
+        <Text className=' text-white font-bold text-2xl text-center'>Signin</Text>
       </TouchableOpacity>
       <Link href={"/(auth)/signup"} className='text-center py-6'>Dont have an account yet? Sign up here</Link>
       </View>
