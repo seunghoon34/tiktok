@@ -53,26 +53,6 @@ useFocusEffect(
      icon: "person-outline",
      title: "Edit Profile",
      onPress: () => router.push('/editprofile'),
-   },
-   {
-     icon: "notifications-outline",
-     title: "Notifications",
-     onPress: () => router.push('/notifications'),
-   },
-   {
-     icon: "lock-closed-outline",
-     title: "Privacy",
-     onPress: () => router.push('/privacy'),
-   },
-   {
-     icon: "help-circle-outline",
-     title: "Help & Support",
-     onPress: () => router.push('/support'),
-   },
-   {
-     icon: "settings-outline",
-     title: "Settings",
-     onPress: () => router.push('/settings'),
    }
  ];
 
@@ -106,7 +86,7 @@ useFocusEffect(
            )}
            <TouchableOpacity 
              className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2"
-             onPress={() => router.push('/editprofile')}
+             onPress={() => router.push('/mystory')}
            >
              <Ionicons name="camera" size={16} color="white" />
            </TouchableOpacity>
@@ -116,20 +96,18 @@ useFocusEffect(
            {user?.email?.split('@')[0]}
          </Text>
          <Text className="text-gray-500">
-           {profile?.name}
-         </Text>
-         <Text className="text-gray-500 mt-1">
+           {profile?.name} <Text className="text-gray-500 mt-1">
            {profile?.birthdate ? 
-             `${new Date().getFullYear() - new Date(profile.birthdate).getFullYear()} years old` 
-             : ''}
+             `${new Date().getFullYear() - new Date(profile.birthdate).getFullYear()}` 
+             : ''}  
          </Text>
-         <Text className="text-gray-500">
-           {user?.email}
          </Text>
+        
+        
          
          <View className="w-full mt-4 px-4">
            <View className="flex-row justify-between items-center">
-             <Text className="text-gray-600 font-medium mb-2">About</Text>
+             <Text className="text-gray-600 font-medium mb-2">About Me</Text>
              <TouchableOpacity 
                onPress={() => router.push('/editprofile')}
                className="mb-2"
@@ -142,36 +120,10 @@ useFocusEffect(
            </Text>
          </View>
          
-         <View className='flex-row gap-3'>
-           <TouchableOpacity 
-             className="mt-4 px-6 py-2 bg-blue-500 rounded-full"
-             onPress={() => router.push('/editprofile')}
-           >
-             <Text className="text-white font-medium">Edit Profile</Text>
-           </TouchableOpacity>
-           <TouchableOpacity 
-             className="mt-4 px-6 py-2 bg-blue-500 rounded-full"
-             onPress={() => router.push('/createprofile')}
-           >
-             <Text className="text-white font-medium">Create Profile</Text>
-           </TouchableOpacity>
-         </View>
+         
        </View>
 
-       <View className="flex-row justify-around py-4 border-y border-gray-100">
-         <View className="items-center">
-           <Text className="font-bold text-lg">0</Text>
-           <Text className="text-gray-500">Friends</Text>
-         </View>
-         <View className="items-center">
-           <Text className="font-bold text-lg">0</Text>
-           <Text className="text-gray-500">Photos</Text>
-         </View>
-         <View className="items-center">
-           <Text className="font-bold text-lg">0</Text>
-           <Text className="text-gray-500">Posts</Text>
-         </View>
-       </View>
+      
 
        <View className="px-4 py-2">
          {menuItems.map((item, index) => (
@@ -186,11 +138,13 @@ useFocusEffect(
            </TouchableOpacity>
          ))}
        </View>
+     </ScrollView>
 
-       <Text className="text-center text-gray-400 py-4">
+     <View className="absolute bottom-0 w-full pb-4">
+       <Text className="text-center text-gray-400">
          Version 1.0.0
        </Text>
-     </ScrollView>
+     </View>
    </SafeAreaView>
  );
 }
