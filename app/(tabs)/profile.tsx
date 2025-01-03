@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import "../../global.css";
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/utils/supabase';
@@ -11,6 +11,9 @@ export default function ProfileScreen() {
  const { signOut, user } = useAuth();
  const [profile, setProfile] = useState(null);
  const [imageUrl, setImageUrl] = useState(null);
+ const [hasVideos, setHasVideos] = useState(false);
+
+ const router = useRouter()
 
 
  const getProfile = async () => {
@@ -23,9 +26,20 @@ export default function ProfileScreen() {
   if (data) setProfile(data);
 };
 
+const checkUserVideos = async () => {
+  const { data, error } = await supabase
+    .from('Video')
+    .select('id')
+    .eq('user_id', user?.id)
+    .limit(1);
+  
+  setHasVideos(data && data.length > 0);
+};
+
 useFocusEffect(
   useCallback(() => {
     getProfile();
+    checkUserVideos();
   }, [])
 );
 
@@ -74,22 +88,31 @@ useFocusEffect(
      <ScrollView className="flex-1">
        <View className="items-center px-4 py-6">
          <View className="relative">
-           {profile?.profilepicture ? (
-             <Image 
-               source={{ uri: imageUrl }}
-               className="h-24 w-24 rounded-full"
-             />
-           ) : (
-             <View className="h-24 w-24 rounded-full bg-gray-200 items-center justify-center">
-               <Ionicons name="person" size={40} color="#9CA3AF" />
-             </View>
-           )}
            <TouchableOpacity 
-             className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2"
-             onPress={() => router.push('/mystory')}
+             onPress={() => hasVideos ? router.push('/stories') : null}
+             activeOpacity={hasVideos ? 0.7 : 1}
            >
-             <Ionicons name="camera" size={16} color="white" />
+             <View className={`${hasVideos ? 'p-1 rounded-full bg-gradient-to-tr from-yellow-400 to-fuchsia-600' : ''}`}>
+               {profile?.profilepicture ? (
+                 <Image 
+                   source={{ uri: imageUrl }}
+                   className="h-24 w-24 rounded-full"
+                 />
+               ) : (
+                 <View className="h-24 w-24 rounded-full bg-gray-200 items-center justify-center">
+                   <Ionicons name="person" size={40} color="#9CA3AF" />
+                 </View>
+               )}
+             </View>
            </TouchableOpacity>
+           {!hasVideos && (
+             <TouchableOpacity 
+               className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2"
+               onPress={() => router.push('/stories')}
+             >
+               <Ionicons name="camera" size={16} color="white" />
+             </TouchableOpacity>
+           )}
          </View>
          
          <Text className="text-xl font-bold mt-4">

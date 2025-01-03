@@ -102,13 +102,9 @@
                   <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
                   <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
                   <Stack.Screen name="createprofile" options={{ headerShown: false }} />
-                  <Stack.Screen 
-                    name="mystory" 
-                    options={{ 
-                      headerShown: false,
-                      presentation: 'modal'
-                    }} 
-                  />
+                  <Stack.Screen name="stories" options={{ headerShown: true }} />
+
+                  
 
                   <Stack.Screen name="+not-found" />
                 </Stack>

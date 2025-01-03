@@ -38,7 +38,7 @@ export default function Mystoryscreen() {
   const fetchStories = async () => {
     try {
       const { data, error } = await supabase
-        .from('Story')
+        .from('Video')
         .select('*')
         .eq('user_id', user?.id)
         .order('created_at', { ascending: false });
@@ -48,7 +48,7 @@ export default function Mystoryscreen() {
       const storiesWithUrls = await Promise.all(
         data.map(async (story) => {
           const { data: signedUrl } = await supabase.storage
-            .from('stories')
+            .from('videos')
             .createSignedUrl(story.uri, 3600);
 
           return {
