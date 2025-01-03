@@ -16,6 +16,7 @@ import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
+import Header from '@/components/header';
 
 const EditProfileScreen = () => {
  const [image, setImage] = useState(null);
@@ -151,6 +152,7 @@ const EditProfileScreen = () => {
        contentContainerStyle={styles.content}
        enableOnAndroid={true}
      >
+      <Header title='' color={'black'} goBack={true}/>
        <View style={styles.content}>
          <Text style={styles.title}>Edit Profile</Text>
 
@@ -305,7 +307,7 @@ const styles = StyleSheet.create({
       borderColor: '#E5E7EB',
   },
   button: {
-      backgroundColor: '#3B82F6',
+      backgroundColor: '#ff5757',
       padding: 16,
       borderRadius: 8,
       marginTop: 10,

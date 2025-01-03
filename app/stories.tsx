@@ -10,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import Toast from 'react-native-toast-message';
+import LoadingScreen from '@/components/loading';
 
 type Story = {
   id: string;
@@ -26,10 +27,20 @@ export default function Mystoryscreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [mute, setMute] = useState(false);
   const modalRef = useRef<Modalize>(null);
+  const [status, setStatus] = useState({});
+  const videoRef = useRef(null);
   
   const router = useRouter();
   const { user } = useAuth();
   const screenWidth = Dimensions.get('window').width;
+
+  const [mediaType, setMediaType] = useState('');
+
+useEffect(() => {
+  // Check file extension
+  const fileExt = stories[currentIndex]?.uri.split('.').pop()?.toLowerCase();
+  setMediaType(fileExt === 'mp4' ? 'video' : 'image');
+}, [currentIndex, stories]);
 
   useEffect(() => {
     fetchStories();
@@ -90,8 +101,7 @@ export default function Mystoryscreen() {
     try {
       const story = stories[currentIndex];
       
-      await supabase.storage.from('stories').remove([story.uri]);
-      await supabase.from('Story').delete().eq('id', story.id);
+      await supabase.from('Video').delete().eq('id', story.id);
 
       const newStories = stories.filter((_, index) => index !== currentIndex);
       setStories(newStories);
@@ -110,30 +120,55 @@ export default function Mystoryscreen() {
     }
   };
 
-  if (isLoading || stories.length === 0) return null;
+  if (isLoading || stories.length === 0) return <LoadingScreen/>;
 
   return (
     <View className="flex-1 bg-black">
       <Pressable onPress={handlePress} className="flex-1">
-        {stories[currentIndex]?.type === 'video' ? (
+      {mediaType === 'video' ? (
+        <>
           <Video
+            ref={videoRef}
             source={{ uri: stories[currentIndex].signedUrl }}
-            style={{ width: '100%', height: '100%' }}
+            style={{
+              width: Dimensions.get('window').width,
+              height: Dimensions.get('window').height,
+              position: 'absolute',
+              top: 0
+            }}
             resizeMode={ResizeMode.COVER}
             isLooping
-            shouldPlay
+            shouldPlay={true}
             isMuted={mute}
+            onLoadStart={() => setIsLoading(true)}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && !status.isBuffering) {
+                setIsLoading(false);
+              }
+            }}
           />
-        ) : (
-          <Image
-            source={{ uri: stories[currentIndex].signedUrl }}
-            style={{ width: '100%', height: '100%' }}
-            resizeMode="cover"
-          />
-        )}
+          {isLoading && (
+            <View style={{
+              position: 'absolute',
+              width: Dimensions.get('window').width,
+              height: Dimensions.get('window').height,
+              zIndex: 1,
+              backgroundColor: 'black'
+            }}>
+              <LoadingScreen />
+            </View>
+          )}
+        </>
+      ) : (
+        <Image
+          source={{ uri: stories[currentIndex].signedUrl }}
+          style={{ width: '100%', height: '100%' }}
+          resizeMode="cover"
+        />
+      )}
 
-        {/* Progress bar */}
-        <View className="absolute top-12 left-2 right-2 flex-row gap-1 z-10">
+        {/* Progress bar - moved to bottom */}
+        <View className="absolute bottom-12 left-2 right-2 flex-row gap-1 z-10">
           {stories.map((_, index) => (
             <View
               key={index}

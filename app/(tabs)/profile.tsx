@@ -87,32 +87,33 @@ useFocusEffect(
 
      <ScrollView className="flex-1">
        <View className="items-center px-4 py-6">
-         <View className="relative">
-           <TouchableOpacity 
-             onPress={() => hasVideos ? router.push('/stories') : null}
-             activeOpacity={hasVideos ? 0.7 : 1}
-           >
-             <View className={`${hasVideos ? 'p-1 rounded-full bg-gradient-to-tr from-yellow-400 to-fuchsia-600' : ''}`}>
-               {profile?.profilepicture ? (
-                 <Image 
-                   source={{ uri: imageUrl }}
-                   className="h-24 w-24 rounded-full"
-                 />
-               ) : (
-                 <View className="h-24 w-24 rounded-full bg-gray-200 items-center justify-center">
-                   <Ionicons name="person" size={40} color="#9CA3AF" />
-                 </View>
-               )}
-             </View>
-           </TouchableOpacity>
-           {!hasVideos && (
-             <TouchableOpacity 
-               className="absolute bottom-0 right-0 bg-blue-500 rounded-full p-2"
-               onPress={() => router.push('/stories')}
-             >
-               <Ionicons name="camera" size={16} color="white" />
-             </TouchableOpacity>
-           )}
+       <View className="relative">
+ {hasVideos ? (
+   <TouchableOpacity onPress={() => router.push('/stories')}>
+     <View className="p-0.5 rounded-full bg-red-400">
+       <View className="p-0.5 bg-white rounded-full">
+         <Image 
+           source={{ uri: imageUrl }}
+           className="h-24 w-24 rounded-full"
+         />
+       </View>
+     </View>
+   </TouchableOpacity>
+ ) : (
+   <View>
+     {profile?.profilepicture ? (
+       <Image 
+         source={{ uri: imageUrl }}
+         className="h-24 w-24 rounded-full"
+       />
+     ) : (
+       <View className="h-24 w-24 rounded-full bg-gray-200 items-center justify-center">
+         <Ionicons name="person" size={40} color="#9CA3AF" />
+       </View>
+     )}
+   </View>
+ )}
+           
          </View>
          
          <Text className="text-xl font-bold mt-4">

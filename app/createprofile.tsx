@@ -332,7 +332,7 @@
         borderColor: '#E5E7EB',
     },
     button: {
-        backgroundColor: '#3B82F6',
+        backgroundColor: '#ff5757',
         padding: 16,
         borderRadius: 8,
         marginTop: 10,
