@@ -141,7 +141,6 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     const signOut = async () => {
         try {
-            await SplashScreen.preventAutoHideAsync();
             const { error } = await supabase.auth.signOut();
             if (error) throw error;
             
@@ -151,13 +150,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         } catch (error) {
             console.error('Sign out error:', error);
             throw error;
-        } finally {
-            try {
-                await SplashScreen.hideAsync();
-            } catch (error) {
-                console.error('Error hiding splash screen:', error);
-            }
-        }
+        } 
     };
 
     const setActiveChatId = (chatId: string | null) => {
@@ -216,55 +209,60 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         }
     }, [user]);
 
-    // Message notifications
     useEffect(() => {
-        if (!user) return;
-
-        const subscription = supabase
-            .channel('global_messages')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'Message'
-                },
-                async (payload) => {
-                    if (payload.new.chat_id) {
-                        const { data: chat } = await supabase
-                            .from('Chat')
-                            .select('user1_id, user2_id')
-                            .eq('id', payload.new.chat_id)
-                            .single();
-
-                        if (chat && 
-                            (chat.user1_id === user.id || chat.user2_id === user.id) && 
-                            payload.new.sender_id !== user.id && 
-                            payload.new.chat_id !== currentChatId) {
-                            
-                            const { data: senderData } = await supabase
-                                .from('User')
-                                .select('username')
-                                .eq('id', payload.new.sender_id)
-                                .single();
-
-                            await sendMessageNotification(
-                                payload.new.sender_id,
-                                senderData.username,
-                                user.id,
-                                payload.new.chat_id
-                            );
-                        }
-                    }
-                }
-            )
-            .subscribe();
-
-        return () => {
-            subscription.unsubscribe();
-        };
-    }, [user, currentChatId]);
-
+      if (!user) return;
+  
+      const subscription = supabase
+          .channel('global_messages')
+          .on(
+              'postgres_changes',
+              {
+                  event: 'INSERT',
+                  schema: 'public',
+                  table: 'Message'
+              },
+              async (payload) => {
+                  // First check if the message is for the current user and they're not the sender
+                  if (payload.new.sender_id === user.id) {
+                      return; // Don't notify for messages the user sent
+                  }
+  
+                  // Check if user is currently in the chat
+                  if (payload.new.chat_id === currentChatId) {
+                      return; // Don't notify if user is in the chat
+                  }
+  
+                  const { data: chat } = await supabase
+                      .from('Chat')
+                      .select('user1_id, user2_id')
+                      .eq('id', payload.new.chat_id)
+                      .single();
+  
+                  // Check if user is part of this chat
+                  if (!chat || (chat.user1_id !== user.id && chat.user2_id !== user.id)) {
+                      return; // Don't notify if user is not part of the chat
+                  }
+  
+                  const { data: senderData } = await supabase
+                      .from('User')
+                      .select('username')
+                      .eq('id', payload.new.sender_id)
+                      .single();
+  
+                  await sendMessageNotification(
+                      payload.new.sender_id,
+                      senderData.username,
+                      user.id,
+                      payload.new.chat_id
+                  );
+              }
+          )
+          .subscribe();
+  
+      return () => {
+          subscription.unsubscribe();
+      };
+  }, [user, currentChatId]);
     // Notification tap handler
     useEffect(() => {
         if (!user) return;

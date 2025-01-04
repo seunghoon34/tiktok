@@ -125,42 +125,62 @@ export async function registerForPushNotifications(userId: string) {
     senderUsername: string,
     receiverId: string,
     chatId: string
-  ) {
+) {
     try {
-      const { data: userData, error: userError } = await supabase
-        .from('User')
-        .select('expo_push_token')
-        .eq('id', receiverId)
-        .single();
-  
-      if (userError || !userData?.expo_push_token) return;
-  
-      const message = {
-        to: userData.expo_push_token,
-        sound: 'default',
-        title: "New Message! 💬",
-        body: `New message from ${senderUsername}`,
-        data: { 
-          type: 'message',
-          chatId: chatId
-        },
-        priority: 'high',
-      channelId: 'default',
-      _displayInForeground: true,
-      badge: 1,
-    
-      };
-  
-      await fetch('https://exp.host/--/api/v2/push/send', {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Accept-encoding': 'gzip, deflate',
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(message),
-      });
+        const { data: userData, error: userError } = await supabase
+            .from('User')
+            .select('expo_push_token')
+            .eq('id', receiverId)
+            .single();
+
+        if (userError || !userData?.expo_push_token) {
+            console.warn(`No push token found for userId ${receiverId}`);
+            return;
+        }
+
+        console.log(`Sending message notification to: ${receiverId}, token: ${userData.expo_push_token}`);
+
+        const message = {
+            to: userData.expo_push_token,
+            sound: 'default',
+            title: "New Message! 💬",
+            body: `New message from ${senderUsername}`,
+            data: { 
+                type: 'message',
+                senderId: senderId,
+                senderName: senderUsername,
+                chatId: chatId
+            },
+            priority: 'high',
+            channelId: 'default',
+            _displayInForeground: true,
+            _category: "message",
+            badge: 1,
+            android: {
+                priority: 'high',
+                sound: 'default',
+                sticky: false,
+            },
+        };
+
+        const response = await fetch('https://exp.host/--/api/v2/push/send', {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                'Accept-encoding': 'gzip, deflate',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(message),
+        });
+
+        const result = await response.json();
+        if (!response.ok) {
+            console.error('Message notification error:', result);
+        } else {
+            console.log(`Message notification sent successfully to ${senderUsername}`);
+        }
+
     } catch (error) {
-      console.error('Error sending message notification:', error);
+        console.error('Error sending message notification:', error);
     }
-  }
+}

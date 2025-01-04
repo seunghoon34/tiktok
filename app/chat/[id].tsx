@@ -6,6 +6,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
+import { sendMessageNotification } from '@/utils/notifications';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState([]);
@@ -214,6 +215,9 @@ export default function ChatScreen() {
       console.error('Error sending message:', error);
       return;
     }
+
+    
+
 
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
