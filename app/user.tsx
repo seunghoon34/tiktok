@@ -9,6 +9,8 @@ import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
+import { FlatList } from 'react-native-reanimated/lib/typescript/Animated';
+import { ScrollView } from 'react-native-gesture-handler';
 
 export default function UserScreen() {
  const params = useLocalSearchParams();
@@ -65,13 +67,12 @@ export default function UserScreen() {
 
  return (
    <SafeAreaView className="flex-1 bg-white">
-     <View className="flex-row items-center justify-between w-full px-4 py-2">
+    <ScrollView>
+    <View className="flex-row items-center justify-between w-full px-4 py-3">
       <View className="w-10">
-        
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name="chevron-back" size={32} color="black"/>
-          </TouchableOpacity>
-     
+        <TouchableOpacity onPress={() => router.back()}>
+          <Ionicons name="chevron-back" size={32} color="black"/>
+        </TouchableOpacity>
       </View>
       
       <View className="flex-1 items-center">
@@ -84,40 +85,42 @@ export default function UserScreen() {
           <Ionicons name="ellipsis-vertical" size={32} color="black"/>
         </TouchableOpacity>
       </View>
-    </View>
-     <View className='h-full bg-white'>
-     <View className="h-96 w-full">
-       {profile.profilepicture ? (
-         <Image
-           source={{ uri: profile.profilepicture }}
-           className="w-full h-full"
-         />
-       ) : (
-         <View className="w-full h-full bg-gray-300 items-center justify-center">
-           <Text className="text-4xl text-gray-400">No Image</Text>
-         </View>
-       )}
      </View>
 
-     <View className="p-4 mx-2 bg-white mt-5 shadow-sm  rounded-3xl">
-      <View className="flex-row items-center gap-4 mb-4">
-        <Text className="text-3xl font-bold flex-1">
-          {profile.name}  <Text className='font-normal text-gray-600'>
-            {getAge(profile.birthdate)}
-          </Text>
-        </Text>
-      </View>
-      </View>
+     <View className='flex-1 bg-white'>
+       <View className="relative mx-4 mt-2">
+         <View className="aspect-[3/4] rounded-3xl overflow-hidden">
+           {profile.profilepicture ? (
+             <Image
+               source={{ uri: profile.profilepicture }}
+               className="w-full h-full"
+             />
+           ) : (
+             <View className="w-full h-full bg-gray-300 items-center justify-center">
+               <Text className="text-4xl text-gray-400">No Image</Text>
+             </View>
+           )}
+           
+           {/* Name and age overlay */}
+           <View className="absolute bottom-3 left-2 right-4 p-4 rounded-2xl">
+             <Text className="text-3xl font-bold text-white">
+               {profile.name},{' '}
+               <Text className='font-normal text-gray-200'>
+                 {getAge(profile.birthdate)}
+               </Text>
+             </Text>
+           </View>
+         </View>
+       </View>
 
-       <View className="p-4 mx-2 bg-white mt-5 shadow-sm  rounded-3xl">
-        <Text className='text-xl font-bold'>About Me</Text>
+       <View className="p-4 mx-4 bg-white mt-5 shadow-sm rounded-3xl">
+         <Text className='text-xl font-bold'>About Me</Text>
          <Text className="text-gray-600 text-lg">
            {profile.aboutme || "No description yet"}
          </Text>
        </View>
-
-       
      </View>
+     </ScrollView>
      
 
    <Portal>

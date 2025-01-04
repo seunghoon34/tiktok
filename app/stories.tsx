@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Dimensions, TouchableOpacity, Text } from 'react-native';
+import { View, Pressable, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Video, ResizeMode } from 'expo-av';
@@ -29,6 +29,10 @@ export default function Mystoryscreen() {
   const modalRef = useRef<Modalize>(null);
   const [status, setStatus] = useState({});
   const videoRef = useRef(null);
+  const [showMuteIcon, setShowMuteIcon] = useState(false);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+
+
   
   const router = useRouter();
   const { user } = useAuth();
@@ -36,10 +40,27 @@ export default function Mystoryscreen() {
 
   const [mediaType, setMediaType] = useState('');
 
+  const showMuteIconWithFade = () => {
+    setShowMuteIcon(true);
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1000),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowMuteIcon(false));
+  };
+
 useEffect(() => {
   // Check file extension
   const fileExt = stories[currentIndex]?.uri.split('.').pop()?.toLowerCase();
-  setMediaType(fileExt === 'mp4' ? 'video' : 'image');
+  setMediaType(fileExt === 'mov' ? 'video' : 'image');
 }, [currentIndex, stories]);
 
   useEffect(() => {
@@ -94,8 +115,12 @@ useEffect(() => {
       }
     } else {
       setMute(!mute);
+      showMuteIconWithFade();
+
     }
   };
+
+  
 
   const handleDelete = async () => {
     try {
@@ -158,13 +183,51 @@ useEffect(() => {
               <LoadingScreen />
             </View>
           )}
+          {showMuteIcon && (
+            <Animated.View style={[{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: [
+                { translateX: -25 },
+                { translateY: -25 },
+              ],
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 50,
+              padding: 15,
+              zIndex: 10,
+            }, {
+              opacity: fadeAnim
+            }]}>
+              <Ionicons 
+                name={mute ? 'volume-mute' : 'volume-high'} 
+                size={25} 
+                color="white"
+              />
+            </Animated.View>
+          )}
         </>
       ) : (
+        <>
         <Image
           source={{ uri: stories[currentIndex].signedUrl }}
           style={{ width: '100%', height: '100%' }}
           resizeMode="cover"
-        />
+              
+          />
+          {isLoading && (
+            <View style={{
+              position: 'absolute',
+              width: Dimensions.get('window').width,
+              height: Dimensions.get('window').height,
+              zIndex: 1,
+              backgroundColor: 'black'
+            }}>
+              <LoadingScreen />
+            </View>
+          )}
+          </>
+          
       )}
 
         {/* Progress bar - moved to bottom */}
