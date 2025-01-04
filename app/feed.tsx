@@ -1,4 +1,4 @@
-import { View, FlatList, Dimensions, AppStateStatus, AppState, TouchableOpacity, RefreshControl } from 'react-native';
+import { View, FlatList, Dimensions, AppStateStatus, AppState, TouchableOpacity, RefreshControl,Text } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -6,6 +6,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MediaItemComponent } from '@/components/mediaItem';
 import LoadingScreen from '@/components/loading';
+import Header from '@/components/header';
+import { SafeAreaView } from 'react-native-safe-area-context';
 interface MediaItem {
   uri: string;
   signedUrl: string;
@@ -134,6 +136,7 @@ export default function HomeScreen() {
         .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
              excludeUserIds.length > 0 ? 'in' : 'eq', 
              excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+        .gt('expired_at', new Date().toISOString())
         .order('created_at', { ascending: false });
       
       if (error) throw error;
@@ -174,7 +177,23 @@ export default function HomeScreen() {
 
   return (
     <View className="flex-1 bg-black">
-      {isLoading && videos.length === 0 ? (<LoadingScreen/>) : (
+      {
+        isLoading ? (
+          <SafeAreaView className="flex-1">
+            <View className="flex-1 items-center justify-center">
+              <LoadingScreen />
+            </View>
+          </SafeAreaView>
+        ) :
+      videos.length === 0? (
+        
+        <SafeAreaView className="flex-1">
+  <Header title="" color="white" goBack={true}/>
+  <View className="flex-1 items-center justify-center">
+    <Text className='text-white'>No shots at the moment</Text>
+  </View>
+</SafeAreaView>
+) : (
         <FlatList
           ref={flatListRef}
           data={videos}

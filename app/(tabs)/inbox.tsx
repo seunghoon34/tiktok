@@ -231,6 +231,29 @@ export default function InboxScreen() {
    }
  };
 
+ useEffect(() => {
+  if (!user) return;
+
+  // Set up realtime subscription
+  const subscription = supabase
+    .channel('inbox_changes')
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'Message',
+      filter: `chat_id=in.(${chats.map(chat => chat.id).join(',')})`,
+    }, () => {
+      // Refetch chats when a new message arrives
+      fetchChats();
+    })
+    .subscribe();
+
+  return () => {
+    // Cleanup subscription when component unmounts
+    subscription.unsubscribe();
+  };
+}, [chats, user]);
+
  useFocusEffect(
    useCallback(() => {
      if (user) {

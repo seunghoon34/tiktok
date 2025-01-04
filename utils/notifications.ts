@@ -2,6 +2,15 @@ import * as Notifications from 'expo-notifications';
 import { supabase } from '@/utils/supabase';
 import { Platform } from 'react-native';
 
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    priority: Notifications.AndroidNotificationPriority.HIGH,
+  }),
+});
+
 
 export async function registerForPushNotifications(userId: string) {
     console.log("Starting push notification registration");
@@ -86,6 +95,12 @@ export async function registerForPushNotifications(userId: string) {
           title: "New Match! 🎉",
           body: `You matched with ${username}!`,
           data: { type: 'match', matchedUser: username, chatId: chatId },
+          priority: 'high',
+      channelId: 'default',
+      _displayInForeground: true,
+      badge: 1,
+    
+          
         };
   
         await fetch('https://exp.host/--/api/v2/push/send', {
@@ -129,6 +144,11 @@ export async function registerForPushNotifications(userId: string) {
           type: 'message',
           chatId: chatId
         },
+        priority: 'high',
+      channelId: 'default',
+      _displayInForeground: true,
+      badge: 1,
+    
       };
   
       await fetch('https://exp.host/--/api/v2/push/send', {

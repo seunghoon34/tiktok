@@ -51,10 +51,12 @@
         "expo-notifications",
         {
           "icon": "./assets/images/s2icon.png",
-          "color": "#ffffff"
+          "color": "#ffffff",
+          "enableBackgroundRemoteNotifications": true
          
         }
       ],
+      
       [
         "expo-splash-screen",
         {
@@ -72,6 +74,7 @@
       ]
 
     ],
+    
     "experiments": {
       "typedRoutes": true
     },

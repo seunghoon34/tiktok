@@ -11,6 +11,7 @@ import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
 import { FlatList } from 'react-native-reanimated/lib/typescript/Animated';
 import { ScrollView } from 'react-native-gesture-handler';
+import SkeletonLoader from '@/components/userSkeleton';
 
 export default function UserScreen() {
  const params = useLocalSearchParams();
@@ -48,12 +49,7 @@ export default function UserScreen() {
  
 
  if (!profile) {
-   return (
-     <SafeAreaView className="flex-1 bg-white">
-       <Header title="" color="black" goBack={true} />
-       <Text>Loading...</Text>
-     </SafeAreaView>
-   );
+  return <SkeletonLoader />;
  }
 
  const getAge = (birthdate) => {

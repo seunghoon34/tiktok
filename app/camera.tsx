@@ -87,7 +87,7 @@ export default function CameraScreen() {
   };
 
 
-  const saveUri = async () =>{
+  const saveUri = async (isMuted: boolean = false) =>{
     setIsUploading(true);
     try {
         const formData = new FormData;
@@ -105,7 +105,8 @@ export default function CameraScreen() {
         const { error: videoError } = await supabase.from('Video').insert({
             title: "test_title",
             uri: data?.path,
-            user_id: user?.id
+            user_id: user?.id,
+            is_muted: isMuted,
         })
         if(videoError) console.error(videoError)
         router.back()
@@ -150,7 +151,7 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
-            top: 40,
+            top: 50,
             left: 20,
             zIndex: 1
           }
@@ -163,7 +164,7 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           flashContainer: {
             position: 'absolute',
-            top: 40,
+            top: 50,
             right: 20,
             zIndex: 1
           }
@@ -198,7 +199,7 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
-            top: 40,
+            top: 50,
             left: 20,
             zIndex: 1
           }
@@ -248,7 +249,7 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           flashContainer: {
             position: 'absolute',
-            top: 40,
+            top: 50,
             right: 20,
             zIndex: 1
           }

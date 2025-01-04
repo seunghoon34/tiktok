@@ -344,7 +344,7 @@
         fontWeight: '600',
     },
     buttonDisabled: {
-        backgroundColor: '#93C5FD',
+        backgroundColor: '##ff5757',
       }
     });
 

@@ -1,12 +1,13 @@
 import { Video, ResizeMode } from 'expo-av';
 import { StyleSheet, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useState } from 'react';
 
 interface PreviewMediaProps {
   uri: string;
   cameraMode: boolean;
   onDelete: () => void;
-  onSave: () => void;
+  onSave: (isMuted?: boolean) => void;
   isUploading: boolean;
 }
 
@@ -18,6 +19,9 @@ export default function PreviewMedia({
   isUploading 
 }: PreviewMediaProps) {
   if (!uri) return <View style={styles.previewContainer} />;
+
+  const [isMuted, setIsMuted] = useState(false);
+
   
   return (
     <View style={styles.previewContainer}>
@@ -27,6 +31,18 @@ export default function PreviewMedia({
           <Ionicons name="close-circle" size={40} color="white" />
         </TouchableOpacity>
       </View>
+
+      {!cameraMode && (
+        <View style={styles.muteButtonContainer}>
+          <TouchableOpacity onPress={() => setIsMuted(!isMuted)}>
+            <Ionicons 
+              name={isMuted ? "volume-mute" : "volume-high"} 
+              size={40} 
+              color="white" 
+            />
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Media preview */}
       <View style={styles.mediaContainer}>
@@ -44,6 +60,7 @@ export default function PreviewMedia({
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay
+            isMuted={isMuted}
           />
         )}
       </View>
@@ -51,7 +68,7 @@ export default function PreviewMedia({
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
-          onPress={onSave} 
+          onPress={()=>onSave(isMuted)} 
           style={styles.saveButton}
           disabled={isUploading}
         >
@@ -95,5 +112,11 @@ const styles = StyleSheet.create({
   saveButton: {
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  muteButtonContainer: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
+    zIndex: 2,
   },
 });

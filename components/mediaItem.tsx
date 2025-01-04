@@ -24,6 +24,9 @@ interface MediaItemProps {
     };
     title: string;
     id: string;
+    is_muted: boolean;
+    expired_at: string;
+    created_at: string;
   };
   isVisible: boolean;
   isScreenFocused: boolean;
@@ -51,6 +54,28 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [userProfile, setUserProfile] = useState(null);
   const [reportType, setReportType] = useState<ReportType>('CONTENT');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
+
+  const formatTimeDifference = (createdAt: string ) => {
+    // Get current time in local timezone
+    const now = new Date();
+    
+    // Parse created_at and convert to local timezone
+    const created = new Date(createdAt + 'Z');
+    
+    // Log times for debugging
+    
+    const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+  
+  
+    if (diffInHours >= 3) {
+      return '3h';
+    } else if (diffInHours >= 1) {
+      return `${diffInHours}h`;
+    } else {
+      return `${diffInMinutes}m`;
+    }
+  };
 
   useEffect(() => {
     const getUserProfile = async () => {
@@ -176,8 +201,10 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       setTimeout(() => {
         if (lastTap.current === now) {
           // If it wasn't a double tap, handle mute
-          onMuteChange();
-          showMuteIconWithFade();
+          if (!item.is_muted) {
+            onMuteChange();
+            showMuteIconWithFade();
+          }
         }
       }, DOUBLE_PRESS_DELAY);
     }
@@ -313,7 +340,9 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   <TouchableOpacity onPress={() => router.back()}>
     <Ionicons name='chevron-back' size={40} color="white"/>
   </TouchableOpacity>
-  
+  <Text className='text-lg font-extrabold text-white ml-2'>
+        {formatTimeDifference(item.created_at)}
+      </Text>
   <TouchableOpacity 
     onPress={() => modalRef.current?.open()}
   >
@@ -329,6 +358,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           zIndex: 1,
           backgroundColor: 'black'
         }}>
+          
           <LoadingScreen />
         </View>
       )}
@@ -341,7 +371,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay={isVisible && isScreenFocused}
-            isMuted={mute}
+            isMuted={item.is_muted || mute}
             onLoadStart={handleLoadStart}
             onPlaybackStatusUpdate={(status) => {
               if (status.isLoaded && !status.isBuffering) {
@@ -349,7 +379,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
               }
             }}
           />
-          {showMuteIcon && (
+          {showMuteIcon && !item.is_muted && (
             <Animated.View style={[{
               position: 'absolute',
               top: '50%',

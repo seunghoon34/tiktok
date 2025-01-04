@@ -266,11 +266,37 @@ export default function ChatScreen() {
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 10}
         >
           <View className="flex-1">
-            <CustomHeader
-              title={otherUser?.username || 'Chat'}
-              color="black"
-              onpress={backFunction}
+           
+            <View className="flex-row items-center  w-full px-4 py-2">
+      <View className="w-10">
+        
+          <TouchableOpacity onPress={() => router.back()}>
+          
+            <Ionicons name="chevron-back" size={32} color={'black'}/>
+          </TouchableOpacity>
+        
+      </View>
+      <TouchableOpacity className="mx-2" onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+        <View className='flex-row'>
+      {otherUserProfile?.profilepicture ? (
+            <Image 
+              source={{ uri: otherUserProfile.profilepicture }}
+              className="w-10 h-10 rounded-full mr-2"
             />
+          ) : (
+            <Ionicons 
+              name="person-circle-outline" 
+              size={40} 
+              color="gray" 
+              className="mr-2" 
+            />
+          )}
+      <Text className="font-bold text-2xl text-black">
+        {otherUser?.username || 'Chat'} 
+      </Text>
+      </View>
+      </TouchableOpacity>
+    </View>
          <ScrollView
   ref={scrollViewRef}
   className="flex-1"
@@ -315,7 +341,7 @@ export default function ChatScreen() {
           {item.sender_id === user.id && item.read ? 'Read' : ' '}
         </Text>
         <Text className="text-gray-500 text-xs">
-          {formatMessageTime(item.created_at)}
+          {formatMessageTime(item.created_at + 'Z')}
         </Text>
       </View>
     </View>
@@ -342,7 +368,7 @@ export default function ChatScreen() {
                 onPress={sendMessage}
                 className="h-10 w-10 items-center justify-center"
               >
-                <Ionicons name="send" size={24} color="blue" />
+                <Ionicons name="send" size={24} color="#ff5757" />
               </TouchableOpacity>
             </View>
           </View>

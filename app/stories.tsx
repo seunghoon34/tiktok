@@ -19,6 +19,8 @@ type Story = {
   signedUrl?: string;
   user_id: string;
   created_at: string;
+  is_muted: boolean;
+  expired_at: string
 }
 
 export default function Mystoryscreen() {
@@ -31,6 +33,27 @@ export default function Mystoryscreen() {
   const videoRef = useRef(null);
   const [showMuteIcon, setShowMuteIcon] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const formatTimeDifference = (createdAt: string ) => {
+    // Get current time in local timezone
+    const now = new Date();
+    
+    // Parse created_at and convert to local timezone
+    const created = new Date(createdAt + 'Z');
+   
+    
+    const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+  
+  
+    if (diffInHours >= 3) {
+      return '3h';
+    } else if (diffInHours >= 1) {
+      return `${diffInHours}h`;
+    } else {
+      return `${diffInMinutes}m`;
+    }
+  };
 
 
   
@@ -73,6 +96,7 @@ useEffect(() => {
         .from('Video')
         .select('*')
         .eq('user_id', user?.id)
+        .gt('expired_at', new Date().toISOString())
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -114,8 +138,10 @@ useEffect(() => {
         router.back();
       }
     } else {
+      if(stories[currentIndex].is_muted == false){
       setMute(!mute);
       showMuteIconWithFade();
+      }
 
     }
   };
@@ -164,7 +190,7 @@ useEffect(() => {
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay={true}
-            isMuted={mute}
+            isMuted={stories[currentIndex].is_muted || mute}
             onLoadStart={() => setIsLoading(true)}
             onPlaybackStatusUpdate={(status) => {
               if (status.isLoaded && !status.isBuffering) {
@@ -247,6 +273,7 @@ useEffect(() => {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={30} color="white"/>
           </TouchableOpacity>
+          <Text className='text-lg font-extrabold text-white ml-2'> {formatTimeDifference(stories[currentIndex].created_at)}</Text>
           
           <TouchableOpacity onPress={() => modalRef.current?.open()}>
             <Ionicons name="ellipsis-vertical" size={30} color="white"/>

@@ -31,6 +31,7 @@ const checkUserVideos = async () => {
     .from('Video')
     .select('id')
     .eq('user_id', user?.id)
+    .gt('expired_at', new Date().toISOString())
     .limit(1);
   
   setHasVideos(data && data.length > 0);
@@ -67,7 +68,12 @@ useFocusEffect(
      icon: "person-outline",
      title: "Edit Profile",
      onPress: () => router.push('/editprofile'),
-   }
+   },
+   {
+    icon: "person-outline",
+    title: "Blocked users",
+    onPress: () => router.push('/blocked'),
+  }
  ];
 
  return (

@@ -57,7 +57,9 @@ model Video {
   user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
   likes      Like[]
   created_at DateTime  @default(now())
+  expried_at DateTime
   comments   Comment[]
+  is_muted  Boolean @default(false)
 }
 
 model Like {

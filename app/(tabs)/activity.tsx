@@ -174,7 +174,9 @@ export default function ActivityScreen() {
         .eq('to_user', user.id)
         .not(excludeUserIds.length > 0 ? 'from_user' : 'id', 
              excludeUserIds.length > 0 ? 'in' : 'eq', 
-             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id);
+             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+        .order('created_at', { ascending: false })
+
 
       if (error) throw error;
 

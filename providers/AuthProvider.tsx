@@ -6,12 +6,6 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 
-
-
-
-
-
-
 export const AuthContext = createContext({
     user: null,
     signIn: async (email: string, password: string) =>{},
@@ -19,10 +13,9 @@ export const AuthContext = createContext({
     signOut: async () =>{},
     likes: [],
     getLikes: async (userId: string) => {},
-    setActiveChatId: (chatId: string | null) => {},  // Changed to match function name
+    setActiveChatId: (chatId: string | null) => {},
     currentChatId: null,
-    blockedUsers: [] as string[],
-    getBlockedUsers: async () => {},
+    loading: true,  // Add this
 });
 
 export const useAuth = () => useContext(AuthContext)
@@ -30,51 +23,40 @@ export const useAuth = () => useContext(AuthContext)
 export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [user, setUser] = useState(null);
     const router = useRouter()
-    const [likes,setLikes] = useState([])
+    const [likes, setLikes] = useState([])
     const [currentChatId, setCurrentChatId] = useState(null);   
-    const [blockedUsers, setBlockedUsers] = useState<string[]>([]);
+    const [session, setSession] = useState(null);
+    const [loading, setLoading] = useState(true);
 
     const getLikes = async (userId: string, immediateUpdate?: any[]) => {
-        if(!user) {
-            return;
-        }
+        if(!user) return;
+        
         if (immediateUpdate) {
-            // Merge existing likes with new like
             setLikes(prevLikes => [...prevLikes, ...immediateUpdate]);
             return;
-          }
-        const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
-        if (error) {
-            return;
         }
+        
+        const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
+        if (error) return;
+        
         setLikes(data || []);
-        console.log(likes)
-
     }
 
     const getUser = async (id: string) => {
         try {
-            console.log('Fetching user with ID:', id); // Debug log
-
-            // First verify the user exists
             const { data, error } = await supabase
                 .from("User")
                 .select("*")
                 .eq("id", id);
             
-            console.log('User query result:', { data, error }); // Debug log
-
             if (error) throw error;
+            
             if (!data || data.length === 0) {
-                console.log('No user found, retrying in 2 seconds...'); // Debug log
-                // If user not found, wait and retry once
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 const retryResult = await supabase
                     .from("User")
                     .select("*")
                     .eq("id", id);
-                
-                console.log('Retry result:', retryResult); // Debug log
                 
                 if (retryResult.error || !retryResult.data || retryResult.data.length === 0) {
                     throw new Error('User not found after retry');
@@ -86,7 +68,6 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                 await getLikes(data[0].id);
             }
 
-            // Check if user has a profile
             const { data: profileData } = await supabase
                 .from('UserProfile')
                 .select('*')
@@ -99,211 +80,214 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                 router.push('/(tabs)/profile');
             }
         } catch (error) {
-            console.error('Detailed error in getUser:', error); // More detailed error logging
+            console.error('Error in getUser:', error);
             router.push('/createprofile');
         }
     };
 
     const signIn = async (email: string, password: string) => {
-        console.log(email, password)
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-        if (error) console.log(error);
-
-        if (error) throw error;
-
-        getUser(data.user.id)
-
+        try {
+            const { data, error } = await supabase.auth.signInWithPassword({ 
+                email, 
+                password 
+            });
+            
+            if (error) throw error;
+            
+            if (data.session) {
+                setSession(data.session);
+                await getUser(data.user.id);
+            }
+        } catch (error) {
+            console.error('Sign in error:', error);
+            throw error;
+        }
     };
 
     const signUp = async (email: string, password: string) => {
         try {
-            console.log('Starting signup process...');
-
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
             });
             
-            console.log('Auth signup result:', { authData, authError });
-
             if (authError) throw authError;
             if (!authData.user?.id) throw new Error('User ID is undefined');
 
             await new Promise(resolve => setTimeout(resolve, 2000));
 
-            // Generate a temporary unique username using timestamp
             const tempUsername = `user_${Date.now()}`;
-
-            console.log('Creating user record...');
 
             const { data: userData, error: userError } = await supabase
                 .from('User')
                 .insert({
                     id: authData.user.id,
                     email: email,
-                    username: tempUsername, // Add temporary username
+                    username: tempUsername,
                 })
                 .select()
                 .single();
             
-            console.log('User creation result:', { userData, userError });
-
             if (userError) throw userError;
 
             await new Promise(resolve => setTimeout(resolve, 2000));
-
-            console.log('Fetching created user...');
-
             await getUser(authData.user.id);
             
         } catch (error) {
-            console.error('Detailed error in signUp:', error);
+            console.error('Sign up error:', error);
             throw error;
         }
     };
 
     const signOut = async () => {
         try {
-          await SplashScreen.preventAutoHideAsync();
-          const { error } = await supabase.auth.signOut();
-          if (error) throw error;
-          setUser(null);
-          router.push('/(auth)');
+            await SplashScreen.preventAutoHideAsync();
+            const { error } = await supabase.auth.signOut();
+            if (error) throw error;
+            
+            setUser(null);
+            setSession(null);
+            router.push('/(auth)');
         } catch (error) {
-          console.log(error);
-        } 
-      };
+            console.error('Sign out error:', error);
+            throw error;
+        } finally {
+            try {
+                await SplashScreen.hideAsync();
+            } catch (error) {
+                console.error('Error hiding splash screen:', error);
+            }
+        }
+    };
 
     const setActiveChatId = (chatId: string | null) => {
-        console.log("Setting active chat id to:", chatId); // Add this log
-
         setCurrentChatId(chatId);
     };
 
     useEffect(() => {
-        const handleAuthStateChange = async (session) => {
+      const initializeAuth = async () => {
           try {
-            if (session) {
-              // Show splash screen while getting user data
               await SplashScreen.preventAutoHideAsync();
-              await getUser(session.user.id);
+              const { data: { session: currentSession } } = await supabase.auth.getSession();
               
-              // Hide splash after a short delay (for smoother transition)
-              setTimeout(async () => {
-                try {
-                  await SplashScreen.hideAsync();
-                } catch (error) {
-                  console.log("Error hiding splash screen:", error);
-                }
-              }, 1000); // 1 second delay
-            } else {
-              // For logout/no session
-              router.push('/(auth)');
-              // Brief splash screen on logout
-              setTimeout(async () => {
-                try {
-                  await SplashScreen.hideAsync();
-                } catch (error) {
-                  console.log("Error hiding splash screen:", error);
-                }
-              }, 500); // half second delay for logout
-            }
+              if (currentSession) {
+                  setSession(currentSession);
+                  await getUser(currentSession.user.id);
+              } else {
+                  router.push('/(auth)');
+              }
           } catch (error) {
-            console.error('Error handling auth state:', error);
-            await SplashScreen.hideAsync();
+              console.error('Error initializing auth:', error);
+              router.push('/(auth)');
+          } finally {
+              setLoading(false);
+              try {
+                  await SplashScreen.hideAsync();
+              } catch (error) {
+                  console.error('Error hiding splash screen:', error);
+              }
           }
-        };
-      
-        const { data: authData } = supabase.auth.onAuthStateChange((event, session) => {
-          handleAuthStateChange(session);
-        });
-      
-        return () => {
-          authData.subscription.unsubscribe();
-        };
-      }, []);
+      };
+  
+      initializeAuth();
+  
+      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
+          setSession(newSession);
+          
+          if (event === 'SIGNED_OUT') {
+              setUser(null);
+              router.push('/(auth)');
+          } else if (event === 'SIGNED_IN' && newSession) {
+              await getUser(newSession.user.id);
+          } else if (event === 'TOKEN_REFRESHED' && newSession) {
+              setSession(newSession);
+          }
+      });
+  
+      return () => {
+          authListener.subscription.unsubscribe();
+      };
+  }, []);
 
+    // Push notifications registration
     useEffect(() => {
         if (user) {
-         
-          registerForPushNotifications(user.id);
+            registerForPushNotifications(user.id);
         }
-      }, [user]);
+    }, [user]);
 
-      useEffect(() => {
+    // Message notifications
+    useEffect(() => {
         if (!user) return;
-    
+
         const subscription = supabase
-          .channel('global_messages')
-          .on(
-            'postgres_changes',
-            {
-              event: 'INSERT',
-              schema: 'public',
-              table: 'Message'
-            },
-            async (payload) => {
-              // Only notify if the message is for current user and they didn't send it
-              console.log("New message received in chat:", payload.new.chat_id);
-            console.log("Current active chat:", currentChatId);
-              if (payload.new.chat_id) {
-                const { data: chat } = await supabase
-                  .from('Chat')
-                  .select('user1_id, user2_id')
-                  .eq('id', payload.new.chat_id)
-                  .single();
-    
-                // Check if user is part of this chat and not the sender
-                if (chat && 
-                    (chat.user1_id === user.id || chat.user2_id === user.id) && 
-                    payload.new.sender_id !== user.id && 
-                    payload.new.chat_id !== currentChatId) { // This condition should now work correctly
-                  
-                  const { data: senderData } = await supabase
-                    .from('User')
-                    .select('username')
-                    .eq('id', payload.new.sender_id)
-                    .single();
-      
-                  await sendMessageNotification(
-                    payload.new.sender_id,
-                    senderData.username,
-                    user.id,
-                    payload.new.chat_id
-                  );
-                }
-              }
-            }
-          )
-          .subscribe();
-    
-        return () => {
-          subscription.unsubscribe();
-        };
-      }, [user, currentChatId]);
+            .channel('global_messages')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'Message'
+                },
+                async (payload) => {
+                    if (payload.new.chat_id) {
+                        const { data: chat } = await supabase
+                            .from('Chat')
+                            .select('user1_id, user2_id')
+                            .eq('id', payload.new.chat_id)
+                            .single();
 
-      useEffect(() => {
+                        if (chat && 
+                            (chat.user1_id === user.id || chat.user2_id === user.id) && 
+                            payload.new.sender_id !== user.id && 
+                            payload.new.chat_id !== currentChatId) {
+                            
+                            const { data: senderData } = await supabase
+                                .from('User')
+                                .select('username')
+                                .eq('id', payload.new.sender_id)
+                                .single();
+
+                            await sendMessageNotification(
+                                payload.new.sender_id,
+                                senderData.username,
+                                user.id,
+                                payload.new.chat_id
+                            );
+                        }
+                    }
+                }
+            )
+            .subscribe();
+
+        return () => {
+            subscription.unsubscribe();
+        };
+    }, [user, currentChatId]);
+
+    // Notification tap handler
+    useEffect(() => {
         if (!user) return;
-      
-        // Set up notification tap handler
+        
         const subscription = Notifications.addNotificationResponseReceivedListener(response => {
             try {
-              const data = response.notification.request.content.data;
-              
-              if (data.type === 'match' || data.type === 'message') {
-                if (data.chatId) {
-                  router.push(`/chat/${data.chatId}`);
+                const data = response.notification.request.content.data;
+                
+                if (data.type === 'match' || data.type === 'message') {
+                    if (data.chatId) {
+                        router.push(`/chat/${data.chatId}`);
+                    }
                 }
-              }
             } catch (error) {
-              console.error('Error handling notification tap:', error);
+                console.error('Error handling notification tap:', error);
             }
-          });
-      
-        return () => subscription.remove();
-      }, [user]);
+        });
 
-      useEffect(() => {
+        return () => subscription.remove();
+    }, [user]);
+
+    // Fetch likes when user changes
+    useEffect(() => {
         if (user && user.id) {
             getLikes(user.id);
         }
@@ -319,8 +303,9 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             getLikes, 
             setActiveChatId, 
             currentChatId,
+            loading
         }}>
             {children}
         </AuthContext.Provider>
     );
-}
+};

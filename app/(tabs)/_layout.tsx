@@ -85,7 +85,7 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: () => 
-            <Ionicons name="film-outline" size={30} color="black" />
+            <Ionicons name="home-outline" size={30} color="black" />
           
         }}
         listeners={{
