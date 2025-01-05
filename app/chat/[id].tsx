@@ -1,8 +1,8 @@
 import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ScrollView, Image } from 'react-native';
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback,  } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
@@ -17,6 +17,8 @@ export default function ChatScreen() {
   const flatListRef = useRef();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [otherUserProfile, setOtherUserProfile] = useState(null);
+  const [hasVideos, setHasVideos] = useState(false);
+
 
   const scrollViewRef = useRef<ScrollView>(null);
 
@@ -242,14 +244,7 @@ export default function ChatScreen() {
     setNewMessage('');
   };
 
-  const backFunction = () => {
-    // Scroll to bottom without animation before navigating back
-    
-    // Small timeout to ensure scroll completes before navigation
-    setTimeout(() => {
-      router.back();
-    }, 50);
-  };
+  
 
   useEffect(() => {
     if (!otherUser) return;
@@ -276,6 +271,28 @@ export default function ChatScreen() {
     };
     getOtherUserProfile();
   }, [otherUser]);
+
+  const checkUserVideos = async () => {
+    if (!otherUser?.id) return; // Add this check
+
+    const { data, error } = await supabase
+      .from('Video')
+      .select('id')
+      .eq('user_id', otherUser?.id)
+      .gt('expired_at', new Date().toISOString())
+      .limit(1);
+    
+    setHasVideos(data && data.length > 0);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      // Only check if we have otherUser
+      if (otherUser?.id) {
+        checkUserVideos();
+      }
+    }, [otherUser]) // Empty dependency array as we want it to run only on focus
+  );
 
   return (
     <View className="flex-1 bg-white">
@@ -329,22 +346,46 @@ export default function ChatScreen() {
     >
       {/* Avatar for other user */}
       {item.sender_id !== user.id && (
-        <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+  hasVideos ? (
+    <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)}>
+      <View className="p-0.5 rounded-full bg-red-400">
+        <View className="p-0.5 bg-white rounded-full">
           {otherUserProfile?.profilepicture ? (
-            <Image 
+            <Image
               source={{ uri: otherUserProfile.profilepicture }}
-              className="w-10 h-10 rounded-full mr-2"
+              className="w-10 h-10 rounded-full"
             />
           ) : (
-            <Ionicons 
-              name="person-circle-outline" 
-              size={40} 
-              color="gray" 
-              className="mr-2" 
-            />
+            <View className="mr-2">
+              <Ionicons
+                name="person-circle-outline"
+                size={40}
+                color="gray"
+              />
+            </View>
           )}
-        </TouchableOpacity>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ) : (
+    <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+      {otherUserProfile?.profilepicture ? (
+        <Image
+          source={{ uri: otherUserProfile.profilepicture }}
+          className="w-10 h-10 rounded-full"
+        />
+      ) : (
+        <View className="mr-2">
+          <Ionicons
+            name="person-circle-outline"
+            size={40}
+            color="gray"
+          />
+        </View>
       )}
+    </TouchableOpacity>
+  )
+)}
 
       {/* Message bubble */}
       <View className={`p-2 rounded-lg max-w-[80%] ${

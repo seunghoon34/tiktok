@@ -105,6 +105,8 @@
                   <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
                   <Stack.Screen name="createprofile" options={{ headerShown: false }} />
                   <Stack.Screen name="stories" options={{ headerShown: false }} />
+                  <Stack.Screen name="userstories" options={{ headerShown: false }} />
+
                   <Stack.Screen name="blocked" options={{ headerShown: false }} />
 
                   <Stack.Screen name="editprofile" options={{ headerShown: false }} />
