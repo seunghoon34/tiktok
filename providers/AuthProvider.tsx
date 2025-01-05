@@ -5,6 +5,7 @@ import { createContext, useContext, useEffect, useState} from 'react'
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
+import { AppState } from 'react-native';
 
 export const AuthContext = createContext({
     user: null,
@@ -140,62 +141,126 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     };
 
     const signOut = async () => {
-        try {
-            const { error } = await supabase.auth.signOut();
-            if (error) throw error;
-            
-            setUser(null);
-            setSession(null);
-            router.push('/(auth)');
-        } catch (error) {
-            console.error('Sign out error:', error);
-            throw error;
-        } 
-    };
+      // Always clear local state and redirect, regardless of auth session status
+      try {
+          // Try to update app state if we have a user
+          if (user?.id) {
+              try {
+                  await supabase
+                      .from('User')
+                      .update({ app_state: 'background' })
+                      .eq('id', user.id);
+              } catch (e) {
+                  // Ignore errors here as the session might already be invalid
+                  console.log('Error updating app state during signout:', e);
+              }
+          }
+  
+          // Try to sign out, but don't wait for it or let it block the process
+          try {
+              await supabase.auth.signOut();
+          } catch (e) {
+              // Ignore auth errors during signout
+              console.log('Auth signout error (expected if session invalid):', e);
+          }
+  
+      } finally {
+          // Always clear local state and redirect
+          setUser(null);
+          setSession(null);
+          setLikes([]);
+          setCurrentChatId(null);
+          router.push('/(auth)');
+      }
+  };
 
     const setActiveChatId = (chatId: string | null) => {
         setCurrentChatId(chatId);
     };
 
-    useEffect(() => {
-      const initializeAuth = async () => {
-          try {
-              await SplashScreen.preventAutoHideAsync();
-              const { data: { session: currentSession } } = await supabase.auth.getSession();
-              
-              if (currentSession) {
-                  setSession(currentSession);
-                  await getUser(currentSession.user.id);
-              } else {
-                  router.push('/(auth)');
-              }
-          } catch (error) {
-              console.error('Error initializing auth:', error);
+    const initializeAuth = async () => {
+      try {
+          await SplashScreen.preventAutoHideAsync();
+          const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+          
+          if (error) {
+              throw error;
+          }
+          
+          if (currentSession) {
+              setSession(currentSession);
+              await getUser(currentSession.user.id);
+          } else {
+              // Clear states and redirect to auth
+              setUser(null);
+              setSession(null);
               router.push('/(auth)');
-          } finally {
-              setLoading(false);
-              try {
-                  await SplashScreen.hideAsync();
-              } catch (error) {
-                  console.error('Error hiding splash screen:', error);
+          }
+      } catch (error) {
+          console.error('Error initializing auth:', error);
+          // Handle the auth session missing error
+          if (error.message?.includes('Auth session missing')) {
+              setUser(null);
+              setSession(null);
+              router.push('/(auth)');
+          }
+      } finally {
+          setLoading(false);
+          try {
+              await SplashScreen.hideAsync();
+          } catch (error) {
+              console.error('Error hiding splash screen:', error);
+          }
+      }
+  };
+  
+  // Modify the auth state change listener
+  useEffect(() => {
+    initializeAuth();
+      const handleAuthStateChange = async (event, newSession) => {
+          console.log('Auth state changed:', event);
+          
+          try {
+              switch (event) {
+                  case 'SIGNED_OUT':
+                  case 'USER_DELETED':
+                      setUser(null);
+                      setSession(null);
+                      router.push('/(auth)');
+                      break;
+                      
+                  case 'SIGNED_IN':
+                      if (newSession) {
+                          setSession(newSession);
+                          await getUser(newSession.user.id);
+                      }
+                      break;
+                      
+                  case 'TOKEN_REFRESHED':
+                      if (newSession) {
+                          setSession(newSession);
+                      }
+                      break;
+                      
+                  case 'INITIAL_SESSION':
+                      if (!newSession) {
+                          setUser(null);
+                          setSession(null);
+                          router.push('/(auth)');
+                      }
+                      break;
+              }
+          } catch (error: any) {
+              console.error('Error handling auth state change:', error);
+              if (error.message?.includes('Auth session missing')) {
+                  setUser(null);
+                  setSession(null);
+                  router.push('/(auth)');
               }
           }
       };
   
-      initializeAuth();
-  
-      const { data: authListener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-          setSession(newSession);
-          
-          if (event === 'SIGNED_OUT') {
-              setUser(null);
-              router.push('/(auth)');
-          } else if (event === 'SIGNED_IN' && newSession) {
-              await getUser(newSession.user.id);
-          } else if (event === 'TOKEN_REFRESHED' && newSession) {
-              setSession(newSession);
-          }
-      });
+      const { data: authListener } = supabase.auth.onAuthStateChange(handleAuthStateChange);
   
       return () => {
           authListener.subscription.unsubscribe();
@@ -211,6 +276,22 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     useEffect(() => {
       if (!user) return;
+
+      let becameActiveTime: string | null = null;
+
+    const handleAppStateChange = (nextAppState: string) => {
+        if (nextAppState === 'active') {
+            becameActiveTime = new Date().toISOString();
+        }
+    };
+
+
+    // Set initial active time
+    becameActiveTime = new Date().toISOString();
+
+    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
+
+
   
       const subscription = supabase
           .channel('global_messages')
@@ -222,6 +303,10 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                   table: 'Message'
               },
               async (payload) => {
+
+                if (becameActiveTime && payload.new.created_at <= becameActiveTime) {
+                  return; // Skip old messages
+              }
                   // First check if the message is for the current user and they're not the sender
                   if (payload.new.sender_id === user.id) {
                       return; // Don't notify for messages the user sent
@@ -261,6 +346,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
   
       return () => {
           subscription.unsubscribe();
+          appStateSubscription.remove();
       };
   }, [user, currentChatId]);
     // Notification tap handler
@@ -289,6 +375,42 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         if (user && user.id) {
             getLikes(user.id);
         }
+    }, [user]);
+
+    useEffect(() => {
+      if (!user) return;
+    
+      const updateAppState = async (state: string) => {
+        try {
+          const { error } = await supabase
+            .from('User')
+            .update({ app_state: state })
+            .eq('id', user.id);
+    
+          if (error) {
+            console.error('Error updating app_state:', error);
+          } else {
+            console.log('App state updated successfully to:', state);
+          }
+        } catch (error) {
+          console.error('Exception updating app_state:', error);
+        }
+      };
+    
+      // Set initial state
+      updateAppState('active');
+    
+      const subscription = AppState.addEventListener('change', async (nextAppState) => {
+        console.log('AppState changed to:', nextAppState);
+        const newState = nextAppState === 'active' ? 'active' : 'background';
+        await updateAppState(newState);
+      });
+    
+      return () => {
+        // Cleanup
+        updateAppState('background');
+        subscription.remove();
+      };
     }, [user]);
 
     return (

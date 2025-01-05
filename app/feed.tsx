@@ -18,6 +18,7 @@ interface MediaItem {
   };
   title: string;
   id: string;
+  display_id: string
 }
 
 export default function HomeScreen() {
@@ -95,13 +96,14 @@ export default function HomeScreen() {
     const timestamp = Date.now();
     let mediaUrls = media?.map((item, index) => ({
       ...item,
-      id: loadMore ? `${item.id}-${timestamp}-${index}` : item.id,
+      displayId: loadMore ? `${item.id}-${timestamp}-${index}` : item.id, // Use this for FlatList key
+      id: item.id, // Keep original ID for database operations
       signedUrl: data?.find((signedUrl) => signedUrl.path === item.uri)?.signedUrl
     }));
     
     setVideos(prev => [...prev, ...mediaUrls]);
     console.log('Updated videos length:', videos.length + mediaUrls.length);
-  };
+  };  
 
   const getVideos = async (loadMore = false) => {
     try {
@@ -198,7 +200,7 @@ export default function HomeScreen() {
           ref={flatListRef}
           data={videos}
           renderItem={renderMediaItem}
-          keyExtractor={(item) => item.id}
+          keyExtractor={(item) => item.displayId}          
           pagingEnabled={true}
           snapToAlignment="center"
           decelerationRate="fast"

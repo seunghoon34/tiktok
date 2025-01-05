@@ -123,7 +123,7 @@ useFocusEffect(
          </View>
          
          <Text className="text-xl font-bold mt-4">
-           {user?.email?.split('@')[0]}
+           {user?.username}
          </Text>
          <Text className="text-gray-500">
            {profile?.name} <Text className="text-gray-500 mt-1">

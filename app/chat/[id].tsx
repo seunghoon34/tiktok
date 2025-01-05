@@ -223,6 +223,22 @@ export default function ChatScreen() {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 0);
 
+    const { data: otherUserData } = await supabase
+      .from('User')
+      .select('app_state')
+      .eq('id', otherUser.id)
+      .single();
+
+    // Only send notification if other user is in background
+    if (otherUserData?.app_state === 'background') {
+      await sendMessageNotification(
+        user.id,
+        user.username,
+        otherUser.id,
+        id
+      );
+    }
+
     setNewMessage('');
   };
 
