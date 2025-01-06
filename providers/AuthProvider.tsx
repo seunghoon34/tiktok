@@ -12,6 +12,7 @@ export const AuthContext = createContext({
     signIn: async (email: string, password: string) =>{},
     signUp: async (email: string, password: string) =>{},
     signOut: async () =>{},
+    deleteAccount: async () =>{},
     likes: [],
     getLikes: async (userId: string) => {},
     setActiveChatId: (chatId: string | null) => {},
@@ -173,6 +174,27 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
           router.push('/(auth)');
       }
   };
+
+  const deleteAccount = async () => {
+    try {
+        if (!user?.id) return;
+        
+        // Delete user (cascades to all related data)
+        await supabase.from('User').delete().eq('id', user.id);
+        
+        // Delete auth user
+        const { error } = await supabase.rpc('delete_user');
+        if (error) throw error;
+        
+    } catch (error) {
+        console.error('Delete account error:', error);
+        throw error;
+
+    }finally{
+        await signOut();
+
+    }
+};
 
     const setActiveChatId = (chatId: string | null) => {
         setCurrentChatId(chatId);
@@ -418,7 +440,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             user, 
             signIn, 
             signUp, 
-            signOut, 
+            signOut,
+            deleteAccount, 
             likes, 
             getLikes, 
             setActiveChatId, 

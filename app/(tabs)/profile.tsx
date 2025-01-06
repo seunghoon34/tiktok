@@ -4,14 +4,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect, useRouter } from 'expo-router';
 import "../../global.css";
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
+import { Modalize } from 'react-native-modalize';
+import { Portal } from 'react-native-portalize';
 
 export default function ProfileScreen() {
- const { signOut, user } = useAuth();
+ const { signOut, user, deleteAccount } = useAuth();
  const [profile, setProfile] = useState(null);
  const [imageUrl, setImageUrl] = useState(null);
  const [hasVideos, setHasVideos] = useState(false);
+ const modalRef = useRef<Modalize>(null);
+ const [modalView, setModalView] = useState<ModalView>('menu');
+
+
 
  const router = useRouter()
 
@@ -68,11 +74,17 @@ useFocusEffect(
      icon: "person-outline",
      title: "Edit Profile",
      onPress: () => router.push('/editprofile'),
+     color: 'black'
    },
    {
     icon: "person-outline",
     title: "Blocked users",
     onPress: () => router.push('/blocked'),
+  },
+  {
+    icon: "person-outline",
+    title: "Delete account",
+    onPress: () => modalRef.current?.open(),
   }
  ];
 
@@ -175,6 +187,63 @@ useFocusEffect(
          Version 1.0.0
        </Text>
      </View>
+     <Portal>
+  <Modalize
+    ref={modalRef}
+    adjustToContentHeight
+    modalStyle={{
+      backgroundColor: '#1f1f1f',
+      borderTopLeftRadius: 12,
+      borderTopRightRadius: 12,
+    }}
+    closeOnOverlayTap
+    handleStyle={{ backgroundColor: '#636363', width: 40 }}
+    onClose={() => setModalView('menu')}  // Reset view when modal closes
+  >
+    <View className="py-2 pb-10">
+      {modalView === 'menu' ? (
+        <>
+          <TouchableOpacity
+            className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            onPress={()=> {console.log("delete account?")
+              setModalView("confirmDelete")
+            }}
+          >
+            <Ionicons name="person-outline" size={24} color="red" className="mr-3" />
+            <Text className="text-red-600 text-[16px]">Delete Account</Text>
+          </TouchableOpacity>
+
+          
+        </>
+      )  : modalView === 'confirmDelete' ? (
+        <View className="px-4 py-3">
+          <Text className="text-white text-lg mb-4">Are you sure you want to delete your account?</Text>
+          <TouchableOpacity
+            className="bg-red-500 rounded-lg py-3 mb-3"
+            onPress={async () => {
+              try {
+                await deleteAccount();
+                modalRef.current?.close();
+              } catch (error) {
+                console.error('Error deleting account:', error);
+                modalRef.current?.close();
+
+                // Handle error (show alert, etc)
+              }
+            }}          >
+            <Text className="text-white text-center font-semibold text-lg">Delete Account</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            className="bg-gray-600 rounded-lg py-3"
+            onPress={() => setModalView('menu')}
+          >
+            <Text className="text-white text-center text-lg">Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      ) : null}
+    </View>
+  </Modalize>
+</Portal>
    </SafeAreaView>
  );
 }

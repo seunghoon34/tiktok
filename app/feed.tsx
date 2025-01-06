@@ -36,6 +36,26 @@ export default function HomeScreen() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [videoIds, setVideoIds] = useState<Set<string>>(new Set());
 
+  useEffect(() => {
+    if (!user?.id) return;
+  
+    const subscription = supabase
+      .channel('public:UserBlock')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'UserBlock', 
+          filter: `blocker_id=eq.${user.id},blocked_id=eq.${user.id}` }, 
+        () => {
+          setIsLoading(true)
+          onRefresh()
+          setIsLoading(false)
+      })
+      .subscribe();
+  
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [user]);
+
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     setVideos([]);
