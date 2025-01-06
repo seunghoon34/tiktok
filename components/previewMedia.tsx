@@ -2,6 +2,8 @@ import { Video, ResizeMode } from 'expo-av';
 import { StyleSheet, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
+import TextOverlayManager from './textOverlayManager';
+
 
 interface PreviewMediaProps {
   uri: string;
@@ -21,6 +23,8 @@ export default function PreviewMedia({
   if (!uri) return <View style={styles.previewContainer} />;
 
   const [isMuted, setIsMuted] = useState(false);
+  const [textElements, setTextElements] = useState([]);
+
 
   
   return (
@@ -64,6 +68,9 @@ export default function PreviewMedia({
           />
         )}
       </View>
+      <TextOverlayManager
+       onTextChange={setTextElements}
+     />
 
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
