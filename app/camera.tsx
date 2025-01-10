@@ -87,36 +87,67 @@ export default function CameraScreen() {
   };
 
 
-  const saveUri = async (isMuted: boolean = false) =>{
+  const saveUri = async (isMuted: boolean = false, textOverlays = []) => {
     setIsUploading(true);
     try {
-        const formData = new FormData;
-        const fileName = uri?.split('/').pop()
-        formData.append('file',{
-            uri: uri,
-            type: `video/${fileName?.split('.').pop()}`,
-            name: fileName,
+      // Upload video first
+      const formData = new FormData;
+      const fileName = uri?.split('/').pop()
+      formData.append('file', {
+        uri: uri,
+        type: `video/${fileName?.split('.').pop()}`,
+        name: fileName,
+      });
+      
+      const { data, error } = await supabase.storage
+        .from('videos')
+        .upload(fileName, formData, {
+          cacheControl: '3600000000',
+          upsert: false
         });
-        const { data, error } = await supabase.storage.from('videos').upload(fileName, formData, {
-            cacheControl: '3600000000',
-            upsert: false
-        });
-        if(error) console.error(error);
-        const { error: videoError } = await supabase.from('Video').insert({
-            title: "test_title",
-            uri: data?.path,
-            user_id: user?.id,
-            is_muted: isMuted,
+      
+      if(error) throw error;
+  
+      // Insert video and get its ID
+      const { data: videoData, error: videoError } = await supabase
+        .from('Video')
+        .insert({
+          title: "test_title",
+          uri: data?.path,
+          user_id: user?.id,
+          is_muted: isMuted,
         })
-        if(videoError) console.error(videoError)
-        router.back()
-        setUri("");
+        .select()
+        .single();
+  
+      if(videoError) throw videoError;
+  
+      // Save text overlays
+      if (textOverlays.length > 0) {
+        const { error: textError } = await supabase
+          .from('TextOverlay')
+          .insert(
+            textOverlays.map(overlay => ({
+              video_id: videoData.id,
+              text: overlay.text,
+              position_x: overlay.translateX,
+              position_y: overlay.translateY,
+              scale: overlay.scale,
+              rotation: overlay.rotation,
+              font_size: overlay.fontSize
+            }))
+          );
+        if(textError) throw textError;
+      }
+  
+      router.back();
+      setUri("");
     } catch (error) {
-        console.error(error);
+      console.error(error);
     } finally {
-        setIsUploading(false);
+      setIsUploading(false);
     }
-}
+  };
 
 const deleteUri = () =>{
     setUri("")

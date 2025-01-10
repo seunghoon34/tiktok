@@ -20,71 +20,74 @@ type Story = {
   user_id: string;
   created_at: string;
   is_muted: boolean;
-  expired_at: string
+  expired_at: string;
+  TextOverlay?: Array<{
+    text: string;
+    position_x: number;
+    position_y: number;
+    scale: number;
+    rotation: number;
+    font_size: number;
+  }>;
 }
 
 export default function Mystoryscreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [stories, setStories] = useState<Story[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [isMediaLoading, setIsMediaLoading] = useState(true);
+  const [isTextLoading, setIsTextLoading] = useState(true);
   const [mute, setMute] = useState(false);
-  const modalRef = useRef<Modalize>(null);
-  const [status, setStatus] = useState({});
-  const videoRef = useRef(null);
+  const [mediaType, setMediaType] = useState('');
   const [showMuteIcon, setShowMuteIcon] = useState(false);
+  
+  const modalRef = useRef<Modalize>(null);
+  const videoRef = useRef(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const formatTimeDifference = (createdAt: string ) => {
-    // Get current time in local timezone
-    const now = new Date();
-    
-    // Parse created_at and convert to local timezone
-    const created = new Date(createdAt + 'Z');
-   
-    
-    const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
-    const diffInHours = Math.floor(diffInMinutes / 60);
-  
-  
-    if (diffInHours >= 3) {
-      return '3h';
-    } else if (diffInHours >= 1) {
-      return `${diffInHours}h`;
-    } else {
-      return `${diffInMinutes}m`;
-    }
-  };
-
-
-  
   const router = useRouter();
   const { user } = useAuth();
   const screenWidth = Dimensions.get('window').width;
 
-  const [mediaType, setMediaType] = useState('');
+  const isContentLoading = isMediaLoading || isTextLoading || initialLoading;
 
-  const showMuteIconWithFade = () => {
-    setShowMuteIcon(true);
-    Animated.sequence([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-      Animated.delay(1000),
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 200,
-        useNativeDriver: true,
-      }),
-    ]).start(() => setShowMuteIcon(false));
+  const renderTextOverlays = () => {
+    return stories[currentIndex]?.TextOverlay?.map((overlay, index) => (
+      <Animated.Text
+        key={index}
+        style={[{
+          position: 'absolute',
+          left: overlay.position_x,
+          top: overlay.position_y,
+          transform: [
+            { scale: overlay.scale },
+            { rotate: `${overlay.rotation}rad` }
+          ],
+          fontSize: overlay.font_size,
+          color: 'white',
+       
+          zIndex: 2,
+        }]}
+      >
+        {overlay.text}
+      </Animated.Text>
+    ));
   };
 
-useEffect(() => {
-  // Check file extension
-  const fileExt = stories[currentIndex]?.uri.split('.').pop()?.toLowerCase();
-  setMediaType(fileExt === 'mov' ? 'video' : 'image');
-}, [currentIndex, stories]);
+  useEffect(() => {
+    // Reset loading states when index changes
+    setIsMediaLoading(true);
+    setIsTextLoading(true);
+    
+    // Check file extension
+    const fileExt = stories[currentIndex]?.uri.split('.').pop()?.toLowerCase();
+    setMediaType(fileExt === 'mov' ? 'video' : 'image');
+    
+    // Set text loading to false once we have the data
+    if (stories[currentIndex]?.TextOverlay !== undefined) {
+      setIsTextLoading(false);
+    }
+  }, [currentIndex, stories]);
 
   useEffect(() => {
     fetchStories();
@@ -94,7 +97,17 @@ useEffect(() => {
     try {
       const { data, error } = await supabase
         .from('Video')
-        .select('*')
+        .select(`
+          *,
+          TextOverlay (
+            text,
+            position_x,
+            position_y,
+            scale,
+            rotation,
+            font_size
+          )
+        `)
         .eq('user_id', user?.id)
         .gt('expired_at', new Date().toISOString())
         .order('created_at', { ascending: false });
@@ -115,11 +128,28 @@ useEffect(() => {
       );
 
       setStories(storiesWithUrls);
-      setIsLoading(false);
     } catch (error) {
       console.error('Error:', error);
-      setIsLoading(false);
+    } finally {
+      setInitialLoading(false);
     }
+  };
+
+  const showMuteIconWithFade = () => {
+    setShowMuteIcon(true);
+    Animated.sequence([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.delay(1000),
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setShowMuteIcon(false));
   };
 
   const handlePress = (event: any) => {
@@ -138,20 +168,27 @@ useEffect(() => {
         router.back();
       }
     } else {
-      if(stories[currentIndex].is_muted == false){
-      setMute(!mute);
-      showMuteIconWithFade();
+      if (stories[currentIndex].is_muted === false && stories[currentIndex].type === 'video') {
+        setMute(!mute);
+        showMuteIconWithFade();
       }
-
     }
   };
 
-  
+  const formatTimeDifference = (createdAt: string) => {
+    const now = new Date();
+    const created = new Date(createdAt + 'Z');
+    const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+
+    if (diffInHours >= 3) return '3h';
+    if (diffInHours >= 1) return `${diffInHours}h`;
+    return `${diffInMinutes}m`;
+  };
 
   const handleDelete = async () => {
     try {
       const story = stories[currentIndex];
-      
       await supabase.from('Video').delete().eq('id', story.id);
 
       const newStories = stories.filter((_, index) => index !== currentIndex);
@@ -171,92 +208,71 @@ useEffect(() => {
     }
   };
 
-  if (isLoading || stories.length === 0) return <LoadingScreen/>;
+  if (initialLoading || stories.length === 0) return <LoadingScreen />;
 
   return (
     <View className="flex-1 bg-black">
       <Pressable onPress={handlePress} className="flex-1">
-      {mediaType === 'video' ? (
-        <>
-          <Video
-            ref={videoRef}
-            source={{ uri: stories[currentIndex].signedUrl }}
-            style={{
-              width: Dimensions.get('window').width,
-              height: Dimensions.get('window').height,
-              position: 'absolute',
-              top: 0
-            }}
-            resizeMode={ResizeMode.COVER}
-            isLooping
-            shouldPlay={true}
-            isMuted={stories[currentIndex].is_muted || mute}
-            onLoadStart={() => setIsLoading(true)}
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && !status.isBuffering) {
-                setIsLoading(false);
-              }
-            }}
-          />
-          {isLoading && (
-            <View style={{
-              position: 'absolute',
-              width: Dimensions.get('window').width,
-              height: Dimensions.get('window').height,
-              zIndex: 1,
-              backgroundColor: 'black'
-            }}>
-              <LoadingScreen />
-            </View>
-          )}
-          {showMuteIcon && (
-            <Animated.View style={[{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: [
-                { translateX: -25 },
-                { translateY: -25 },
-              ],
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              borderRadius: 50,
-              padding: 15,
-              zIndex: 10,
-            }, {
-              opacity: fadeAnim
-            }]}>
-              <Ionicons 
-                name={mute ? 'volume-mute' : 'volume-high'} 
-                size={25} 
-                color="white"
-              />
-            </Animated.View>
-          )}
-        </>
-      ) : (
-        <>
-        <Image
-          source={{ uri: stories[currentIndex].signedUrl }}
-          style={{ width: '100%', height: '100%' }}
-          resizeMode="cover"
-              
-          />
-          {isLoading && (
-            <View style={{
-              position: 'absolute',
-              width: Dimensions.get('window').width,
-              height: Dimensions.get('window').height,
-              zIndex: 1,
-              backgroundColor: 'black'
-            }}>
-              <LoadingScreen />
-            </View>
-          )}
+        {mediaType === 'video' ? (
+          <>
+            <Video
+              ref={videoRef}
+              source={{ uri: stories[currentIndex].signedUrl }}
+              style={{
+                width: Dimensions.get('window').width,
+                height: Dimensions.get('window').height,
+                position: 'absolute',
+                top: 0
+              }}
+              resizeMode={ResizeMode.COVER}
+              isLooping
+              shouldPlay={true}
+              isMuted={stories[currentIndex].is_muted || mute}
+              onLoadStart={() => setIsMediaLoading(true)}
+              onPlaybackStatusUpdate={(status) => {
+                if (status.isLoaded && !status.isBuffering) {
+                  setIsMediaLoading(false);
+                }
+              }}
+            />
+            {!isContentLoading && renderTextOverlays()}
+            {isContentLoading && (
+              <View style={{
+                position: 'absolute',
+                width: Dimensions.get('window').width,
+                height: Dimensions.get('window').height,
+                zIndex: 1,
+                backgroundColor: 'black'
+              }}>
+                <LoadingScreen />
+              </View>
+            )}
           </>
-          
-      )}
+        ) : (
+          <>
+            <Image
+              source={{ uri: stories[currentIndex].signedUrl }}
+              style={{ width: '100%', height: '100%' }}
+              resizeMode="cover"
+              onLoadStart={() => setIsMediaLoading(true)}
+              onLoad={() => setIsMediaLoading(false)}
+            />
+            {!isContentLoading && renderTextOverlays()}
+            {isContentLoading && (
+              <View style={{
+                position: 'absolute',
+                width: Dimensions.get('window').width,
+                height: Dimensions.get('window').height,
+                zIndex: 1,
+                backgroundColor: 'black'
+              }}>
+                <LoadingScreen />
+              </View>
+            )}
+          </>
+        )}
 
-        {/* Progress bar - moved to bottom */}
+        {/* Progress bar */}
         <View className="absolute bottom-12 left-2 right-2 flex-row gap-1 z-10">
           {stories.map((_, index) => (
             <View
@@ -273,12 +289,40 @@ useEffect(() => {
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={30} color="white"/>
           </TouchableOpacity>
-          <Text className='text-lg font-extrabold text-white ml-2'> {formatTimeDifference(stories[currentIndex].created_at)}</Text>
-          
+          <Text className="text-lg font-extrabold text-white ml-2">
+            {formatTimeDifference(stories[currentIndex].created_at)}
+          </Text>
           <TouchableOpacity onPress={() => modalRef.current?.open()}>
             <Ionicons name="ellipsis-vertical" size={30} color="white"/>
           </TouchableOpacity>
         </View>
+
+        {/* Mute icon */}
+        {showMuteIcon && (
+          <Animated.View 
+            style={[{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: [
+                { translateX: -25 },
+                { translateY: -25 },
+              ],
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 50,
+              padding: 15,
+              zIndex: 10,
+            }, {
+              opacity: fadeAnim
+            }]}
+          >
+            <Ionicons 
+              name={mute ? 'volume-mute' : 'volume-high'} 
+              size={25} 
+              color="white"
+            />
+          </Animated.View>
+        )}
       </Pressable>
 
       <Portal>

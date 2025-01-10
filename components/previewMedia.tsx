@@ -8,25 +8,23 @@ interface PreviewMediaProps {
   uri: string;
   cameraMode: boolean;
   onDelete: () => void;
-  onSave: (isMuted?: boolean) => void;
+  onSave: (isMuted?: boolean, textOverlays?: any[]) => void; // Updated this
   isUploading: boolean;
 }
 
-export default function PreviewMedia({ 
-  uri, 
-  cameraMode, 
-  onDelete, 
-  onSave, 
-  isUploading 
+export default function PreviewMedia({
+  uri,
+  cameraMode,
+  onDelete,
+  onSave,
+  isUploading
 }: PreviewMediaProps) {
   if (!uri) return <View style={styles.previewContainer} />;
-
+  
   const [isMuted, setIsMuted] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
+  const [textOverlays, setTextOverlays] = useState<any[]>([]); // Added type
 
-
-
-  
   return (
     <View style={styles.previewContainer}>
       {/* Close button in top-left corner */}
@@ -39,10 +37,10 @@ export default function PreviewMedia({
       {!cameraMode && (
         <View style={styles.muteButtonContainer}>
           <TouchableOpacity onPress={() => setIsMuted(!isMuted)}>
-            <Ionicons 
-              name={isMuted ? "volume-mute" : "volume-high"} 
-              size={40} 
-              color="white" 
+            <Ionicons
+              name={isMuted ? "volume-mute" : "volume-high"}
+              size={40}
+              color="white"
             />
           </TouchableOpacity>
         </View>
@@ -51,8 +49,8 @@ export default function PreviewMedia({
       {/* Media preview */}
       <View style={styles.mediaContainer}>
         {cameraMode ? (
-          <Image 
-            source={{ uri }} 
+          <Image
+            source={{ uri }}
             style={styles.preview}
             resizeMode="contain"
           />
@@ -68,20 +66,23 @@ export default function PreviewMedia({
           />
         )}
       </View>
-      <TextOverlayManager 
-      onDragStateChange={setIsDraggingText}
-    />
-    
+
+      <TextOverlayManager
+        onDragStateChange={setIsDraggingText}
+        onOverlaysUpdate={setTextOverlays}
+        video={!cameraMode}
+      />
+
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
-        <TouchableOpacity 
-          onPress={()=>onSave(isMuted)} 
+        <TouchableOpacity
+          onPress={() => onSave(isMuted, textOverlays)}
           style={styles.saveButton}
           disabled={isUploading}
         >
           {isUploading ? (
             <ActivityIndicator size="large" color="white" />
-          ): isDraggingText ? (
+          ) : isDraggingText ? (
             <Ionicons name="trash-outline" size={100} color="white" />
           ) : (
             <Ionicons name="checkmark-circle-outline" size={100} color="white" />
@@ -91,6 +92,8 @@ export default function PreviewMedia({
     </View>
   );
 }
+
+// ... styles remain the same
 
 const styles = StyleSheet.create({
   previewContainer: {

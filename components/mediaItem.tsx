@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, Image, Pressable, Animated, TouchableOpacity } from 'react-native';
+import { View, Text, Dimensions, Image, Pressable, Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -27,6 +27,14 @@ interface MediaItemProps {
     is_muted: boolean;
     expired_at: string;
     created_at: string;
+    TextOverlay?: Array<{  // Add this
+      text: string;
+      position_x: number;
+      position_y: number;
+      scale: number;
+      rotation: number;
+      font_size: number;
+    }>;
   };
   isVisible: boolean;
   isScreenFocused: boolean;
@@ -54,6 +62,30 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [userProfile, setUserProfile] = useState(null);
   const [reportType, setReportType] = useState<ReportType>('CONTENT');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
+
+  const renderTextOverlays = () => {
+    return item.TextOverlay?.map((overlay, index) => (
+      <Animated.Text
+        key={index}
+        style={[
+          styles.overlayText,
+          {
+            position: 'absolute',
+            left: overlay.position_x,
+            top: overlay.position_y,
+            transform: [
+              { scale: overlay.scale },
+              { rotate: `${overlay.rotation}rad` }
+            ],
+            fontSize: overlay.font_size,
+          }
+        ]}
+      >
+        {overlay.text}
+      </Animated.Text>
+    ));
+  };
+
 
   const formatTimeDifference = (createdAt: string ) => {
     // Get current time in local timezone
@@ -379,6 +411,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
               }
             }}
           />
+          {!isLoading && renderTextOverlays()}
           {showMuteIcon && !item.is_muted && (
             <Animated.View style={[{
               position: 'absolute',
@@ -404,6 +437,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           )}
         </>
       ) : (
+        <>
         <Image
           source={{ uri: item.signedUrl }}
           style={mediaStyle}
@@ -411,6 +445,8 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           onLoadStart={handleLoadStart}
           onLoadEnd={handleLoadEnd}
         />
+        {!isLoading && renderTextOverlays()}
+        </>
       )}
       
       <View style={{
@@ -623,4 +659,52 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       <Toast />
     </Pressable>
   );
+
+  
 };
+
+const styles = StyleSheet.create({
+  overlayText: {
+    color: 'white',
+    textShadowColor: 'rgba(0, 0, 0, 0.75)',
+    textShadowOffset: { width: -1, height: 1 },
+    textShadowRadius: 10,
+    zIndex: 2,
+  },
+  topBar: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    zIndex: 999,
+  },
+  timeText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: 'white',
+    marginLeft: 8,
+  },
+  loadingContainer: {
+    position: 'absolute',
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
+    zIndex: 1,
+    backgroundColor: 'black',
+  },
+  muteIconContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [
+      { translateX: -25 },
+      { translateY: -25 },
+    ],
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    borderRadius: 50,
+    padding: 15,
+    zIndex: 10,
+  }
+});

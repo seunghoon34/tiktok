@@ -19,6 +19,14 @@ interface MediaItem {
   title: string;
   id: string;
   display_id: string
+  TextOverlay?: Array<{
+    text: string;
+    position_x: number;
+    position_y: number;
+    scale: number;
+    rotation: number;
+    font_size: number;
+  }>;
 }
 
 export default function HomeScreen() {
@@ -153,13 +161,24 @@ export default function HomeScreen() {
 
       // Get videos excluding blocked users
       const { data, error } = await supabase
-        .from('Video')
-        .select('*, User(username, id)')
-        .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
-             excludeUserIds.length > 0 ? 'in' : 'eq', 
-             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
-        .gt('expired_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+  .from('Video')
+  .select(`
+    *,
+    User(username, id),
+    TextOverlay(
+      text,
+      position_x,
+      position_y,
+      scale,
+      rotation,
+      font_size
+    )
+  `)
+  .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
+       excludeUserIds.length > 0 ? 'in' : 'eq', 
+       excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+  .gt('expired_at', new Date().toISOString())
+  .order('created_at', { ascending: false });
       
       if (error) throw error;
       

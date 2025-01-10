@@ -8,7 +8,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ComposedGesture, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 
 
@@ -29,6 +29,8 @@ interface DraggableTextProps {
   onEdit: () => void;
   onEditComplete: () => void;
   binPosition: BinPosition;
+  onOverlayUpdate: (data: any) => void; // Add this
+
 }
 
 const DraggableText = ({
@@ -39,13 +41,15 @@ const DraggableText = ({
   onEditComplete,
   binPosition,
   onDragStateChange,
+  onOverlayUpdate,
+
 }: DraggableTextProps & { onDragStateChange?: (isDragging: boolean) => void }) => {
   const [text, setText] = useState('');
   const [fontSize] = useState(INITIAL_FONT_SIZE);
   const [elementSize, setElementSize] = useState({ width: 0, height: 0 });
 
   // Animated values for transformations
-  const translateX = useSharedValue((SCREEN_WIDTH - 100) / 2);
+  const translateX = useSharedValue(((SCREEN_WIDTH - 100) / 2)-50);
   const translateY = useSharedValue((SCREEN_HEIGHT - 100) / 2);
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
@@ -56,7 +60,19 @@ const DraggableText = ({
   const contextScale = useSharedValue(1);
   const contextRotation = useSharedValue(0);
 
-  const [isOverBin, setIsOverBin] = useState(false);
+
+  const handleTransformUpdate = () => {
+    const updateData = {
+      id,
+      text,
+      translateX: translateX.value,
+      translateY: translateY.value,
+      scale: scale.value,
+      rotation: rotation.value,
+      fontSize
+    };
+    onOverlayUpdate?.(updateData);
+  };
 
   // Modify the useAnimatedReaction to include haptic feedback
   useAnimatedReaction(
@@ -71,19 +87,16 @@ const DraggableText = ({
 
       return overlapsX && overlapsY;
     },
-    (isOverlapping) => {
-      if (isOverlapping && !isOverBin) {
+    (isOverlapping, previous) => {
+      if (isOverlapping && !previous) {
         runOnJS(Haptics.impactAsync)(Haptics.ImpactFeedbackStyle.Heavy);
-        runOnJS(setIsOverBin)(true);
-      } else if (!isOverlapping && isOverBin) {
-        runOnJS(setIsOverBin)(false);
       }
       if (isOverlapping) {
         runOnJS(onDelete)(id);
       }
-    },
-    [elementSize, binPosition, isOverBin]
+    }
   );
+
 
   
   const handleBlur = () => {
@@ -96,20 +109,22 @@ const DraggableText = ({
 
   // Pan gesture for dragging
   const panGesture = Gesture.Pan()
-  .onStart(() => {
-    contextX.value = translateX.value;
-    contextY.value = translateY.value;
-    runOnJS(onDragStateChange)(true); // Add this
-  })
-  .onUpdate((event) => {
-    translateX.value = contextX.value + event.translationX;
-    translateY.value = contextY.value + event.translationY;
-  })
-  .onEnd(() => {
-    translateX.value = withSpring(translateX.value);
-    translateY.value = withSpring(translateY.value);
-    runOnJS(onDragStateChange)(false); // Add this
-  });
+    .onStart(() => {
+      contextX.value = translateX.value;
+      contextY.value = translateY.value;
+      runOnJS(onDragStateChange)(true);
+    })
+    .onUpdate((event) => {
+      translateX.value = contextX.value + event.translationX;
+      translateY.value = contextY.value + event.translationY;
+      runOnJS(handleTransformUpdate)(); // Update here
+    })
+    .onEnd(() => {
+      translateX.value = withSpring(translateX.value);
+      translateY.value = withSpring(translateY.value);
+      runOnJS(onDragStateChange)(false);
+      runOnJS(handleTransformUpdate)(); // And here
+    });
 
 
   // Pinch gesture for scaling
@@ -119,15 +134,16 @@ const DraggableText = ({
     })
     .onUpdate((event) => {
       scale.value = contextScale.value * event.scale;
+      runOnJS(handleTransformUpdate)();
     });
 
-  // Rotation gesture
   const rotationGesture = Gesture.Rotation()
     .onStart(() => {
       contextRotation.value = rotation.value;
     })
     .onUpdate((event) => {
       rotation.value = contextRotation.value + event.rotation;
+      runOnJS(handleTransformUpdate)();
     });
 
   // Single tap for editing
@@ -187,10 +203,13 @@ const DraggableText = ({
 interface TextOverlayManagerProps {
   containerStyle?: object;
   onDragStateChange?: (isDragging: boolean) => void;
+  onOverlaysUpdate?: (overlays: any[]) => void; // Add this
+  video?: boolean
+
 
 }
 
-export const TextOverlayManager = ({ containerStyle, onDragStateChange }: TextOverlayManagerProps) => {
+export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video  }: TextOverlayManagerProps) => {
   const [textElements, setTextElements] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [binPosition, setBinPosition] = useState<BinPosition>({ 
@@ -199,11 +218,29 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange }: TextOv
     width: SCREEN_WIDTH,    // Full width to make it easier to hit
     height: 100            // Height of the button area
   });
+  const [overlayData, setOverlayData] = useState<Map<string, any>>(new Map());
+
+
+  useEffect(() => {
+    if (onOverlaysUpdate) {
+      const overlays = Array.from(overlayData.values());
+      onOverlaysUpdate(overlays);
+    }
+  }, [overlayData]);
+
+  const handleOverlayUpdate = (data: any) => {
+    setOverlayData(prev => new Map(prev).set(data.id, data));
+  };
 
   const handleDelete = (id: string) => {
     setTextElements(prev => prev.filter(elementId => elementId !== id));
     setEditingId(null);
-    onDragStateChange?.(false); // Reset drag state after deletion
+    setOverlayData(prev => {
+      const newData = new Map(prev);
+      newData.delete(id);
+      return newData;
+    });
+    onDragStateChange?.(false);
   };
   
 
@@ -238,10 +275,12 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange }: TextOv
             onDelete={handleDelete}
             binPosition={binPosition}
             onDragStateChange={onDragStateChange}
+            onOverlayUpdate={handleOverlayUpdate}
+
           />
         ))}
-        <TouchableOpacity style={styles.addButton} onPress={addNewText}>
-          <Ionicons name="add-circle" size={40} color="white" />
+        <TouchableOpacity style={!video? styles.addButton : styles.addVideoButton } onPress={addNewText}>
+          <Ionicons name="text" size={40} color="white" />
         </TouchableOpacity>
 
        
@@ -266,22 +305,25 @@ const styles = StyleSheet.create({
   },
   text: {
     color: 'white',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    
     padding: 10,
   },
   textInput: {
     color: 'white',
-    textShadowColor: 'rgba(0, 0, 0, 0.75)',
-    textShadowOffset: { width: -1, height: 1 },
-    textShadowRadius: 10,
+    
     padding: 10,
     minWidth: 100,
   },
   addButton: {
     position: 'absolute',
-    top: 60,
+    top: 40,
+    right: 20,
+    zIndex: 999,
+  },
+
+  addVideoButton: {
+    position: 'absolute',
+    top: 90,
     right: 20,
     zIndex: 999,
   },
