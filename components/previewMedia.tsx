@@ -2,6 +2,7 @@ import { Video, ResizeMode } from 'expo-av';
 import { StyleSheet, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
+import { TextOverlayManager } from './textOverlayManager';
 
 interface PreviewMediaProps {
   uri: string;
@@ -21,6 +22,9 @@ export default function PreviewMedia({
   if (!uri) return <View style={styles.previewContainer} />;
 
   const [isMuted, setIsMuted] = useState(false);
+  const [isDraggingText, setIsDraggingText] = useState(false);
+
+
 
   
   return (
@@ -64,7 +68,10 @@ export default function PreviewMedia({
           />
         )}
       </View>
-
+      <TextOverlayManager 
+      onDragStateChange={setIsDraggingText}
+    />
+    
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
         <TouchableOpacity 
@@ -74,6 +81,8 @@ export default function PreviewMedia({
         >
           {isUploading ? (
             <ActivityIndicator size="large" color="white" />
+          ): isDraggingText ? (
+            <Ionicons name="trash-outline" size={100} color="white" />
           ) : (
             <Ionicons name="checkmark-circle-outline" size={100} color="white" />
           )}
