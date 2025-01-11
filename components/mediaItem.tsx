@@ -1,4 +1,4 @@
-import { View, Text, Dimensions, Image, Pressable, Animated, TouchableOpacity, StyleSheet, PixelRatio, Platform } from 'react-native';
+import { View, Text, Dimensions, Image, Pressable, Animated, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -64,24 +64,6 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-  const BASE_SCREEN_WIDTH = 393;
-const BASE_SCREEN_HEIGHT = 852;
-
-// Scale factors
-const widthScaleFactor = SCREEN_WIDTH / BASE_SCREEN_WIDTH;
-const heightScaleFactor = SCREEN_HEIGHT / BASE_SCREEN_HEIGHT;
-const scaleFactor = Math.min(widthScaleFactor, heightScaleFactor);
-
-// Normalize font size based on screen size
-const normalizeFont = (size: number) => {
-  const scale = scaleFactor;
-  const newSize = size * scale;
-  if (Platform.OS === 'ios') {
-    return Math.round(PixelRatio.roundToNearestPixel(newSize));
-  }
-  return Math.round(PixelRatio.roundToNearestPixel(newSize));
-};
-
 
   
 
@@ -96,7 +78,7 @@ const normalizeFont = (size: number) => {
           minWidth: 100,
           maxWidth: '80%',
           transform: [
-            { scale: overlay.scale / scaleFactor }, // Adjust back for device scale
+            { scale: overlay.scale },
             { rotate: `${overlay.rotation}rad` }
           ],
         }]}
@@ -105,7 +87,7 @@ const normalizeFont = (size: number) => {
           <Text
             style={{
               color: 'white',
-              fontSize: normalizeFont((overlay.font_size / 100) * BASE_SCREEN_HEIGHT),
+              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
               
             }}
           >

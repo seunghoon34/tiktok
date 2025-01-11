@@ -1,4 +1,4 @@
-import { StyleSheet, View, TextInput, TouchableOpacity, Dimensions, PixelRatio, Platform } from 'react-native';
+import { StyleSheet, View, TextInput, TouchableOpacity, Dimensions } from 'react-native';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -11,27 +11,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 
-const normalizeFont = (size: number) => {
-    const scale = scaleFactor;
-    const newSize = size * scale;
-    if (Platform.OS === 'ios') {
-      return Math.round(PixelRatio.roundToNearestPixel(newSize));
-    }
-    return Math.round(PixelRatio.roundToNearestPixel(newSize));
-  };
-
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const BASE_SCREEN_WIDTH = 393;
-const BASE_SCREEN_HEIGHT = 852;
-const INITIAL_FONT_SIZE = 50;
-
-const widthScaleFactor = SCREEN_WIDTH / BASE_SCREEN_WIDTH;
-const heightScaleFactor = SCREEN_HEIGHT / BASE_SCREEN_HEIGHT;
-const scaleFactor = Math.min(widthScaleFactor, heightScaleFactor);
-
-// Normalize font size based on screen size
-
+const INITIAL_FONT_SIZE = (Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.13); // Keep as pixels for input
 
 interface BinPosition {
   x: number;
@@ -83,11 +65,11 @@ const DraggableText = ({
     const updateData = {
       id,
       text,
-      position_x: (translateX.value / SCREEN_WIDTH) * 100,
-      position_y: (translateY.value / SCREEN_HEIGHT) * 100,
-      scale: scale.value * scaleFactor, // Adjust scale based on device
+      position_x: Math.round((translateX.value / SCREEN_WIDTH) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
+      position_y: Math.round((translateY.value / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
+      scale: scale.value,
       rotation: rotation.value,
-      fontSize: (INITIAL_FONT_SIZE / BASE_SCREEN_HEIGHT) * 100 // Use base height for percentage
+      fontSize: Math.round((fontSize / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 10 // Round font size too
     };
     onOverlayUpdate?.(updateData);
   };

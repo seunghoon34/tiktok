@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Dimensions, TouchableOpacity, Text, Animated, PixelRatio, Platform } from 'react-native';
+import { View, Pressable, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Video, ResizeMode } from 'expo-av';
@@ -54,59 +54,36 @@ export default function UserStoryScreen() {
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 
-  const BASE_SCREEN_WIDTH = 393;
-  const BASE_SCREEN_HEIGHT = 852;
-  
-  // Scale factors
-  const widthScaleFactor = SCREEN_WIDTH / BASE_SCREEN_WIDTH;
-  const heightScaleFactor = SCREEN_HEIGHT / BASE_SCREEN_HEIGHT;
-  const scaleFactor = Math.min(widthScaleFactor, heightScaleFactor);
-  
-  // Normalize font size based on screen size
-  const normalizeFont = (size: number) => { 
-    const scale = scaleFactor;
-    const newSize = size * scale;
-    if (Platform.OS === 'ios') {
-      return Math.round(PixelRatio.roundToNearestPixel(newSize));
-    }
-    return Math.round(PixelRatio.roundToNearestPixel(newSize));
+  const renderTextOverlays = () => {
+    return stories[currentIndex]?.TextOverlay?.map((overlay, index) => (
+      <Animated.View
+        key={index}
+        style={[{
+          position: 'absolute',
+          left: (overlay.position_x / 100) * SCREEN_WIDTH,
+          top: (overlay.position_y / 100) * SCREEN_HEIGHT,
+          minWidth: 100,
+          maxWidth: '80%',
+          transform: [
+            { scale: overlay.scale },
+            { rotate: `${overlay.rotation}rad` }
+          ],
+        }]}
+      >
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
+            }}
+          >
+            {overlay.text}
+          </Text>
+        </View>
+      </Animated.View>
+    ));
   };
-  
-  
-    const renderTextOverlays = () => {
-      console.log('Screen Dimensions:', {
-        width: SCREEN_WIDTH,
-        height: SCREEN_HEIGHT,
-        aspectRatio: SCREEN_WIDTH / SCREEN_HEIGHT
-      });
-      return stories[currentIndex]?.TextOverlay?.map((overlay, index) => (
-        <Animated.View
-          key={index}
-          style={[{
-            position: 'absolute',
-            left: (overlay.position_x / 100) * SCREEN_WIDTH,
-            top: (overlay.position_y / 100) * SCREEN_HEIGHT,
-            minWidth: 100,
-            maxWidth: '80%',
-            transform: [
-              { scale: overlay.scale / scaleFactor }, // Adjust back for device scale
-              { rotate: `${overlay.rotation}rad` }
-            ],
-          }]}
-        >
-          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-            <Text
-              style={{
-                color: 'white',
-                fontSize: normalizeFont((overlay.font_size / 100) * BASE_SCREEN_HEIGHT),
-              }}
-            >
-              {overlay.text}
-            </Text>
-          </View>
-        </Animated.View>
-      ));
-    };
+
 
   useEffect(() => {
     // Reset loading states when index changes
