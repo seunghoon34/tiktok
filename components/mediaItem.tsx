@@ -62,27 +62,39 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [userProfile, setUserProfile] = useState(null);
   const [reportType, setReportType] = useState<ReportType>('CONTENT');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+
+  
 
   const renderTextOverlays = () => {
     return item.TextOverlay?.map((overlay, index) => (
-      <Animated.Text
+      <Animated.View
         key={index}
-        style={[
-          styles.overlayText,
-          {
-            position: 'absolute',
-            left: overlay.position_x,
-            top: overlay.position_y,
-            transform: [
-              { scale: overlay.scale },
-              { rotate: `${overlay.rotation}rad` }
-            ],
-            fontSize: overlay.font_size,
-          }
-        ]}
+        style={[{
+          position: 'absolute',
+          left: (overlay.position_x / 100) * SCREEN_WIDTH,
+          top: (overlay.position_y / 100) * SCREEN_HEIGHT,
+          minWidth: 100,
+          maxWidth: '80%',
+          transform: [
+            { scale: overlay.scale },
+            { rotate: `${overlay.rotation}rad` }
+          ],
+        }]}
       >
-        {overlay.text}
-      </Animated.Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
+              
+            }}
+          >
+            {overlay.text}
+          </Text>
+        </View>
+      </Animated.View>
     ));
   };
 
@@ -406,7 +418,6 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             isMuted={item.is_muted || mute}
             onLoadStart={handleLoadStart}
             onPlaybackStatusUpdate={(status) => {
-              console.log('Playback status:', status);
               if (status.isLoaded && !status.isBuffering) {  // Match this condition
                 setIsLoading(false);
               }

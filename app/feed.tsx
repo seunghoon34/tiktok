@@ -130,7 +130,6 @@ export default function HomeScreen() {
     }));
     
     setVideos(prev => [...prev, ...mediaUrls]);
-    console.log(videos)
     console.log('Updated videos length:', videos.length + mediaUrls.length);
   };  
 

@@ -13,7 +13,7 @@ import * as Haptics from 'expo-haptics';
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const INITIAL_FONT_SIZE = Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.1;
+const INITIAL_FONT_SIZE = (Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.13); // Keep as pixels for input
 
 interface BinPosition {
   x: number;
@@ -49,8 +49,8 @@ const DraggableText = ({
   const [elementSize, setElementSize] = useState({ width: 0, height: 0 });
 
   // Animated values for transformations
-  const translateX = useSharedValue(((SCREEN_WIDTH - 100) / 2)-50);
-  const translateY = useSharedValue((SCREEN_HEIGHT - 100) / 2);
+  const translateX = useSharedValue((SCREEN_WIDTH * 0.25)); 
+  const translateY = useSharedValue(SCREEN_HEIGHT * 0.5); 
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
 
@@ -65,11 +65,11 @@ const DraggableText = ({
     const updateData = {
       id,
       text,
-      translateX: translateX.value,
-      translateY: translateY.value,
+      position_x: Math.round((translateX.value / SCREEN_WIDTH) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
+      position_y: Math.round((translateY.value / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
       scale: scale.value,
       rotation: rotation.value,
-      fontSize
+      fontSize: Math.round((fontSize / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 10 // Round font size too
     };
     onOverlayUpdate?.(updateData);
   };
@@ -103,6 +103,8 @@ const DraggableText = ({
     if (text.trim() === '') {
       onDelete(id);
     } else {
+        runOnJS(handleTransformUpdate)(); // Add this to ensure initial position is saved
+
       onEditComplete();
     }
   };
@@ -113,6 +115,8 @@ const DraggableText = ({
       contextX.value = translateX.value;
       contextY.value = translateY.value;
       runOnJS(onDragStateChange)(true);
+      runOnJS(handleTransformUpdate)(); // Add this to ensure initial position is saved
+
     })
     .onUpdate((event) => {
       translateX.value = contextX.value + event.translationX;
@@ -162,12 +166,15 @@ const DraggableText = ({
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [
-      { translateX: translateX.value },
+      { translateX: translateX.value  },  // Match the percentage conversion
       { translateY: translateY.value },
       { scale: scale.value },
       { rotate: `${rotation.value}rad` },
     ],
   }));
+
+ 
+  
 
   return (
     <GestureDetector gesture={isEditing ? Gesture.Exclusive() : composed}>
@@ -182,8 +189,10 @@ const DraggableText = ({
           {isEditing ? (
             <TextInput
               value={text}
-              onChangeText={setText}
-              style={[styles.textInput, { fontSize }]}
+              onChangeText={(newText) => {
+                setText(newText);
+                handleTransformUpdate(); // Update when text changes
+              }}              style={[styles.textInput, { fontSize }]}
               autoFocus
               multiline
               placeholder="Enter text"
@@ -306,12 +315,10 @@ const styles = StyleSheet.create({
   text: {
     color: 'white',
     
-    padding: 10,
   },
   textInput: {
     color: 'white',
     
-    padding: 10,
     minWidth: 100,
   },
   addButton: {
@@ -337,4 +344,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 999,
   },
+  
 });

@@ -52,7 +52,7 @@ export default function PreviewMedia({
           <Image
             source={{ uri }}
             style={styles.preview}
-            resizeMode="contain"
+            resizeMode="cover"
           />
         ) : (
           <Video

@@ -123,6 +123,7 @@ export default function CameraScreen() {
       if(videoError) throw videoError;
   
       // Save text overlays
+      
       if (textOverlays.length > 0) {
         const { error: textError } = await supabase
           .from('TextOverlay')
@@ -130,8 +131,8 @@ export default function CameraScreen() {
             textOverlays.map(overlay => ({
               video_id: videoData.id,
               text: overlay.text,
-              position_x: overlay.translateX,
-              position_y: overlay.translateY,
+              position_x: overlay.position_x,
+              position_y: overlay.position_y,
               scale: overlay.scale,
               rotation: overlay.rotation,
               font_size: overlay.fontSize

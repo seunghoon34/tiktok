@@ -51,29 +51,39 @@ export default function UserStoryScreen() {
   const screenWidth = Dimensions.get('window').width;
 
   const isContentLoading = isMediaLoading || isTextLoading || initialLoading;
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 
   const renderTextOverlays = () => {
     return stories[currentIndex]?.TextOverlay?.map((overlay, index) => (
-      <Animated.Text
+      <Animated.View
         key={index}
         style={[{
           position: 'absolute',
-          left: overlay.position_x,
-          top: overlay.position_y,
+          left: (overlay.position_x / 100) * SCREEN_WIDTH,
+          top: (overlay.position_y / 100) * SCREEN_HEIGHT,
+          minWidth: 100,
+          maxWidth: '80%',
           transform: [
             { scale: overlay.scale },
             { rotate: `${overlay.rotation}rad` }
           ],
-          fontSize: overlay.font_size,
-          color: 'white',
-         
-          zIndex: 2,
         }]}
       >
-        {overlay.text}
-      </Animated.Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
+            }}
+          >
+            {overlay.text}
+          </Text>
+        </View>
+      </Animated.View>
     ));
   };
+
 
   useEffect(() => {
     // Reset loading states when index changes
@@ -158,12 +168,16 @@ export default function UserStoryScreen() {
     
     if (touchX < screenWidth * 0.3) {
       if (currentIndex > 0) {
+        setIsMediaLoading(true);
+      setIsTextLoading(true);
         setCurrentIndex(currentIndex - 1);
       } else {
         router.back();
       }
     } else if (touchX > screenWidth * 0.7) {
       if (currentIndex < stories.length - 1) {
+        setIsMediaLoading(true);
+      setIsTextLoading(true);
         setCurrentIndex(currentIndex + 1);
       } else {
         router.back();

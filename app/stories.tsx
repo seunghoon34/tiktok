@@ -50,27 +50,41 @@ export default function Mystoryscreen() {
   const screenWidth = Dimensions.get('window').width;
 
   const isContentLoading = isMediaLoading || isTextLoading || initialLoading;
+  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 
   const renderTextOverlays = () => {
+    console.log('Screen Dimensions:', {
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+      aspectRatio: SCREEN_WIDTH / SCREEN_HEIGHT
+    });
     return stories[currentIndex]?.TextOverlay?.map((overlay, index) => (
-      <Animated.Text
+      <Animated.View
         key={index}
         style={[{
           position: 'absolute',
-          left: overlay.position_x,
-          top: overlay.position_y,
+          left: (overlay.position_x / 100) * SCREEN_WIDTH,
+          top: (overlay.position_y / 100) * SCREEN_HEIGHT,
+          minWidth: 100,
+          maxWidth: '80%',
           transform: [
             { scale: overlay.scale },
             { rotate: `${overlay.rotation}rad` }
           ],
-          fontSize: overlay.font_size,
-          color: 'white',
-       
-          zIndex: 2,
         }]}
       >
-        {overlay.text}
-      </Animated.Text>
+        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+          <Text
+            style={{
+              color: 'white',
+              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
+            }}
+          >
+            {overlay.text}
+          </Text>
+        </View>
+      </Animated.View>
     ));
   };
 
@@ -157,11 +171,15 @@ export default function Mystoryscreen() {
     
     if (touchX < screenWidth * 0.3) {
       if (currentIndex > 0) {
+        setIsMediaLoading(true);
+      setIsTextLoading(true);
         setCurrentIndex(currentIndex - 1);
       } else {
         router.back();
       }
     } else if (touchX > screenWidth * 0.7) {
+      setIsMediaLoading(true);
+      setIsTextLoading(true);
       if (currentIndex < stories.length - 1) {
         setCurrentIndex(currentIndex + 1);
       } else {
