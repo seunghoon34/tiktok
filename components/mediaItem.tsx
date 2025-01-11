@@ -406,8 +406,9 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             isMuted={item.is_muted || mute}
             onLoadStart={handleLoadStart}
             onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && !status.isBuffering) {
-                handleLoadEnd();
+              console.log('Playback status:', status);
+              if (status.isLoaded && !status.isBuffering) {  // Match this condition
+                setIsLoading(false);
               }
             }}
           />
