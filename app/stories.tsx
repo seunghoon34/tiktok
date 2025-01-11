@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Pressable, Dimensions, TouchableOpacity, Text, Animated } from 'react-native';
+import { View, Pressable, Dimensions, TouchableOpacity, Text, Animated, Platform, PixelRatio } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useState, useEffect, useRef } from 'react';
 import { Video, ResizeMode } from 'expo-av';
@@ -52,6 +52,24 @@ export default function Mystoryscreen() {
   const isContentLoading = isMediaLoading || isTextLoading || initialLoading;
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
+  const BASE_SCREEN_WIDTH = 393;
+const BASE_SCREEN_HEIGHT = 852;
+
+// Scale factors
+const widthScaleFactor = SCREEN_WIDTH / BASE_SCREEN_WIDTH;
+const heightScaleFactor = SCREEN_HEIGHT / BASE_SCREEN_HEIGHT;
+const scaleFactor = Math.min(widthScaleFactor, heightScaleFactor);
+
+// Normalize font size based on screen size
+const normalizeFont = (size: number) => { 
+  const scale = scaleFactor;
+  const newSize = size * scale;
+  if (Platform.OS === 'ios') {
+    return Math.round(PixelRatio.roundToNearestPixel(newSize));
+  }
+  return Math.round(PixelRatio.roundToNearestPixel(newSize));
+};
+
 
   const renderTextOverlays = () => {
     console.log('Screen Dimensions:', {
@@ -69,7 +87,7 @@ export default function Mystoryscreen() {
           minWidth: 100,
           maxWidth: '80%',
           transform: [
-            { scale: overlay.scale },
+            { scale: overlay.scale / scaleFactor }, // Adjust back for device scale
             { rotate: `${overlay.rotation}rad` }
           ],
         }]}
@@ -78,7 +96,7 @@ export default function Mystoryscreen() {
           <Text
             style={{
               color: 'white',
-              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
+              fontSize: normalizeFont((overlay.font_size / 100) * BASE_SCREEN_HEIGHT),
             }}
           >
             {overlay.text}
