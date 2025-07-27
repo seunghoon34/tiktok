@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
@@ -12,73 +6,73 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DIRECT_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
+  extensions = [uuid_ossp(map: "uuid-ossp")]
 }
 
 model User {
-  id         String     @id @unique
-  email      String     @unique
-  username       String    @unique
-  created_at DateTime   @default(now())
-  videos     Video[]
-  likes      Like[]
-  matchesAsUser1 Match[] @relation("UserOneMatches")
-  matchesAsUser2 Match[] @relation("UserTwoMatches")
-  comments   Comment[]
-  chatsAsUser1 Chat[] @relation("UserOneChats")
-  chatsAsUser2 Chat[] @relation("UserTwoChats")
-  messages Message[]
-  expo_push_token String?
-  sent_notifications      Notification[] @relation("SentNotifications")
-  received_notifications  Notification[] @relation("ReceivedNotifications")
-  userProfile UserProfile[]
-  blockedUsers     UserBlock[] @relation("BlockerUser")
-  blockedByUsers   UserBlock[] @relation("BlockedUser")
-  reportsMade      Report[]    @relation("ReporterUser")
-  reportsReceived  Report[]    @relation("ReportedUser")
+  id                     String         @id @unique
+  email                  String         @unique
+  created_at             DateTime       @default(now())
+  username               String         @unique
+  expo_push_token        String?
+  app_state              String?        @default("background")
+  chatsAsUser1           Chat[]         @relation("UserOneChats")
+  chatsAsUser2           Chat[]         @relation("UserTwoChats")
+  comments               Comment[]
+  likes                  Like[]
+  matchesAsUser1         Match[]        @relation("UserOneMatches")
+  matchesAsUser2         Match[]        @relation("UserTwoMatches")
+  messages               Message[]
+  sent_notifications     Notification[] @relation("SentNotifications")
+  received_notifications Notification[] @relation("ReceivedNotifications")
+  reportsReceived        Report[]       @relation("ReportedUser")
+  reportsMade            Report[]       @relation("ReporterUser")
+  blockedByUsers         UserBlock[]    @relation("BlockedUser")
+  blockedUsers           UserBlock[]    @relation("BlockerUser")
+  userProfile            UserProfile?
+  videos                 Video[]
 }
 
 model UserProfile {
-  user_id String
-  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user_id        String   @unique
   profilepicture String
-  name String
-  birthdate DateTime
-  aboutme String
-
-  @@unique([user_id])
+  name           String
+  birthdate      DateTime
+  aboutme        String
+  user           User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Video {
-  id         String    @id @default(dbgenerated("uuid_generate_v4()"))
-  title      String
-  uri        String
-  user_id    String
-  user       User      @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  likes      Like[]
-  created_at DateTime  @default(now())
-  expried_at DateTime
-  comments   Comment[]
-  is_muted  Boolean @default(false)
+  id          String        @id @default(dbgenerated("uuid_generate_v4()"))
+  title       String
+  uri         String
+  user_id     String
+  created_at  DateTime      @default(now())
+  is_muted    Boolean       @default(false)
+  expired_at  DateTime?     @db.Timestamptz(6)
+  comments    Comment[]
+  likes       Like[]
+  TextOverlay TextOverlay[]
+  user        User          @relation(fields: [user_id], references: [id], onDelete: Cascade)
 }
 
 model Like {
   id            String   @id @default(dbgenerated("uuid_generate_v4()"))
   user_id       String
-  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   video_id      String
-  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
   video_user_id String
   created_at    DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
 }
 
 model Match {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-  user1_id String
-  user2_id String
-  user1 User @relation("UserOneMatches", fields: [user1_id], references: [id], onDelete: Cascade)
-  user2 User @relation("UserTwoMatches", fields: [user2_id], references: [id], onDelete: Cascade)
+  id         String   @id @default(dbgenerated("uuid_generate_v4()"))
+  user1_id   String
+  user2_id   String
   created_at DateTime @default(now())
+  user1      User     @relation("UserOneMatches", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2      User     @relation("UserTwoMatches", fields: [user2_id], references: [id], onDelete: Cascade)
 
   @@unique([user1_id, user2_id])
 }
@@ -86,81 +80,91 @@ model Match {
 model Comment {
   id            String   @id @default(dbgenerated("uuid_generate_v4()"))
   user_id       String
-  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
   video_id      String
-  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
   video_user_id String
   text          String
   created_at    DateTime @default(now())
+  user          User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  video         Video    @relation(fields: [video_id], references: [id], onDelete: Cascade)
 }
 
 model Chat {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-  user1_id String
-  user2_id String
-  created_at DateTime @default(now())
-  messages Message[]
-  user1 User @relation("UserOneChats", fields: [user1_id], references: [id], onDelete: Cascade)
-  user2 User @relation("UserTwoChats", fields: [user2_id], references: [id], onDelete: Cascade)
+  id         String    @id @default(dbgenerated("uuid_generate_v4()"))
+  created_at DateTime  @default(now())
+  user1_id   String
+  user2_id   String
+  user1      User      @relation("UserOneChats", fields: [user1_id], references: [id], onDelete: Cascade)
+  user2      User      @relation("UserTwoChats", fields: [user2_id], references: [id], onDelete: Cascade)
+  messages   Message[]
 
   @@unique([user1_id, user2_id])
 }
 
 model Message {
-  id String @id @default(dbgenerated("uuid_generate_v4()"))
-  chat_id String
-  sender_id String
-  content String
+  id         String   @id @default(dbgenerated("uuid_generate_v4()"))
+  chat_id    String
+  sender_id  String
+  content    String
   created_at DateTime @default(now())
   read       Boolean  @default(false)
-  chat Chat @relation(fields: [chat_id], references: [id], onDelete: Cascade)
-  sender User @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+  chat       Chat     @relation(fields: [chat_id], references: [id], onDelete: Cascade)
+  sender     User     @relation(fields: [sender_id], references: [id], onDelete: Cascade)
 }
 
 model Notification {
-  id          String   @id @default(dbgenerated("uuid_generate_v4()"))
-  type        NotificationType  // Using an enum for type safety
-  from_user   String   
-  to_user     String   
-  read        Boolean  @default(false)
-  created_at  DateTime @default(now())
-  
-  // Relations
-  sender    User @relation("SentNotifications", fields: [from_user], references: [id], onDelete: Cascade)
-  receiver  User @relation("ReceivedNotifications", fields: [to_user], references: [id], onDelete: Cascade)
+  id         String           @id @default(dbgenerated("uuid_generate_v4()"))
+  read       Boolean          @default(false)
+  created_at DateTime         @default(now())
+  from_user  String
+  to_user    String
+  type       NotificationType
+  sender     User             @relation("SentNotifications", fields: [from_user], references: [id], onDelete: Cascade)
+  receiver   User             @relation("ReceivedNotifications", fields: [to_user], references: [id], onDelete: Cascade)
+}
+
+model UserBlock {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()"))
+  blocker_id String
+  blocked_id String
+  created_at DateTime @default(now())
+  blocked    User     @relation("BlockedUser", fields: [blocked_id], references: [id], onDelete: Cascade)
+  blocker    User     @relation("BlockerUser", fields: [blocker_id], references: [id], onDelete: Cascade)
+
+  @@unique([blocker_id, blocked_id])
+}
+
+model Report {
+  id           String       @id @default(dbgenerated("uuid_generate_v4()"))
+  reporter_id  String
+  reported_id  String
+  content_type ContentType
+  content_id   String
+  reason       ReportReason
+  status       ReportStatus @default(PENDING)
+  description  String?
+  created_at   DateTime     @default(now())
+  resolved_at  DateTime?
+  reported     User         @relation("ReportedUser", fields: [reported_id], references: [id], onDelete: Cascade)
+  reporter     User         @relation("ReporterUser", fields: [reporter_id], references: [id], onDelete: Cascade)
+}
+
+model TextOverlay {
+  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  video_id   String?
+  text       String
+  position_x Float
+  position_y Float
+  scale      Float
+  rotation   Float
+  font_size  Float
+  created_at DateTime? @default(now()) @db.Timestamptz(6)
+  Video      Video?    @relation(fields: [video_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum NotificationType {
   SHOT
   MATCH
   PROFILE_VIEW
-}
-
-model UserBlock {
-  id            String   @id @default(dbgenerated("uuid_generate_v4()"))
-  blocker_id    String
-  blocked_id    String
-  created_at    DateTime @default(now())
-  blocker       User     @relation("BlockerUser", fields: [blocker_id], references: [id], onDelete: Cascade)
-  blocked       User     @relation("BlockedUser", fields: [blocked_id], references: [id], onDelete: Cascade)
-
-  @@unique([blocker_id, blocked_id])
-}
-
-model Report {
-  id            String       @id @default(dbgenerated("uuid_generate_v4()"))
-  reporter_id   String
-  reported_id   String
-  content_type  ContentType
-  content_id    String
-  reason        ReportReason
-  status        ReportStatus @default(PENDING)
-  description   String?
-  created_at    DateTime     @default(now())
-  resolved_at   DateTime?
-  
-  reporter      User         @relation("ReporterUser", fields: [reporter_id], references: [id], onDelete: Cascade)
-  reported      User         @relation("ReportedUser", fields: [reported_id], references: [id], onDelete: Cascade)
 }
 
 enum ContentType {
