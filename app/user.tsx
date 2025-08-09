@@ -24,24 +24,68 @@ export default function UserScreen() {
 
  useEffect(() => {
   const getProfile = async () => {
-    const { data, error } = await supabase
-      .from('UserProfile')
-      .select(`
-        *,
-        user:User (
-          username
-        )
-      `)
-      .eq('user_id', params.user_id)
-      .single();
+    try {
+      console.log('[UserScreen] Fetching profile for user_id:', params.user_id);
+      const { data, error } = await supabase
+        .from('UserProfile')
+        .select(`
+          *,
+          user:User (
+            username
+          )
+        `)
+        .eq('user_id', params.user_id)
+        .single();
  
-    if (data) {
-      const { data: urlData } = await supabase.storage
-        .from('avatars')
-        .createSignedUrl(data.profilepicture, 3600);
-      if (urlData) {
-        setProfile({...data, profilepicture: urlData.signedUrl});
+      if (error) {
+        console.error('[UserScreen] Error fetching profile:', error);
+        return;
       }
+ 
+      if (data) {
+        console.log('[UserScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+        
+        if (data.profilepicture) {
+          console.log('[UserScreen] Getting public URL for:', data.profilepicture);
+          const { data: publicData, error: storageError } = supabase.storage
+            .from('profile_images')
+            .getPublicUrl(data.profilepicture);
+          
+          if (storageError) {
+            console.error('[UserScreen] Error getting public URL:', storageError);
+          }
+          
+          if (publicData?.publicUrl) {
+            const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+            console.log('[UserScreen] Setting image URL:', imageUrl);
+            
+            // Test if the image actually loads (web only)
+            if (typeof window !== 'undefined' && window.Image) {
+              const testImage = new window.Image();
+              testImage.onload = () => {
+                console.log('[UserScreen] ✅ Image loaded successfully');
+              };
+              testImage.onerror = (error: any) => {
+                console.error('[UserScreen] ❌ Failed to load image:', error);
+                console.error('[UserScreen] Image URL that failed:', imageUrl);
+              };
+              testImage.src = imageUrl;
+            }
+            
+            setProfile({...data, profilepicture: imageUrl});
+          } else {
+            console.log('[UserScreen] No public URL returned from storage');
+            setProfile({...data, profilepicture: null});
+          }
+        } else {
+          console.log('[UserScreen] No profile picture path in data');
+          setProfile({...data, profilepicture: null});
+        }
+      } else {
+        console.log('[UserScreen] No profile data returned');
+      }
+    } catch (error) {
+      console.error('[UserScreen] Exception in getProfile:', error);
     }
   };
   getProfile();
@@ -87,10 +131,15 @@ export default function UserScreen() {
        <View className="relative mx-4 mt-2">
          <View className="aspect-[3/4] rounded-3xl overflow-hidden">
            {profile.profilepicture ? (
-             <Image
-               source={{ uri: profile.profilepicture }}
-               className="w-full h-full"
-             />
+                        <Image
+             source={{ uri: profile.profilepicture }}
+             className="w-full h-full"
+             onLoad={() => console.log('[UserScreen] Image component loaded successfully')}
+             onError={(error) => {
+               console.error('[UserScreen] Image component failed to load:', error.nativeEvent);
+               console.error('[UserScreen] Failed image URL:', profile.profilepicture);
+             }}
+           />
            ) : (
              <View className="w-full h-full bg-gray-300 items-center justify-center">
                <Text className="text-4xl text-gray-400">No Image</Text>

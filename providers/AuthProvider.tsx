@@ -8,40 +8,40 @@ import * as SplashScreen from 'expo-splash-screen';
 import { AppState } from 'react-native';
 
 export const AuthContext = createContext({
-    user: null,
+    user: null as any,
     signIn: async (email: string, password: string) =>{},
     signUp: async (email: string, password: string) =>{},
     signOut: async () =>{},
     deleteAccount: async () =>{},
-    likes: [],
+    likes: [] as any[],
     getLikes: async (userId: string) => {},
     setActiveChatId: (chatId: string | null) => {},
-    currentChatId: null,
+    currentChatId: null as string | null,
     loading: true,  // Add this
 });
 
 export const useAuth = () => useContext(AuthContext)
 
 export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
-    const [user, setUser] = useState(null);
+    const [user, setUser] = useState<any>(null);
     const router = useRouter()
-    const [likes, setLikes] = useState([])
-    const [currentChatId, setCurrentChatId] = useState(null);   
-    const [session, setSession] = useState(null);
+    const [likes, setLikes] = useState<any[]>([])
+    const [currentChatId, setCurrentChatId] = useState<string | null>(null);   
+    const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     const getLikes = async (userId: string, immediateUpdate?: any[]) => {
         if(!user) return;
         
         if (immediateUpdate) {
-            setLikes(prevLikes => [...prevLikes, ...immediateUpdate]);
+            setLikes((prevLikes: any[]) => [...prevLikes, ...immediateUpdate]);
             return;
         }
         
         const { data, error } = await supabase.from('Like').select("*").eq('user_id', userId);
         if (error) return;
         
-        setLikes(data || []);
+        setLikes((data as any[]) || []);
     }
 
     const getUser = async (id: string) => {
@@ -54,6 +54,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             if (error) throw error;
             
             if (!data || data.length === 0) {
+                // Brief delay in case of eventual consistency
                 await new Promise(resolve => setTimeout(resolve, 2000));
                 const retryResult = await supabase
                     .from("User")
@@ -61,10 +62,36 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                     .eq("id", id);
                 
                 if (retryResult.error || !retryResult.data || retryResult.data.length === 0) {
-                    throw new Error('User not found after retry');
+                    // Auto-provision a row for migrated users who have an auth user but no public.User row yet
+                    const { data: authUserResult } = await supabase.auth.getUser();
+                    const tempUsername = `user_${Date.now()}`;
+                    const emailForInsert = authUserResult?.user?.email ?? '';
+
+                    const { error: provisionError } = await supabase
+                        .from('User')
+                        .insert({ id, email: emailForInsert, username: tempUsername });
+
+                    if (provisionError) {
+                        throw new Error('User not found after retry');
+                    }
+
+                    // Fetch the newly provisioned row
+                    const { data: createdUser } = await supabase
+                        .from('User')
+                        .select('*')
+                        .eq('id', id)
+                        .single();
+
+                    if (!createdUser) {
+                        throw new Error('User not found after retry');
+                    }
+
+                    await setUser(createdUser);
+                    await getLikes(createdUser.id);
+                } else {
+                    await setUser(retryResult.data[0]);
+                    await getLikes(retryResult.data[0].id);
                 }
-                await setUser(retryResult.data[0]);
-                await getLikes(retryResult.data[0].id);
             } else {
                 await setUser(data[0]);
                 await getLikes(data[0].id);
@@ -100,7 +127,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                 setSession(data.session);
                 await getUser(data.user.id);
             }
-        } catch (error) {
+        } catch (error: unknown) {
             console.error('Sign in error:', error);
             throw error;
         }
@@ -122,11 +149,14 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
             const { data: userData, error: userError } = await supabase
                 .from('User')
-                .insert({
-                    id: authData.user.id,
-                    email: email,
-                    username: tempUsername,
-                })
+                .upsert(
+                    {
+                        id: authData.user.id,
+                        email: email,
+                        username: tempUsername,
+                    },
+                    { onConflict: 'id' }
+                )
                 .select()
                 .single();
             
@@ -218,14 +248,18 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
               setSession(null);
               router.push('/(auth)');
           }
-      } catch (error) {
-          console.error('Error initializing auth:', error);
-          // Handle the auth session missing error
-          if (error.message?.includes('Auth session missing')) {
-              setUser(null);
-              setSession(null);
-              router.push('/(auth)');
+      } catch (error: any) {
+          // Check if it's a refresh token error (expected when session expired)
+          if (error?.message?.includes('Invalid Refresh Token') || error?.message?.includes('Refresh Token Not Found')) {
+              console.log('Session expired, redirecting to login');
+          } else {
+              console.error('Error initializing auth:', error);
           }
+          
+          // Handle auth errors by clearing session and redirecting
+          setUser(null);
+          setSession(null);
+          router.push('/(auth)');
       } finally {
           setLoading(false);
           try {
@@ -239,7 +273,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
   // Modify the auth state change listener
   useEffect(() => {
     initializeAuth();
-      const handleAuthStateChange = async (event, newSession) => {
+      const handleAuthStateChange = async (event: string, newSession: any) => {
           console.log('Auth state changed:', event);
           
           try {
@@ -272,13 +306,18 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                       }
                       break;
               }
-          } catch (error: any) {
-              console.error('Error handling auth state change:', error);
-              if (error.message?.includes('Auth session missing')) {
-                  setUser(null);
-                  setSession(null);
-                  router.push('/(auth)');
+            } catch (error: any) {
+              // Check if it's a refresh token error (expected when session expired)
+              if (error?.message?.includes('Invalid Refresh Token') || error?.message?.includes('Refresh Token Not Found')) {
+                  console.log('Session expired during auth state change, redirecting to login');
+              } else {
+                  console.error('Error handling auth state change:', error);
               }
+              
+              // Handle auth errors by clearing session and redirecting
+              setUser(null);
+              setSession(null);
+              router.push('/(auth)');
           }
       };
   
@@ -350,7 +389,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                       return; // Don't notify if user is not part of the chat
                   }
   
-                  const { data: senderData } = await supabase
+                   const { data: senderData } = await supabase
                       .from('User')
                       .select('username')
                       .eq('id', payload.new.sender_id)
@@ -358,8 +397,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
   
                   await sendMessageNotification(
                       payload.new.sender_id,
-                      senderData.username,
-                      user.id,
+                       senderData?.username ?? '',
+                       user.id,
                       payload.new.chat_id
                   );
               }

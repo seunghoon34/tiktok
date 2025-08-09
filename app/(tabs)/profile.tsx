@@ -23,13 +23,28 @@ export default function ProfileScreen() {
 
 
  const getProfile = async () => {
-  const { data, error } = await supabase
-    .from('UserProfile')
-    .select('*')
-    .eq('user_id', user?.id)
-    .single();
-  
-  if (data) setProfile(data);
+  try {
+    console.log('[ProfileScreen] Fetching profile for user:', user?.id);
+    const { data, error } = await supabase
+      .from('UserProfile')
+      .select('*')
+      .eq('user_id', user?.id)
+      .single();
+    
+    if (error) {
+      console.error('[ProfileScreen] Error fetching profile:', error);
+      return;
+    }
+    
+    if (data) {
+      console.log('[ProfileScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+      setProfile(data);
+    } else {
+      console.log('[ProfileScreen] No profile data returned');
+    }
+  } catch (error) {
+    console.error('[ProfileScreen] Exception in getProfile:', error);
+  }
 };
 
 const checkUserVideos = async () => {
@@ -51,15 +66,48 @@ useFocusEffect(
 );
 
  useEffect(() => {
-  const getSignedUrl = async () => {
-    if (profile?.profilepicture) {
-      const { data, error } = await supabase.storage
-        .from('avatars')
-        .createSignedUrl(profile.profilepicture, 60 * 60); // 1 hour expiry
-      if (data) setImageUrl(data.signedUrl);
+  const getAvatarUrl = async () => {
+    try {
+      if (profile?.profilepicture) {
+        console.log('[ProfileScreen] Getting avatar URL for:', profile.profilepicture);
+        const { data, error } = supabase.storage
+          .from('profile_images')
+          .getPublicUrl(profile.profilepicture);
+        
+        if (error) {
+          console.error('[ProfileScreen] Error getting public URL:', error);
+          return;
+        }
+        
+        if (data?.publicUrl) {
+          const imageUrl = `${data.publicUrl}?t=${Date.now()}`;
+          console.log('[ProfileScreen] Setting image URL:', imageUrl);
+          setImageUrl(imageUrl);
+          
+          // Test if the image actually loads (web only)
+          if (typeof window !== 'undefined' && window.Image) {
+            const testImage = new window.Image();
+            testImage.onload = () => {
+              console.log('[ProfileScreen] ✅ Image loaded successfully');
+            };
+            testImage.onerror = (error: any) => {
+              console.error('[ProfileScreen] ❌ Failed to load image:', error);
+              console.error('[ProfileScreen] Image URL that failed:', imageUrl);
+            };
+            testImage.src = imageUrl;
+          }
+        } else {
+          console.log('[ProfileScreen] No public URL returned from storage');
+        }
+      } else {
+        console.log('[ProfileScreen] No profile picture path available');
+        setImageUrl(null);
+      }
+    } catch (error) {
+      console.error('[ProfileScreen] Exception in getAvatarUrl:', error);
     }
   };
-  getSignedUrl();
+  getAvatarUrl();
  }, [profile]);
 
  useFocusEffect(
@@ -113,6 +161,11 @@ useFocusEffect(
          <Image 
            source={{ uri: imageUrl }}
            className="h-24 w-24 rounded-full"
+           onLoad={() => console.log('[ProfileScreen] Image component loaded successfully')}
+           onError={(error) => {
+             console.error('[ProfileScreen] Image component failed to load:', error.nativeEvent);
+             console.error('[ProfileScreen] Failed image URL:', imageUrl);
+           }}
          />
        </View>
      </View>
@@ -120,10 +173,15 @@ useFocusEffect(
  ) : (
    <View>
      {profile?.profilepicture ? (
-       <Image 
-         source={{ uri: imageUrl }}
-         className="h-24 w-24 rounded-full"
-       />
+                <Image 
+           source={{ uri: imageUrl }}
+           className="h-24 w-24 rounded-full"
+           onLoad={() => console.log('[ProfileScreen] Image component loaded successfully (with stories)')}
+           onError={(error) => {
+             console.error('[ProfileScreen] Image component failed to load (with stories):', error.nativeEvent);
+             console.error('[ProfileScreen] Failed image URL:', imageUrl);
+           }}
+         />
      ) : (
        <View className="h-24 w-24 rounded-full bg-gray-200 items-center justify-center">
          <Ionicons name="person" size={40} color="#9CA3AF" />
@@ -181,7 +239,6 @@ useFocusEffect(
          ))}
        </View>
      </ScrollView>
-
      <View className="absolute bottom-0 w-full pb-4">
        <Text className="text-center text-gray-400">
          Version 1.0.0

@@ -70,24 +70,68 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
  useEffect(() => {
   if (!otherUser) return;
   const getOtherUserProfile = async () => {
-    const { data, error } = await supabase
-      .from('UserProfile')
-      .select(`
-        *,
-        user:User (
-          username
-        )
-      `)
-      .eq('user_id', otherUser.id)
-      .single();
+    try {
+      console.log('[InboxScreen] Fetching profile for other user:', otherUser.id);
+      const { data, error } = await supabase
+        .from('UserProfile')
+        .select(`
+          *,
+          user:User (
+            username
+          )
+        `)
+        .eq('user_id', otherUser.id)
+        .single();
 
-    if (data) {
-      const publicUrl = supabase.storage
-        .from('avatars')
-        .getPublicUrl(data.profilepicture).data.publicUrl;
-      if (publicUrl) {
-        setOtherUserProfile({...data, profilepicture: publicUrl});
+      if (error) {
+        console.error('[InboxScreen] Error fetching profile:', error);
+        return;
       }
+
+      if (data) {
+        console.log('[InboxScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+        
+        if (data.profilepicture) {
+          console.log('[InboxScreen] Getting public URL for:', data.profilepicture);
+          const { data: publicData, error: storageError } = supabase.storage
+            .from('profile_images')
+            .getPublicUrl(data.profilepicture);
+          
+          if (storageError) {
+            console.error('[InboxScreen] Error getting public URL:', storageError);
+          }
+          
+          if (publicData?.publicUrl) {
+            const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+            console.log('[InboxScreen] Setting image URL:', imageUrl);
+            
+            // Test if the image actually loads (web only)
+            if (typeof window !== 'undefined' && window.Image) {
+              const testImage = new window.Image();
+              testImage.onload = () => {
+                console.log('[InboxScreen] ✅ Image loaded successfully');
+              };
+              testImage.onerror = (error: any) => {
+                console.error('[InboxScreen] ❌ Failed to load image:', error);
+                console.error('[InboxScreen] Image URL that failed:', imageUrl);
+              };
+              testImage.src = imageUrl;
+            }
+            
+            setOtherUserProfile({...data, profilepicture: imageUrl});
+          } else {
+            console.log('[InboxScreen] No public URL returned from storage');
+            setOtherUserProfile({...data, profilepicture: null});
+          }
+        } else {
+          console.log('[InboxScreen] No profile picture path in data');
+          setOtherUserProfile({...data, profilepicture: null});
+        }
+      } else {
+        console.log('[InboxScreen] No profile data returned');
+      }
+    } catch (error) {
+      console.error('[InboxScreen] Exception in getOtherUserProfile:', error);
     }
   };
   getOtherUserProfile();
@@ -109,6 +153,11 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
            <Image 
              source={{ uri: otherUserProfile?.profilepicture }}
              className="w-10 h-10 rounded-full"
+             onLoad={() => console.log('[InboxScreen] Image component loaded successfully')}
+             onError={(error) => {
+               console.error('[InboxScreen] Image component failed to load:', error.nativeEvent);
+               console.error('[InboxScreen] Failed image URL:', otherUserProfile?.profilepicture);
+             }}
            />
          ) : (
            <Ionicons 

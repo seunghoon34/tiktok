@@ -250,23 +250,68 @@ export default function ChatScreen() {
     if (!otherUser) return;
 
     const getOtherUserProfile = async () => {
-      const { data, error } = await supabase
-        .from('UserProfile')
-        .select(`
-          *,
-          user:User (
-            username
-          )
-        `)
-        .eq('user_id', otherUser.id)
-        .single();
+      try {
+        console.log('[ChatScreen] Fetching profile for other user:', otherUser.id);
+        const { data, error } = await supabase
+          .from('UserProfile')
+          .select(`
+            *,
+            user:User (
+              username
+            )
+          `)
+          .eq('user_id', otherUser.id)
+          .single();
 
-      if (data) {
-        const publicUrl = supabase.storage
-          .from('avatars')
-          .getPublicUrl(data.profilepicture).data.publicUrl;
+        if (error) {
+          console.error('[ChatScreen] Error fetching profile:', error);
+          return;
+        }
+
+        if (data) {
+          console.log('[ChatScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
           
-        setOtherUserProfile({...data, profilepicture: publicUrl});
+          if (data.profilepicture) {
+            console.log('[ChatScreen] Getting public URL for:', data.profilepicture);
+            const { data: publicData, error: storageError } = supabase.storage
+              .from('profile_images')
+              .getPublicUrl(data.profilepicture);
+            
+            if (storageError) {
+              console.error('[ChatScreen] Error getting public URL:', storageError);
+            }
+            
+            if (publicData?.publicUrl) {
+              const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+              console.log('[ChatScreen] Setting image URL:', imageUrl);
+              
+              // Test if the image actually loads (web only)
+              if (typeof window !== 'undefined' && window.Image) {
+                const testImage = new window.Image();
+                testImage.onload = () => {
+                  console.log('[ChatScreen] ✅ Image loaded successfully');
+                };
+                testImage.onerror = (error: any) => {
+                  console.error('[ChatScreen] ❌ Failed to load image:', error);
+                  console.error('[ChatScreen] Image URL that failed:', imageUrl);
+                };
+                testImage.src = imageUrl;
+              }
+              
+              setOtherUserProfile({...data, profilepicture: imageUrl});
+            } else {
+              console.log('[ChatScreen] No public URL returned from storage');
+              setOtherUserProfile({...data, profilepicture: null});
+            }
+          } else {
+            console.log('[ChatScreen] No profile picture path in data');
+            setOtherUserProfile({...data, profilepicture: null});
+          }
+        } else {
+          console.log('[ChatScreen] No profile data returned');
+        }
+      } catch (error) {
+        console.error('[ChatScreen] Exception in getOtherUserProfile:', error);
       }
     };
     getOtherUserProfile();
@@ -354,6 +399,11 @@ export default function ChatScreen() {
             <Image
               source={{ uri: otherUserProfile.profilepicture }}
               className="w-10 h-10 rounded-full"
+              onLoad={() => console.log('[ChatScreen] Image component loaded successfully')}
+              onError={(error) => {
+                console.error('[ChatScreen] Image component failed to load:', error.nativeEvent);
+                console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
+              }}
             />
           ) : (
             <View className="mr-2">
@@ -373,6 +423,11 @@ export default function ChatScreen() {
         <Image
           source={{ uri: otherUserProfile.profilepicture }}
           className="w-10 h-10 rounded-full"
+          onLoad={() => console.log('[ChatScreen] Image component loaded successfully (with stories)')}
+          onError={(error) => {
+            console.error('[ChatScreen] Image component failed to load (with stories):', error.nativeEvent);
+            console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
+          }}
         />
       ) : (
         <View className="mr-2">

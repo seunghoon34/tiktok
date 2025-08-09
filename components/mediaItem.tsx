@@ -123,23 +123,68 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
 
   useEffect(() => {
     const getUserProfile = async () => {
-      const { data, error } = await supabase
-        .from('UserProfile')
-        .select(`
-          *,
-          user:User (
-            username
-          )
-        `)
-        .eq('user_id', item.User.id)
-        .single();
+      try {
+        console.log('[MediaItem] Fetching profile for user:', item.User.id);
+        const { data, error } = await supabase
+          .from('UserProfile')
+          .select(`
+            *,
+            user:User (
+              username
+            )
+          `)
+          .eq('user_id', item.User.id)
+          .single();
 
-      if (data) {
-        const publicUrl = supabase.storage
-          .from('avatars')
-          .getPublicUrl(data.profilepicture).data.publicUrl;
-        
-        setUserProfile({...data, profilepicture: publicUrl});
+        if (error) {
+          console.error('[MediaItem] Error fetching profile:', error);
+          return;
+        }
+
+        if (data) {
+          console.log('[MediaItem] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+          
+          if (data.profilepicture) {
+            console.log('[MediaItem] Getting public URL for:', data.profilepicture);
+            const { data: publicData, error: storageError } = supabase.storage
+              .from('profile_images')
+              .getPublicUrl(data.profilepicture);
+            
+            if (storageError) {
+              console.error('[MediaItem] Error getting public URL:', storageError);
+            }
+            
+            if (publicData?.publicUrl) {
+              const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+              console.log('[MediaItem] Setting image URL:', imageUrl);
+              
+              // Test if the image actually loads (web only)
+              if (typeof window !== 'undefined' && window.Image) {
+                const testImage = new window.Image();
+                testImage.onload = () => {
+                  console.log('[MediaItem] ✅ Image loaded successfully');
+                };
+                testImage.onerror = (error: any) => {
+                  console.error('[MediaItem] ❌ Failed to load image:', error);
+                  console.error('[MediaItem] Image URL that failed:', imageUrl);
+                };
+                testImage.src = imageUrl;
+              }
+              
+              setUserProfile({...data, profilepicture: imageUrl});
+            } else {
+              console.log('[MediaItem] No public URL returned from storage');
+              setUserProfile({...data, profilepicture: null});
+            }
+          } else {
+            console.log('[MediaItem] No profile picture path in data');
+            setUserProfile({...data, profilepicture: null});
+          }
+        } else {
+          console.log('[MediaItem] No profile data returned');
+        }
+      } catch (error) {
+        console.error('[MediaItem] Exception in getUserProfile:', error);
       }
     };
     getUserProfile();

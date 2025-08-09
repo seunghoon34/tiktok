@@ -20,8 +20,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import Header from '@/components/header';
 
 const EditProfileScreen = () => {
-  const [image, setImage] = useState(null);
-  const [originalImage, setOriginalImage] = useState(null);
+  const [image, setImage] = useState<string | null>(null);
+  const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({
     name: '',
@@ -54,12 +54,34 @@ const EditProfileScreen = () => {
           });
 
           if (data.profilepicture) {
-            const { data: urlData } = await supabase.storage
-              .from('avatars')
+            console.log('[EditProfile] Loading existing profile picture:', data.profilepicture);
+            const { data: urlData, error: urlError } = await supabase.storage
+              .from('profile_images')
               .createSignedUrl(data.profilepicture, 3600);
+            
+            if (urlError) {
+              console.error('[EditProfile] Error creating signed URL:', urlError);
+            }
+            
             if (urlData) {
+              console.log('[EditProfile] Signed URL created:', urlData.signedUrl);
               setImage(urlData.signedUrl);
               setOriginalImage(urlData.signedUrl);
+              
+              // Test if the image actually loads (web only)
+              if (typeof window !== 'undefined' && window.Image) {
+                const testImage = new window.Image();
+                testImage.onload = () => {
+                  console.log('[EditProfile] ✅ Existing image loaded successfully');
+                };
+                testImage.onerror = (error: any) => {
+                  console.error('[EditProfile] ❌ Failed to load existing image:', error);
+                  console.error('[EditProfile] Image URL that failed:', urlData.signedUrl);
+                };
+                testImage.src = urlData.signedUrl;
+              }
+            } else {
+              console.log('[EditProfile] No signed URL data returned');
             }
           }
         }
@@ -101,7 +123,7 @@ const EditProfileScreen = () => {
     }
   };
 
-  const onDateChange = (event, selectedDate) => {
+  const onDateChange = (event: any, selectedDate?: Date) => {
     if (selectedDate) {
       setFormData(prev => ({ ...prev, birthdate: selectedDate }));
     }
@@ -130,31 +152,61 @@ const EditProfileScreen = () => {
 
       // Only upload if image has changed from original
       if (image && image !== originalImage) {
+        console.log('[EditProfile] Image changed, starting upload process...');
+        console.log('[EditProfile] Starting image compression...');
         const compressed = await ImageManipulator.manipulateAsync(
           image,
           [{ resize: { width: 800 } }],
           { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
         );
+        console.log('[EditProfile] Image compressed successfully');
 
         const fileName = `${user?.id}-${Date.now()}.jpg`;
-        const file = {
+        console.log('[EditProfile] Uploading file:', fileName);
+        
+        // Create FormData for React Native upload
+        const formData = new FormData();
+        formData.append('file', {
+          uri: compressed.uri,
           type: 'image/jpeg',
           name: fileName,
-          uri: compressed.uri
-        };
+        } as any);
+
+        console.log('[EditProfile] FormData created for file:', fileName);
+        console.log('[EditProfile] Image URI:', compressed.uri);
 
         const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(fileName, file, {
+          .from('profile_images')
+          .upload(fileName, formData, {
             cacheControl: '3600000000',
-            upsert: true
+            upsert: true,
+            contentType: 'image/jpeg',
           });
 
-        if (uploadError) throw uploadError;
+        if (uploadError) {
+          console.error('[EditProfile] File upload failed:', uploadError);
+          console.error('[EditProfile] Upload error details:', JSON.stringify(uploadError, null, 2));
+          throw new Error(`Failed to upload profile picture: ${uploadError.message}`);
+        }
+        
+        if (!uploadData || !uploadData.path) {
+          console.error('[EditProfile] Upload succeeded but no data/path returned:', uploadData);
+          throw new Error('Upload succeeded but no file path returned');
+        }
+        
+        console.log('[EditProfile] File uploaded successfully:', uploadData.path);
         profilePicturePath = uploadData?.path;
+        
+        // Test the uploaded image URL
+        const { data: testUrl } = supabase.storage
+            .from('profile_images')
+            .getPublicUrl(uploadData.path);
+        console.log('[EditProfile] Testing uploaded image URL:', testUrl?.publicUrl);
+      } else {
+        console.log('[EditProfile] No image change detected, skipping upload');
       }
 
-      const updateData = {
+      const updateData: any = {
         name: formData.name.trim(),
         birthdate: formData.birthdate,
         aboutme: formData.aboutme.trim(),
@@ -164,19 +216,29 @@ const EditProfileScreen = () => {
         updateData.profilepicture = profilePicturePath;
       }
 
+      console.log('[EditProfile] Updating profile data...');
+      console.log('[EditProfile] Update data:', { ...updateData, profilepicture: updateData.profilepicture ? 'exists' : 'unchanged' });
+      
       const { error: profileError } = await supabase
         .from('UserProfile')
         .update(updateData)
         .eq('user_id', user?.id);
 
-      if (profileError) throw profileError;
+      if (profileError) {
+        console.error('[EditProfile] Failed to update profile:', profileError);
+        console.error('[EditProfile] Profile error details:', JSON.stringify(profileError, null, 2));
+        throw new Error(`Failed to update profile: ${profileError.message}`);
+      }
+      
+      console.log('[EditProfile] Profile updated successfully!');
 
       router.back();
-    } catch (error) {
-      console.error(error);
+    } catch (error: any) {
+      console.error('[EditProfile] An error occurred:', error);
+      console.error('[EditProfile] Full error object:', error);
       setErrors(prev => ({
         ...prev,
-        general: 'Failed to update profile. Please try again.'
+        general: error?.message || 'Failed to update profile. Please try again.'
       }));
     } finally {
       setIsSubmitting(false);

@@ -19,14 +19,15 @@ import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
 
 const CreateProfileScreen = () => {
-    const [image, setImage] = useState(null);
+    const [image, setImage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
     const [errors, setErrors] = useState({
         image: '',
         username: '',
         name: '',
-        aboutme: ''
+        aboutme: '',
+        general: '',
     });
 
     const scrollViewRef = useRef(null);
@@ -92,7 +93,7 @@ const CreateProfileScreen = () => {
         }
     };
 
-    const onDateChange = (event, selectedDate) => {
+    const onDateChange = (event: any, selectedDate?: Date) => {
         if (selectedDate) {
             setFormData(prev => ({ ...prev, birthdate: selectedDate }));
         }
@@ -103,7 +104,8 @@ const CreateProfileScreen = () => {
             image: !image ? 'Profile picture is required' : '',
             username: !formData.username.trim() ? 'Username is required' : '',
             name: !formData.name.trim() ? 'Name is required' : '',
-            aboutme: !formData.aboutme.trim() ? 'About me is required' : ''
+            aboutme: !formData.aboutme.trim() ? 'About me is required' : '',
+            general: '',
         };
 
         setErrors(newErrors);
@@ -127,31 +129,54 @@ const CreateProfileScreen = () => {
                 throw new Error("Please select an image");
             }
 
+            console.log('[CreateProfile] Starting image compression...');
             const compressed = await ImageManipulator.manipulateAsync(
                 image,
                 [{ resize: { width: 800 } }],
                 { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG }
             );
+            console.log('[CreateProfile] Image compressed successfully');
 
             const fileName = `${user?.id}-${Date.now()}.jpg`;
+            console.log('[CreateProfile] Uploading file:', fileName);
 
-            const file = {
+            // Create FormData for React Native upload
+            const formData = new FormData();
+            formData.append('file', {
+                uri: compressed.uri,
                 type: 'image/jpeg',
                 name: fileName,
-                uri: compressed.uri
-            };
-    
+            } as any);
+
+            console.log('[CreateProfile] FormData created for file:', fileName);
+            console.log('[CreateProfile] Image URI:', compressed.uri);
+
             const { data: uploadData, error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(fileName, file, {
+                .from('profile_images')
+                .upload(fileName, formData, {
                     cacheControl: '3600000000',
-                    upsert: false
+                    upsert: false,
+                    contentType: 'image/jpeg',
                 });
     
             if (uploadError) {
-                console.error("File upload failed:", uploadError.message);
-                throw new Error("Failed to upload the profile picture.");
+                console.error('[CreateProfile] File upload failed:', uploadError);
+                console.error('[CreateProfile] Upload error details:', JSON.stringify(uploadError, null, 2));
+                throw new Error(`Failed to upload the profile picture: ${uploadError.message}`);
             }
+            
+            if (!uploadData || !uploadData.path) {
+                console.error('[CreateProfile] Upload succeeded but no data/path returned:', uploadData);
+                throw new Error('Upload succeeded but no file path returned');
+            }
+            
+            console.log('[CreateProfile] File uploaded successfully:', uploadData.path);
+            
+            // Test the uploaded image URL
+            const { data: testUrl } = supabase.storage
+                .from('profile_images')
+                .getPublicUrl(uploadData.path);
+            console.log('[CreateProfile] Testing uploaded image URL:', testUrl?.publicUrl);
     
             const { error: userError } = await supabase
                 .from('User')
@@ -163,25 +188,33 @@ const CreateProfileScreen = () => {
                 throw new Error("Failed to update username.");
             }
 
+            console.log('[CreateProfile] Inserting profile data...');
+            const profileData = {
+                name: formData.name,
+                birthdate: formData.birthdate,
+                aboutme: formData.aboutme,
+                profilepicture: uploadData?.path,
+                user_id: user?.id
+            };
+            console.log('[CreateProfile] Profile data to insert:', { ...profileData, profilepicture: profileData.profilepicture ? 'exists' : 'missing' });
+            
             const { error: profileError } = await supabase
                 .from('UserProfile')
-                .insert({
-                    name: formData.name,
-                    birthdate: formData.birthdate,
-                    aboutme: formData.aboutme,
-                    profilepicture: uploadData?.path,
-                    user_id: user?.id
-                });
+                .insert(profileData);
     
             if (profileError) {
-                console.error("Failed to insert profile:", profileError.message);
-                throw new Error("Failed to save user profile.");
+                console.error('[CreateProfile] Failed to insert profile:', profileError);
+                console.error('[CreateProfile] Profile error details:', JSON.stringify(profileError, null, 2));
+                throw new Error(`Failed to save user profile: ${profileError.message}`);
             }
+            
+            console.log('[CreateProfile] Profile created successfully!');
     
             router.push('/(tabs)/profile');
-        } catch (error) {
-            console.error("An error occurred:", error.message);
-            setErrors(prev => ({...prev, general: error.message}));
+        } catch (error: any) {
+            console.error('[CreateProfile] An error occurred:', error?.message ?? String(error));
+            console.error('[CreateProfile] Full error object:', error);
+            setErrors(prev => ({...prev, general: error?.message ?? 'Unknown error'}));
         } finally {
             setIsSubmitting(false);
         }

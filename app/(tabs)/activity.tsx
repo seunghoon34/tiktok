@@ -282,11 +282,10 @@ export default function ActivityScreen() {
           .single();
 
         if (data) {
-          const publicUrl = supabase.storage
-            .from('avatars')
-            .getPublicUrl(data.profilepicture).data.publicUrl;
-          
-          profiles[userId] = publicUrl;
+          const { data: publicData } = supabase.storage
+            .from('profile_images')
+            .getPublicUrl(data.profilepicture);
+          profiles[userId] = publicData?.publicUrl ? `${publicData.publicUrl}?t=${Date.now()}` : null;
         }
       }));
 

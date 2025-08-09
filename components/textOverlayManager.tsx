@@ -8,18 +8,30 @@ import Animated, {
 } from 'react-native-reanimated';
 import { ComposedGesture, Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Haptics from 'expo-haptics';
 
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
-const INITIAL_FONT_SIZE = (Math.min(SCREEN_WIDTH, SCREEN_HEIGHT) * 0.13); // Keep as pixels for input
 
 interface BinPosition {
   x: number;
   y: number;
   width: number;
   height: number;
+}
+
+interface OverlayData {
+  id: string;
+  text: string;
+  // Stored as percentages (0-100) of the container dimensions
+  position_x: number;
+  position_y: number;
+  // Raw values
+  scale: number;
+  rotation: number; // radians
+  // Font size stored as percentage of container height (0-100)
+  fontSize: number;
 }
 
 interface DraggableTextProps {
@@ -30,6 +42,9 @@ interface DraggableTextProps {
   onEditComplete: () => void;
   binPosition: BinPosition;
   onOverlayUpdate: (data: any) => void; // Add this
+  containerWidth: number;
+  containerHeight: number;
+  initialOverlay?: OverlayData;
 
 }
 
@@ -42,15 +57,19 @@ const DraggableText = ({
   binPosition,
   onDragStateChange,
   onOverlayUpdate,
+  containerWidth,
+  containerHeight,
+  initialOverlay,
 
 }: DraggableTextProps & { onDragStateChange?: (isDragging: boolean) => void }) => {
   const [text, setText] = useState('');
-  const [fontSize] = useState(INITIAL_FONT_SIZE);
+  const initialFontSize = Math.min(containerWidth || SCREEN_WIDTH, containerHeight || SCREEN_HEIGHT) * 0.13;
+  const [fontSize, setFontSize] = useState(initialFontSize);
   const [elementSize, setElementSize] = useState({ width: 0, height: 0 });
 
   // Animated values for transformations
-  const translateX = useSharedValue((SCREEN_WIDTH * 0.25)); 
-  const translateY = useSharedValue(SCREEN_HEIGHT * 0.5); 
+  const translateX = useSharedValue(containerWidth ? containerWidth * 0.25 : SCREEN_WIDTH * 0.25); 
+  const translateY = useSharedValue(containerHeight ? containerHeight * 0.5 : SCREEN_HEIGHT * 0.5); 
   const scale = useSharedValue(1);
   const rotation = useSharedValue(0);
 
@@ -65,11 +84,11 @@ const DraggableText = ({
     const updateData = {
       id,
       text,
-      position_x: Math.round((translateX.value / SCREEN_WIDTH) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
-      position_y: Math.round((translateY.value / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 50, // Round to 2 decimal places
+      position_x: containerWidth > 0 ? Math.round(((translateX.value / containerWidth) * 100) * 100) / 100 : 50, // percent of container width
+      position_y: containerHeight > 0 ? Math.round(((translateY.value / containerHeight) * 100) * 100) / 100 : 50, // percent of container height
       scale: scale.value,
       rotation: rotation.value,
-      fontSize: Math.round((fontSize / SCREEN_HEIGHT) * 100 * 100) / 100 ?? 10 // Round font size too
+      fontSize: containerHeight > 0 ? Math.round(((fontSize / containerHeight) * 100) * 100) / 100 : 10 // percent of container height
     };
     onOverlayUpdate?.(updateData);
   };
@@ -110,11 +129,38 @@ const DraggableText = ({
   };
 
   // Pan gesture for dragging
+  const safeOnDragStateChange = useRef(onDragStateChange ?? (() => {})).current;
+
+  // Initialize position from provided overlay or default when container size becomes available (once)
+  const hasInitializedPosition = useRef(false);
+  useEffect(() => {
+    if (hasInitializedPosition.current) return;
+    if (containerWidth > 0 && containerHeight > 0) {
+      if (initialOverlay) {
+        // Seed from saved percentages
+        translateX.value = (initialOverlay.position_x / 100) * containerWidth;
+        translateY.value = (initialOverlay.position_y / 100) * containerHeight;
+        scale.value = initialOverlay.scale ?? 1;
+        rotation.value = initialOverlay.rotation ?? 0;
+        // Convert font size percent-of-height to pixels
+        const pxFontSize = (initialOverlay.fontSize / 100) * containerHeight;
+        runOnJS(setText)(initialOverlay.text ?? '');
+        runOnJS(setFontSize)(pxFontSize > 0 ? pxFontSize : initialFontSize);
+      } else {
+        translateX.value = containerWidth * 0.25;
+        translateY.value = containerHeight * 0.5;
+      }
+      hasInitializedPosition.current = true;
+      handleTransformUpdate();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [containerWidth, containerHeight, initialOverlay]);
+
   const panGesture = Gesture.Pan()
     .onStart(() => {
       contextX.value = translateX.value;
       contextY.value = translateY.value;
-      runOnJS(onDragStateChange)(true);
+      runOnJS(safeOnDragStateChange)(true);
       runOnJS(handleTransformUpdate)(); // Add this to ensure initial position is saved
 
     })
@@ -126,7 +172,7 @@ const DraggableText = ({
     .onEnd(() => {
       translateX.value = withSpring(translateX.value);
       translateY.value = withSpring(translateY.value);
-      runOnJS(onDragStateChange)(false);
+      runOnJS(safeOnDragStateChange)(false);
       runOnJS(handleTransformUpdate)(); // And here
     });
 
@@ -214,20 +260,32 @@ interface TextOverlayManagerProps {
   onDragStateChange?: (isDragging: boolean) => void;
   onOverlaysUpdate?: (overlays: any[]) => void; // Add this
   video?: boolean
+  initialOverlays?: OverlayData[];
 
 
 }
 
-export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video  }: TextOverlayManagerProps) => {
+export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video, initialOverlays  }: TextOverlayManagerProps) => {
   const [textElements, setTextElements] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [binPosition, setBinPosition] = useState<BinPosition>({ 
     x: 0, 
-    y: SCREEN_HEIGHT - 140, // Position where the checkmark button is
-    width: SCREEN_WIDTH,    // Full width to make it easier to hit
-    height: 100            // Height of the button area
+    y: 0,
+    width: 0,
+    height: 0
   });
   const [overlayData, setOverlayData] = useState<Map<string, any>>(new Map());
+  const [containerSize, setContainerSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
+
+  // Hydrate from initial overlays if provided
+  useEffect(() => {
+    if (initialOverlays && initialOverlays.length > 0) {
+      const ids = initialOverlays.map(o => o.id);
+      setTextElements(ids);
+      setEditingId(null);
+      setOverlayData(new Map(initialOverlays.map(o => [o.id, o])));
+    }
+  }, [initialOverlays]);
 
 
   useEffect(() => {
@@ -273,7 +331,18 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverla
 
   return (
     <GestureDetector gesture={containerGesture}>
-      <View style={[styles.overlayContainer, containerStyle]}>
+      <View
+        style={[styles.overlayContainer, containerStyle]}
+        onLayout={({ nativeEvent: { layout } }) => {
+          setContainerSize({ width: layout.width, height: layout.height });
+          setBinPosition({
+            x: 0,
+            y: layout.height - 140,
+            width: layout.width,
+            height: 100,
+          });
+        }}
+      >
         {textElements.map(id => (
           <DraggableText
             key={id}
@@ -285,6 +354,9 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverla
             binPosition={binPosition}
             onDragStateChange={onDragStateChange}
             onOverlayUpdate={handleOverlayUpdate}
+            containerWidth={containerSize.width}
+            containerHeight={containerSize.height}
+            initialOverlay={initialOverlays?.find(o => o.id === id)}
 
           />
         ))}
