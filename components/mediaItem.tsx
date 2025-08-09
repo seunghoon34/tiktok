@@ -6,7 +6,7 @@ import { useRef, useState, useEffect } from 'react';
 import { Video, ResizeMode } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { handleVideoLike } from '@/utils/videoMatching';
-import LoadingScreen from '@/components/loading';
+import SimpleSpinner from '@/components/simpleSpinner';
 import React from 'react';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
@@ -48,7 +48,7 @@ type ReportType = 'USER' | 'CONTENT';
 
 export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onMuteChange }: MediaItemProps) => {
   const [showMuteIcon, setShowMuteIcon] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isVideoLoading, setIsVideoLoading] = useState(true); // Track individual video loading
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const router = useRouter();
   const { user, likes, getLikes } = useAuth();
@@ -209,11 +209,11 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   };
 
   const handleLoadStart = () => {
-    setIsLoading(true);
+    setIsVideoLoading(true);
   };
 
   const handleLoadEnd = () => {
-    setIsLoading(false);
+    setIsVideoLoading(false);
   };
 
   const likeVideo = async () => {
@@ -439,16 +439,18 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   </TouchableOpacity>
 </View>
     
-      {isLoading && (
+      {isVideoLoading && (
         <View style={{
           position: 'absolute',
           width: Dimensions.get('window').width,
           height: Dimensions.get('window').height,
           zIndex: 1,
-          backgroundColor: 'black'
+          backgroundColor: 'black',
+          justifyContent: 'center',
+          alignItems: 'center'
         }}>
-          
-          <LoadingScreen />
+          {/* Simple loading indicator instead of full LoadingScreen component */}
+          <SimpleSpinner size={50} />
         </View>
       )}
       
@@ -463,12 +465,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             isMuted={item.is_muted || mute}
             onLoadStart={handleLoadStart}
             onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && !status.isBuffering) {  // Match this condition
-                setIsLoading(false);
+              if (status.isLoaded && !status.isBuffering) {
+                setIsVideoLoading(false);
               }
             }}
           />
-          {!isLoading && renderTextOverlays()}
+          {!isVideoLoading && renderTextOverlays()}
           {showMuteIcon && !item.is_muted && (
             <Animated.View style={[{
               position: 'absolute',
@@ -502,7 +504,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           onLoadStart={handleLoadStart}
           onLoadEnd={handleLoadEnd}
         />
-        {!isLoading && renderTextOverlays()}
+        {!isVideoLoading && renderTextOverlays()}
         </>
       )}
       

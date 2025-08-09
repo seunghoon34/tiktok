@@ -5,7 +5,7 @@ import { supabase } from '@/utils/supabase';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { MediaItemComponent } from '@/components/mediaItem';
-import LoadingScreen from '@/components/loading';
+import SimpleSpinner from '@/components/simpleSpinner';
 import Header from '@/components/header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 interface MediaItem {
@@ -220,9 +220,11 @@ export default function HomeScreen() {
     <View className="flex-1 bg-black">
       {
         isLoading ? (
-          <SafeAreaView className="flex-1">
+          <SafeAreaView className="flex-1 bg-black">
+            <Header title="" color="white" goBack={true}/>
             <View className="flex-1 items-center justify-center">
-              <LoadingScreen />
+              <SimpleSpinner size={60} />
+              <Text className="text-white mt-4 text-lg">Loading feed...</Text>
             </View>
           </SafeAreaView>
         ) :
