@@ -40,6 +40,8 @@ export default function Mystoryscreen() {
   const [mute, setMute] = useState(false);
   const [mediaType, setMediaType] = useState('');
   const [showMuteIcon, setShowMuteIcon] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showSuccessToast, setShowSuccessToast] = useState(false);
   
   const modalRef = useRef<Modalize>(null);
   const videoRef = useRef(null);
@@ -207,22 +209,73 @@ export default function Mystoryscreen() {
   const handleDelete = async () => {
     try {
       const story = stories[currentIndex];
-      await supabase.from('Video').delete().eq('id', story.id);
+      console.log('[Stories] Attempting to delete story:', story.id);
+      
+      if (!story || !story.id) {
+        throw new Error('Story not found or invalid story ID');
+      }
 
+      // Delete from database
+      const { error: deleteError } = await supabase
+        .from('Video')
+        .delete()
+        .eq('id', story.id);
+
+      if (deleteError) {
+        console.error('[Stories] Database deletion failed:', deleteError);
+        throw new Error(`Failed to delete from database: ${deleteError.message}`);
+      }
+
+      console.log('[Stories] Story deleted from database successfully');
+      
+      // Update local state
       const newStories = stories.filter((_, index) => index !== currentIndex);
       setStories(newStories);
       
-      if (newStories.length === 0) {
-        router.back();
-      } else if (currentIndex >= newStories.length) {
-        setCurrentIndex(newStories.length - 1);
-      }
-
+      // Close modal and show toast first
       modalRef.current?.close();
-      Toast.show({ type: 'success', text1: 'Story deleted' });
+      setShowDeleteConfirm(false);
+      
+      // Show both global toast and local state toast
+      Toast.show({ 
+        type: 'success', 
+        text1: 'Story Deleted',
+        text2: 'Your story has been removed successfully'
+      });
+      
+      setShowSuccessToast(true);
+      
+      // Handle navigation after toast (with delay)
+      if (newStories.length === 0) {
+        console.log('[Stories] No more stories, navigating back');
+        // Delay navigation to allow toast to show
+        setTimeout(() => {
+          setShowSuccessToast(false);
+          router.back();
+        }, 1500); // Longer delay to ensure toast visibility
+      } else if (currentIndex >= newStories.length) {
+        console.log('[Stories] Adjusting current index after deletion');
+        setCurrentIndex(newStories.length - 1);
+        // Hide success toast after delay
+        setTimeout(() => {
+          setShowSuccessToast(false);
+        }, 3000);
+      }
+      
     } catch (error) {
-      console.error('Error:', error);
-      Toast.show({ type: 'error', text1: 'Failed to delete' });
+      console.error('[Stories] Error deleting story:', error);
+      modalRef.current?.close();
+      setShowDeleteConfirm(false);
+      
+      // Force toast to show with longer visibility
+      setTimeout(() => {
+        Toast.show({ 
+          type: 'error', 
+          text1: 'Delete Failed',
+          text2: error instanceof Error ? error.message : 'Unable to delete story. Please try again.',
+          visibilityTime: 4000
+        });
+      }, 100);
     }
   };
 
@@ -235,7 +288,7 @@ export default function Mystoryscreen() {
           <>
             <Video
               ref={videoRef}
-              source={{ uri: stories[currentIndex].signedUrl }}
+              source={{ uri: stories[currentIndex].signedUrl || '' }}
               style={{
                 width: Dimensions.get('window').width,
                 height: Dimensions.get('window').height,
@@ -269,7 +322,7 @@ export default function Mystoryscreen() {
         ) : (
           <>
             <Image
-              source={{ uri: stories[currentIndex].signedUrl }}
+              source={{ uri: stories[currentIndex].signedUrl || '' }}
               style={{ width: '100%', height: '100%' }}
               resizeMode="cover"
               onLoadStart={() => setIsMediaLoading(true)}
@@ -341,6 +394,52 @@ export default function Mystoryscreen() {
             />
           </Animated.View>
         )}
+        
+        {/* Success toast overlay */}
+        {showSuccessToast && (
+          <View style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: [
+              { translateX: -100 },
+              { translateY: -50 }
+            ],
+            backgroundColor: 'rgba(34, 197, 94, 0.95)',
+            paddingHorizontal: 24,
+            paddingVertical: 16,
+            borderRadius: 16,
+            flexDirection: 'row',
+            alignItems: 'center',
+            minWidth: 200,
+            zIndex: 1000,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 8,
+            elevation: 8,
+          }}>
+            <Ionicons name="checkmark-circle" size={24} color="white" style={{ marginRight: 12 }} />
+            <View>
+              <Text style={{
+                color: 'white',
+                fontSize: 16,
+                fontWeight: '600',
+                textAlign: 'center'
+              }}>
+                Story Deleted
+              </Text>
+              <Text style={{
+                color: 'rgba(255, 255, 255, 0.9)',
+                fontSize: 14,
+                marginTop: 2,
+                textAlign: 'center'
+              }}>
+                Successfully removed
+              </Text>
+            </View>
+          </View>
+        )}
       </Pressable>
 
       <Portal>
@@ -349,21 +448,56 @@ export default function Mystoryscreen() {
           adjustToContentHeight
           modalStyle={{ backgroundColor: '#1f1f1f', borderTopLeftRadius: 12 }}
           handleStyle={{ backgroundColor: '#636363', width: 40 }}
+          onClose={() => setShowDeleteConfirm(false)}
         >
           <View className="py-2 pb-10">
-            <TouchableOpacity
-              className="flex-row items-center px-4 py-3"
-              onPress={handleDelete}
-            >
-              <Ionicons name="trash-outline" size={24} color="red" />
-              <View className="ml-3">
-                <Text className="text-red-500 text-base">Delete Story</Text>
+            {!showDeleteConfirm ? (
+              <TouchableOpacity
+                className="flex-row items-center px-4 py-3"
+                onPress={() => setShowDeleteConfirm(true)}
+              >
+                <Ionicons name="trash-outline" size={24} color="red" />
+                <View className="ml-3">
+                  <Text className="text-red-500 text-base">Delete Story</Text>
+                </View>
+              </TouchableOpacity>
+            ) : (
+              <View className="px-4 py-3">
+                <Text className="text-white text-lg mb-4 text-center">
+                  Are you sure you want to delete this story?
+                </Text>
+                <Text className="text-gray-400 text-sm mb-6 text-center">
+                  This action cannot be undone.
+                </Text>
+                
+                <View className="flex-row justify-between gap-3">
+                  <TouchableOpacity
+                    className="flex-1 bg-gray-600 rounded-lg py-3"
+                    onPress={() => setShowDeleteConfirm(false)}
+                  >
+                    <Text className="text-white text-center text-base font-medium">
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    className="flex-1 bg-red-500 rounded-lg py-3"
+                    onPress={handleDelete}
+                  >
+                    <Text className="text-white text-center text-base font-medium">
+                      Delete
+                    </Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-            </TouchableOpacity>
+            )}
           </View>
         </Modalize>
       </Portal>
-      <Toast />
+      <Toast 
+        visibilityTime={3000}
+        autoHide={true}
+      />
     </View>
   );
 }

@@ -1,7 +1,7 @@
-  import { useFonts } from 'expo-font';
   import { Stack } from 'expo-router';
-  import { useEffect } from 'react';
+  import { useEffect, useState } from 'react';
   import * as SplashScreen from 'expo-splash-screen';
+  import * as Font from 'expo-font';
   import 'react-native-reanimated';
   import { AuthProvider } from '@/providers/AuthProvider';
   import * as Notifications from 'expo-notifications';
@@ -10,44 +10,172 @@
   import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
   import { ProfileProvider } from '@/providers/ProfileProvider';
   import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
-  import { View } from 'react-native';
+  import { View, Text, Dimensions, Animated } from 'react-native';
+  import { Ionicons } from '@expo/vector-icons';
 
   // Prevent the splash screen from auto-hiding before asset loading is complete.
   SplashScreen.preventAutoHideAsync();
 
-  // Define custom toast styles
-  const toastConfig = {
-    /*
-      Overwrite 'success' type,
-      by modifying the existing `BaseToast` component
-    */
-    success: (props) => (
-      <BaseToast
-        {...props}
-        style={{ borderLeftColor: 'pink', backgroundColor: '#FEF3F2' }}
-        contentContainerStyle={{ paddingHorizontal: 15, backgroundColor: '#FEF3F2' }}
-        text1Style={{
-          fontSize: 15,
-          fontWeight: '400'
-        }}
-      />
-    ),
-    /*
-      Overwrite 'error' type,
-      by modifying the existing `ErrorToast` component
-    */
-    error: (props) => (
-      <ErrorToast
-        {...props}
-        text1Style={{
-          fontSize: 17
-        }}
-        text2Style={{
-          fontSize: 15
-        }}
-      />
-    ),
+  // Suppress specific React warnings that are not actionable in React Native
+  if (__DEV__) {
+    const originalWarn = console.warn;
+    const originalError = console.error;
+    
+    console.warn = (...args) => {
+      const message = args[0];
+      if (typeof message === 'string' && 
+          (message.includes('useInsertionEffect must not schedule updates') ||
+           message.includes('Warning: useInsertionEffect'))) {
+        return; // Suppress this specific warning
+      }
+      originalWarn(...args);
+    };
+    
+    console.error = (...args) => {
+      const message = args[0];
+      if (typeof message === 'string' && 
+          (message.includes('useInsertionEffect must not schedule updates') ||
+           message.includes('Warning: useInsertionEffect'))) {
+        return; // Suppress this specific error
+      }
+      originalError(...args);
+    };
+  }
 
+  // Define modern, centered toast styles with enhanced animations
+  const toastConfig = {
+    success: (props) => (
+      <Animated.View style={{
+        backgroundColor: 'rgba(34, 197, 94, 0.95)', // Modern green with transparency
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 20, // More rounded for modern look
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 200,
+        maxWidth: Dimensions.get('window').width - 60, // More margin
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+      }}>
+        <Ionicons name="checkmark-circle" size={26} color="white" style={{ marginRight: 12 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 16,
+            fontWeight: '700', // Bolder text
+            textAlign: 'center',
+            letterSpacing: 0.3, // Better spacing
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 14,
+              marginTop: 4,
+              textAlign: 'center',
+              letterSpacing: 0.2,
+            }}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
+    ),
+    error: (props) => (
+      <Animated.View style={{
+        backgroundColor: 'rgba(239, 68, 68, 0.95)', // Modern red with transparency
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 20, // More rounded for modern look
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 200,
+        maxWidth: Dimensions.get('window').width - 60, // More margin
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+      }}>
+        <Ionicons name="close-circle" size={26} color="white" style={{ marginRight: 12 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 16,
+            fontWeight: '700', // Bolder text
+            textAlign: 'center',
+            letterSpacing: 0.3, // Better spacing
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 14,
+              marginTop: 4,
+              textAlign: 'center',
+              letterSpacing: 0.2,
+            }}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
+    ),
+    info: (props) => (
+      <Animated.View style={{
+        backgroundColor: 'rgba(59, 130, 246, 0.95)', // Modern blue with transparency
+        paddingHorizontal: 24,
+        paddingVertical: 16,
+        borderRadius: 20, // More rounded for modern look
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minWidth: 200,
+        maxWidth: Dimensions.get('window').width - 60, // More margin
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
+        shadowOpacity: 0.25,
+        shadowRadius: 12,
+        elevation: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+      }}>
+        <Ionicons name="information-circle" size={26} color="white" style={{ marginRight: 12 }} />
+        <View style={{ flex: 1 }}>
+          <Text style={{
+            color: 'white',
+            fontSize: 16,
+            fontWeight: '700', // Bolder text
+            textAlign: 'center',
+            letterSpacing: 0.3, // Better spacing
+          }}>
+            {props.text1}
+          </Text>
+          {props.text2 && (
+            <Text style={{
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: 14,
+              marginTop: 4,
+              textAlign: 'center',
+              letterSpacing: 0.2,
+            }}>
+              {props.text2}
+            </Text>
+          )}
+        </View>
+      </Animated.View>
+    ),
   };
 
   Notifications.setNotificationHandler({
@@ -65,28 +193,36 @@
 
 
   export default function RootLayout() {
-    const [loaded] = useFonts({
-      SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-    });
-
+    // Load fonts outside of component lifecycle to avoid warnings
+    const [fontsLoaded, setFontsLoaded] = useState(false);
     
-
     useEffect(() => {
-      const prepare = async () => {
-        if (loaded) {
-          try {
-            // Don't hide splash screen here - let AuthProvider handle it
-            // await SplashScreen.hideAsync();
-          } catch (error) {
-            console.error('Error preparing app:', error);
+      let mounted = true;
+      
+      const loadFonts = async () => {
+        try {
+          await Font.loadAsync({
+            SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
+          });
+          if (mounted) {
+            setFontsLoaded(true);
+          }
+        } catch (error) {
+          if (mounted) {
+            console.warn('Font loading error:', error);
+            setFontsLoaded(true); // Continue anyway
           }
         }
       };
-
-      prepare();
-    }, [loaded]);
-
-    if (!loaded) {
+      
+      loadFonts();
+      
+      return () => {
+        mounted = false;
+      };
+    }, []);
+    
+    if (!fontsLoaded) {
       return null;
     }
 
@@ -120,8 +256,15 @@
             </ProfileProvider>
           </AuthProvider>
         </Host>
-        <Toast config={toastConfig} position='bottom'
-    bottomOffset={20}/>
+        <Toast 
+          config={toastConfig} 
+          position='center'
+          visibilityTime={3500} // Slightly longer for better readability
+          autoHide={true}
+          topOffset={30}
+          bottomOffset={40}
+          swipeable={true} // Allow swipe to dismiss
+        />
       </GestureHandlerRootView>
     );
   }
