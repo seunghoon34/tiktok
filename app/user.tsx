@@ -171,7 +171,7 @@ export default function UserScreen() {
    <Portal>
      <Modalize
        ref={modalRef}
-       adjustToContentHeight
+       modalHeight={300}
        modalStyle={{
          backgroundColor: '#1f1f1f',
          borderTopLeftRadius: 12,

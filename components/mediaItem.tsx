@@ -576,7 +576,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       <Portal>
   <Modalize
     ref={modalRef}
-    adjustToContentHeight
+    modalHeight={400}
     modalStyle={{
       backgroundColor: '#1f1f1f',
       borderTopLeftRadius: 12,

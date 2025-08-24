@@ -245,10 +245,6 @@
                   <Stack.Screen name="blocked" options={{ headerShown: false }} />
 
                   <Stack.Screen name="editprofile" options={{ headerShown: false  }} />
-
-
-                  
-
                   <Stack.Screen name="+not-found" />
                 </Stack>
               </NotificationProvider>

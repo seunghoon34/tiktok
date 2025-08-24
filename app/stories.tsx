@@ -445,7 +445,7 @@ export default function Mystoryscreen() {
       <Portal>
         <Modalize
           ref={modalRef}
-          adjustToContentHeight
+          modalHeight={200}
           modalStyle={{ backgroundColor: '#1f1f1f', borderTopLeftRadius: 12 }}
           handleStyle={{ backgroundColor: '#636363', width: 40 }}
           onClose={() => setShowDeleteConfirm(false)}

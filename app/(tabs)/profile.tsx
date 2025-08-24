@@ -247,7 +247,7 @@ useFocusEffect(
      <Portal>
   <Modalize
     ref={modalRef}
-    adjustToContentHeight
+    modalHeight={250}
     modalStyle={{
       backgroundColor: '#1f1f1f',
       borderTopLeftRadius: 12,
