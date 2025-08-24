@@ -10,13 +10,35 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useRouter } from 'expo-router';
 
+interface Notification {
+  id: string;
+  type: string;
+  read: boolean;
+  username: string;
+  userId: string;
+  time: string;
+  actionable: boolean;
+  content: string;
+}
+
+interface RawNotification {
+  id: string;
+  type: string;
+  read: boolean;
+  created_at: string;
+  sender: {
+    id: string;
+    username: string;
+  } | null;
+}
+
 export default function ActivityScreen() {
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user } = useAuth();
   const [isPremium, setIsPremium] = useState(true);
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
-  const [userProfiles, setUserProfiles] = useState({});
+  const [userProfiles, setUserProfiles] = useState<{[key: string]: string | null}>({});
 
   const markSingleAsRead = async (notificationId: string) => {
     try {
@@ -34,9 +56,7 @@ export default function ActivityScreen() {
         )
       );
       
-      // Update unread count
-      const unreadCount = notifications.filter(n => !n.read && n.id !== notificationId).length;
-      setUnreadCount(unreadCount);
+      // Note: unread count is now updated globally by NotificationProvider
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -56,7 +76,7 @@ export default function ActivityScreen() {
       setNotifications(prevNotifications =>
         prevNotifications.map(notif => ({ ...notif, read: true }))
       );
-      setUnreadCount(0);
+      // Note: unread count is now updated globally by NotificationProvider
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
     }
@@ -128,7 +148,7 @@ export default function ActivityScreen() {
     return data[0].id;
   };
 
-  const handleNotificationPress = async (item) => {
+  const handleNotificationPress = async (item: Notification) => {
     // Mark as read first
     if (!item.read) {
       await markSingleAsRead(item.id);
@@ -180,18 +200,17 @@ export default function ActivityScreen() {
 
       if (error) throw error;
 
-      const unreadNotifications = data.filter(notification => !notification.read).length;
-      setUnreadCount(unreadNotifications);
+      // Note: unread count is now managed globally by NotificationProvider
 
-      const formattedNotifications = data.map(notification => ({
+      const formattedNotifications: Notification[] = (data as any[]).map((notification: any) => ({
         id: notification.id,
         type: notification.type,
         read: notification.read,
-        username: notification.sender.username,
-        userId: notification.sender.id,
+        username: notification.sender?.username || 'Unknown',
+        userId: notification.sender?.id || '',
         time: formatDate(notification.created_at),
         actionable: notification.type === 'SHOT' || notification.type === 'MATCH',
-        content: getNotificationContent(notification.type, notification.sender.username)
+        content: getNotificationContent(notification.type, notification.sender?.username || 'Unknown')
       }));
 
       setNotifications(formattedNotifications);
@@ -200,7 +219,7 @@ export default function ActivityScreen() {
     }
   };
 
-  const getNotificationContent = (type, username) => {
+  const getNotificationContent = (type: string, username: string) => {
     switch (type) {
       case 'SHOT':
         return isPremium 
@@ -213,7 +232,7 @@ export default function ActivityScreen() {
     }
   };
 
-  const renderNotification = ({ item }) => (
+  const renderNotification = ({ item }: { item: Notification }) => (
     <TouchableOpacity 
       className={`p-4 border-b border-gray-100 ${!item.read ? 'bg-blue-50' : ''}`}
       onPress={()=>handleNotificationPress(item)}
@@ -222,7 +241,7 @@ export default function ActivityScreen() {
         <View className="h-12 w-12 rounded-full bg-gray-200 items-center justify-center mr-3">
           {userProfiles[item.userId] ? (
             <Image 
-              source={{ uri: userProfiles[item.userId] }}
+              source={{ uri: userProfiles[item.userId] || undefined }}
               className="h-12 w-12 rounded-full"
             />
           ) : (
@@ -267,7 +286,7 @@ export default function ActivityScreen() {
       // Remove duplicates
       const uniqueUserIds = [...new Set(userIds)];
       
-      const profiles = {};
+      const profiles: {[key: string]: string | null} = {};
       
       await Promise.all(uniqueUserIds.map(async (userId) => {
         const { data } = await supabase
