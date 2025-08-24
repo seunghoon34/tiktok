@@ -19,6 +19,11 @@ export const handleVideoLike = async (
 
     if (likeError) throw likeError;
 
+    // Debug: Check current user session
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    console.log('Current authenticated user:', currentUser?.id);
+    console.log('Trying to insert notification from_user:', userId);
+
     const { error: shotNotificationError } = await supabase
       .from('Notification')
       .insert({
@@ -26,7 +31,12 @@ export const handleVideoLike = async (
         from_user: userId,
         to_user: videoUserId,
       });
-    if (shotNotificationError) throw shotNotificationError;
+    if (shotNotificationError) {
+      console.error('Error creating shot notification:', shotNotificationError);
+      console.error('User trying to insert:', userId);
+      console.error('Authenticated user:', currentUser?.id);
+      // Don't throw error - continue with like flow even if notification fails
+    }
 
     // 2. Check if the other user has liked any of current user's videos
     const { data: otherUserLikes, error: checkError } = await supabase
@@ -78,7 +88,10 @@ export const handleVideoLike = async (
             to_user: userId,
           }
         ]);
-      if (matchNotificationsError) throw matchNotificationsError;
+      if (matchNotificationsError) {
+        console.error('Error creating match notifications:', matchNotificationsError);
+        // Don't throw error - continue with match flow even if notifications fail
+      }
 
         
 
