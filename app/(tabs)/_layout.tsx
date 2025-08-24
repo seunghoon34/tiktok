@@ -39,15 +39,56 @@ export default function TabLayout() {
     return count || 0;
   };
 
+  const getTotalUnreadNotifications = async () => {
+    if (!user) return 0;
+
+    // First, get list of blocked users
+    const { data: blockedUsers, error: blockError } = await supabase
+      .from('UserBlock')
+      .select('blocker_id, blocked_id')
+      .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+    if (blockError) {
+      console.error('Error fetching blocked users:', blockError);
+      return 0;
+    }
+
+    // Create array of user IDs to exclude
+    const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
+      if (block.blocker_id === user.id) acc.push(block.blocked_id);
+      if (block.blocked_id === user.id) acc.push(block.blocker_id);
+      return acc;
+    }, []);
+
+    // Get unread notifications excluding blocked users
+    const { count, error } = await supabase
+      .from('Notification')
+      .select('*', { count: 'exact' })
+      .eq('to_user', user.id)
+      .eq('read', false)
+      .not(excludeUserIds.length > 0 ? 'from_user' : 'id', 
+           excludeUserIds.length > 0 ? 'in' : 'eq', 
+           excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id);
+
+    if (error) {
+      console.error('Error fetching notification count:', error);
+      return 0;
+    }
+
+    console.log('getTotalUnreadNotifications returning count:', count);
+    return count || 0;
+  };
+
   // Set up subscription and initial fetch
   useEffect(() => {
     if (!user) return;
 
-    // Initial fetch
+    // Initial fetch for both messages and notifications
     getTotalUnreadMessages().then(setUnreadMessages);
+    getTotalUnreadNotifications().then(setUnreadCount);
 
     // Subscribe to all message changes
-    const subscription = supabase
+    const messageSubscription = supabase
       .channel('any_messages')
       .on(
         'postgres_changes',
@@ -63,8 +104,29 @@ export default function TabLayout() {
       )
       .subscribe();
 
+    // Subscribe to notification changes
+    const notificationSubscription = supabase
+      .channel('any_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to inserts, updates, and deletes
+          schema: 'public',
+          table: 'Notification',
+        },
+        async () => {
+          // Add small delay to ensure database changes have propagated
+          setTimeout(async () => {
+            const newCount = await getTotalUnreadNotifications();
+            setUnreadCount(newCount);
+          }, 100);
+        }
+      )
+      .subscribe();
+
     return () => {
-      subscription.unsubscribe();
+      messageSubscription.unsubscribe();
+      notificationSubscription.unsubscribe();
     };
   }, [user]);
   
