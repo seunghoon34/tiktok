@@ -32,7 +32,7 @@ const CreateProfileScreen = () => {
 
     const scrollViewRef = useRef<any>(null);
     const aboutMeRef = useRef<any>(null);
-    const { user } = useAuth();
+    const { user, refreshUserData } = useAuth();
     const [formData, setFormData] = useState({
         username: '',
         name: '',
@@ -121,8 +121,10 @@ const CreateProfileScreen = () => {
             return;
         }
 
+        // Final username availability check right before submission
         const isUsernameAvailable = await checkUsername(formData.username);
         if (!isUsernameAvailable) {
+            setIsSubmitting(false);
             return;
         }
 
@@ -189,8 +191,20 @@ const CreateProfileScreen = () => {
 
             if (userError) {
                 console.error("Failed to update username:", userError.message);
+                
+                // Handle duplicate username error specifically
+                if (userError.code === '23505' || userError.message.includes('duplicate') || userError.message.includes('unique constraint')) {
+                    setErrors(prev => ({...prev, username: 'Username already taken. Please choose a different one.'}));
+                    setIsSubmitting(false);
+                    return;
+                }
+                
                 throw new Error("Failed to update username.");
             }
+
+            // Refresh user data in AuthProvider to get updated username
+            console.log('[CreateProfile] Refreshing user data after username update');
+            await refreshUserData();
 
             console.log('[CreateProfile] Inserting profile data...');
             console.log('[CreateProfile] Form data state:', formData);

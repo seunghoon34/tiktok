@@ -18,6 +18,7 @@ export const AuthContext = createContext({
     setActiveChatId: (chatId: string | null) => {},
     currentChatId: null as string | null,
     loading: true,  // Add this
+    refreshUserData: async () => {},  // Add this
 });
 
 export const useAuth = () => useContext(AuthContext)
@@ -118,6 +119,34 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             console.error('Error in getUser:', error);
             // On technical errors, redirect to sign-in instead of createprofile
             router.push('/(auth)');
+        }
+    };
+
+    const refreshUserData = async () => {
+        try {
+            if (!user?.id) {
+                console.log('[refreshUserData] No user ID available');
+                return;
+            }
+            
+            console.log('[refreshUserData] Refreshing user data for:', user.id);
+            const { data, error } = await supabase
+                .from("User")
+                .select("*")
+                .eq("id", user.id)
+                .single();
+            
+            if (error) {
+                console.error('[refreshUserData] Error fetching updated user data:', error);
+                return;
+            }
+            
+            if (data) {
+                console.log('[refreshUserData] Updated user data received, updating state');
+                setUser(data);
+            }
+        } catch (error) {
+            console.error('[refreshUserData] Exception refreshing user data:', error);
         }
     };
 
@@ -501,7 +530,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             getLikes, 
             setActiveChatId, 
             currentChatId,
-            loading
+            loading,
+            refreshUserData
         }}>
             {children}
         </AuthContext.Provider>
