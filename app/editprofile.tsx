@@ -20,6 +20,8 @@ import * as ImageManipulator from 'expo-image-manipulator';
 import Header from '@/components/header';
 
 const EditProfileScreen = () => {
+  const scrollViewRef = useRef<any>(null);
+  const aboutMeRef = useRef<any>(null);
   const [image, setImage] = useState<string | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -30,6 +32,11 @@ const EditProfileScreen = () => {
   });
   const { user } = useAuth();
   const [formData, setFormData] = useState({
+    name: '',
+    birthdate: new Date(),
+    aboutme: '',
+  });
+  const [originalFormData, setOriginalFormData] = useState({
     name: '',
     birthdate: new Date(),
     aboutme: '',
@@ -47,11 +54,13 @@ const EditProfileScreen = () => {
         if (error) throw error;
 
         if (data) {
-          setFormData({
+          const profileData = {
             name: data.name || '',
             birthdate: new Date(data.birthdate),
             aboutme: data.aboutme || '',
-          });
+          };
+          setFormData(profileData);
+          setOriginalFormData(profileData);
 
           if (data.profilepicture) {
             console.log('[EditProfile] Loading existing profile picture:', data.profilepicture);
@@ -165,8 +174,8 @@ const EditProfileScreen = () => {
         console.log('[EditProfile] Uploading file:', fileName);
         
         // Create FormData for React Native upload
-        const formData = new FormData();
-        formData.append('file', {
+        const fileFormData = new FormData();
+        fileFormData.append('file', {
           uri: compressed.uri,
           type: 'image/jpeg',
           name: fileName,
@@ -177,7 +186,7 @@ const EditProfileScreen = () => {
 
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from('profile_images')
-          .upload(fileName, formData, {
+          .upload(fileName, fileFormData, {
             cacheControl: '3600000000',
             upsert: true,
             contentType: 'image/jpeg',
@@ -206,11 +215,13 @@ const EditProfileScreen = () => {
         console.log('[EditProfile] No image change detected, skipping upload');
       }
 
+      console.log('[EditProfile] Form data state:', formData);
       const updateData: any = {
         name: formData.name.trim(),
         birthdate: formData.birthdate,
         aboutme: formData.aboutme.trim(),
       };
+      console.log('[EditProfile] Update data to save:', updateData);
 
       if (profilePicturePath) {
         updateData.profilepicture = profilePicturePath;
@@ -248,17 +259,25 @@ const EditProfileScreen = () => {
   const hasChanges = () => {
     return (
       image !== originalImage ||
-      formData.name.trim() !== '' ||
-      formData.aboutme.trim() !== ''
+      formData.name.trim() !== originalFormData.name.trim() ||
+      formData.aboutme.trim() !== originalFormData.aboutme.trim() ||
+      formData.birthdate.getTime() !== originalFormData.birthdate.getTime()
     );
   };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
       <KeyboardAwareScrollView
+        ref={scrollViewRef}
         style={styles.container}
         contentContainerStyle={styles.content}
         enableOnAndroid={true}
+        extraScrollHeight={50}
+        keyboardShouldPersistTaps="handled"
+        enableAutomaticScroll={true}
+        scrollEnabled={true}
+        keyboardOpeningTime={0}
+        extraHeight={50}
       >
         <Header title='' color={'black'} goBack={true}/>
         <View style={styles.content}>
@@ -318,6 +337,7 @@ const EditProfileScreen = () => {
               <Text style={styles.characterCount}>{formData.aboutme.length}/150</Text>
             </View>
             <TextInput
+              ref={aboutMeRef}
               style={[styles.input, styles.textArea, errors.aboutme && styles.inputError]}
               value={formData.aboutme}
               onChangeText={(text) => {
@@ -325,6 +345,11 @@ const EditProfileScreen = () => {
                   setFormData(prev => ({ ...prev, aboutme: text }));
                   setErrors(prev => ({ ...prev, aboutme: '' }));
                 }
+              }}
+              onFocus={() => {
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToFocusedInput(aboutMeRef.current, 200);
+                }, 100);
               }}
               placeholder="Tell us about yourself..."
               placeholderTextColor="#9CA3AF"

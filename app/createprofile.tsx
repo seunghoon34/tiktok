@@ -30,7 +30,8 @@ const CreateProfileScreen = () => {
         general: '',
     });
 
-    const scrollViewRef = useRef(null);
+    const scrollViewRef = useRef<any>(null);
+    const aboutMeRef = useRef<any>(null);
     const { user } = useAuth();
     const [formData, setFormData] = useState({
         username: '',
@@ -113,6 +114,9 @@ const CreateProfileScreen = () => {
     };
 
     const handleSubmit = async () => {
+        // Clear any previous general errors to allow retry
+        setErrors(prev => ({...prev, general: ''}));
+        
         if (!validateForm()) {
             return;
         }
@@ -141,8 +145,8 @@ const CreateProfileScreen = () => {
             console.log('[CreateProfile] Uploading file:', fileName);
 
             // Create FormData for React Native upload
-            const formData = new FormData();
-            formData.append('file', {
+            const fileFormData = new FormData();
+            fileFormData.append('file', {
                 uri: compressed.uri,
                 type: 'image/jpeg',
                 name: fileName,
@@ -153,7 +157,7 @@ const CreateProfileScreen = () => {
 
             const { data: uploadData, error: uploadError } = await supabase.storage
                 .from('profile_images')
-                .upload(fileName, formData, {
+                .upload(fileName, fileFormData, {
                     cacheControl: '3600000000',
                     upsert: false,
                     contentType: 'image/jpeg',
@@ -189,6 +193,7 @@ const CreateProfileScreen = () => {
             }
 
             console.log('[CreateProfile] Inserting profile data...');
+            console.log('[CreateProfile] Form data state:', formData);
             const profileData = {
                 name: formData.name,
                 birthdate: formData.birthdate,
@@ -220,22 +225,25 @@ const CreateProfileScreen = () => {
         }
     };
 
-    const hasErrors = Object.values(errors).some(error => error !== '');
-    const isButtonDisabled = isSubmitting || hasErrors || isCheckingUsername;
+    const hasValidationErrors = !!(errors.image || errors.username || errors.name || errors.aboutme);
+    const isButtonDisabled = isSubmitting || hasValidationErrors || isCheckingUsername;
 
     return (
         <SafeAreaView style={{ flex: 1, minHeight: '100%', backgroundColor: 'white'}}>
             <KeyboardAwareScrollView
+                ref={scrollViewRef}
                 style={styles.container}
                 contentContainerStyle={styles.content}
                 enableOnAndroid={true}
-                extraScrollHeight={10}
+                extraScrollHeight={50}
                 keyboardShouldPersistTaps="handled"
                 enableAutomaticScroll={true}
                 scrollEnabled={true}
                 bounces={false}
                 enableResetScrollToCoords={false}
                 scrollToOverflowEnabled={true}
+                keyboardOpeningTime={0}
+                extraHeight={50}
             >
                 <View style={styles.content}>
                     <Text style={styles.title}>Create Your Profile</Text>
@@ -313,6 +321,7 @@ const CreateProfileScreen = () => {
                             <Text style={styles.characterCount}>{formData.aboutme.length}/150</Text>
                         </View>
                         <TextInput
+                            ref={aboutMeRef}
                             style={[styles.input, styles.textArea, errors.aboutme && styles.inputError]}
                             value={formData.aboutme}
                             onChangeText={(text) => {
@@ -320,6 +329,11 @@ const CreateProfileScreen = () => {
                                     setFormData(prev => ({ ...prev, aboutme: text }));
                                     setErrors(prev => ({ ...prev, aboutme: '' }));
                                 }
+                            }}
+                            onFocus={() => {
+                                setTimeout(() => {
+                                    scrollViewRef.current?.scrollToFocusedInput(aboutMeRef.current, 200);
+                                }, 100);
                             }}
                             placeholder="Tell us about yourself..."
                             placeholderTextColor="#9CA3AF"
