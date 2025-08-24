@@ -232,10 +232,14 @@ export default function UserStoryScreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
                 width: Dimensions.get('window').width,
                 height: Dimensions.get('window').height,
                 zIndex: 1,
-                backgroundColor: 'black'
+                backgroundColor: 'black',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}>
                 <LoadingScreen />
               </View>
@@ -254,10 +258,14 @@ export default function UserStoryScreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
                 width: Dimensions.get('window').width,
                 height: Dimensions.get('window').height,
                 zIndex: 1,
-                backgroundColor: 'black'
+                backgroundColor: 'black',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}>
                 <LoadingScreen />
               </View>
@@ -294,24 +302,27 @@ export default function UserStoryScreen() {
         {showMuteIcon && (
           <Animated.View style={[{
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: [
-              { translateX: -25 },
-              { translateY: -25 },
-            ],
-            backgroundColor: 'rgba(0,0,0,0.5)',
-            borderRadius: 50,
-            padding: 15,
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: 'center',
+            alignItems: 'center',
             zIndex: 10,
           }, {
             opacity: fadeAnim
           }]}>
-            <Ionicons 
-              name={mute ? 'volume-mute' : 'volume-high'} 
-              size={25} 
-              color="white"
-            />
+            <View style={{
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 50,
+              padding: 15,
+            }}>
+              <Ionicons 
+                name={mute ? 'volume-mute' : 'volume-high'} 
+                size={25} 
+                color="white"
+              />
+            </View>
           </Animated.View>
         )}
       </Pressable>

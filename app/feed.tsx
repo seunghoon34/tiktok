@@ -200,13 +200,18 @@ export default function HomeScreen() {
   const renderMediaItem = ({ item, index }: { item: MediaItem; index: number }) => {
     const isVisible = visibleItems.includes(index);
     return (
-      <MediaItemComponent
-        item={item}
-        isVisible={isVisible}
-        isScreenFocused={isScreenFocused}
-        mute={mute}
-        onMuteChange={() => setMute(!mute)}
-      />
+      <View style={{
+        width: Dimensions.get('window').width,
+        height: Dimensions.get('window').height,
+      }}>
+        <MediaItemComponent
+          item={item}
+          isVisible={isVisible}
+          isScreenFocused={isScreenFocused}
+          mute={mute}
+          onMuteChange={() => setMute(!mute)}
+        />
+      </View>
     );
   };
 

@@ -205,7 +205,6 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const mediaStyle = {
     width: Dimensions.get('window').width,
     height: Dimensions.get('window').height,
-    top: 0,
   };
 
   const handleLoadStart = () => {
@@ -414,7 +413,10 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   return (
     <Pressable 
       onPress={handlePress}
-      style={mediaStyle}
+      style={[mediaStyle, { 
+        position: 'relative',
+        backgroundColor: 'black' // Ensure black background 
+      }]}
     >
       <View style={{
   position: 'absolute',
@@ -442,8 +444,10 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       {isVideoLoading && (
         <View style={{
           position: 'absolute',
-          width: Dimensions.get('window').width,
-          height: Dimensions.get('window').height,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           zIndex: 1,
           backgroundColor: 'black',
           justifyContent: 'center',
@@ -458,7 +462,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         <>
           <Video
             source={{ uri: item.signedUrl }}
-            style={[mediaStyle, { position: 'absolute' }]}
+            style={[mediaStyle, { position: 'absolute', top: 0, left: 0 }]}
             resizeMode={ResizeMode.COVER}
             isLooping
             shouldPlay={isVisible && isScreenFocused}
@@ -474,24 +478,27 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           {showMuteIcon && !item.is_muted && (
             <Animated.View style={[{
               position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: [
-                { translateX: -25 },
-                { translateY: -25 },
-              ],
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              borderRadius: 50,
-              padding: 15,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
               zIndex: 10,
             }, {
               opacity: fadeAnim
             }]}>
-              <Ionicons 
-                name={mute ? 'volume-mute' : 'volume-high'} 
-                size={25} 
-                color="white"
-              />
+              <View style={{
+                backgroundColor: 'rgba(0,0,0,0.5)',
+                borderRadius: 50,
+                padding: 15,
+              }}>
+                <Ionicons 
+                  name={mute ? 'volume-mute' : 'volume-high'} 
+                  size={25} 
+                  color="white"
+                />
+              </View>
             </Animated.View>
           )}
         </>
@@ -499,7 +506,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         <>
         <Image
           source={{ uri: item.signedUrl }}
-          style={mediaStyle}
+          style={[mediaStyle, { position: 'absolute', top: 0, left: 0 }]}
           resizeMode="cover"
           onLoadStart={handleLoadStart}
           onLoadEnd={handleLoadEnd}
@@ -558,11 +565,13 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   <Animated.View
     style={[{
       position: 'absolute',
-      top: '50%',
-      left: '50%',
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      justifyContent: 'center',
+      alignItems: 'center',
       transform: [
-        { translateX: -40 },
-        { translateY: -40 },
         { scale: heartScale }
       ],
       zIndex: 11,

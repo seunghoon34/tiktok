@@ -310,10 +310,14 @@ export default function Mystoryscreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
                 width: Dimensions.get('window').width,
                 height: Dimensions.get('window').height,
                 zIndex: 1,
-                backgroundColor: 'black'
+                backgroundColor: 'black',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}>
                 <LoadingScreen />
               </View>
@@ -332,10 +336,14 @@ export default function Mystoryscreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
+                top: 0,
+                left: 0,
                 width: Dimensions.get('window').width,
                 height: Dimensions.get('window').height,
                 zIndex: 1,
-                backgroundColor: 'black'
+                backgroundColor: 'black',
+                justifyContent: 'center',
+                alignItems: 'center'
               }}>
                 <LoadingScreen />
               </View>
@@ -373,25 +381,28 @@ export default function Mystoryscreen() {
           <Animated.View 
             style={[{
               position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: [
-                { translateX: -25 },
-                { translateY: -25 },
-              ],
-              backgroundColor: 'rgba(0,0,0,0.5)',
-              borderRadius: 50,
-              padding: 15,
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              justifyContent: 'center',
+              alignItems: 'center',
               zIndex: 10,
             }, {
               opacity: fadeAnim
             }]}
           >
-            <Ionicons 
-              name={mute ? 'volume-mute' : 'volume-high'} 
-              size={25} 
-              color="white"
-            />
+            <View style={{
+              backgroundColor: 'rgba(0,0,0,0.5)',
+              borderRadius: 50,
+              padding: 15,
+            }}>
+              <Ionicons 
+                name={mute ? 'volume-mute' : 'volume-high'} 
+                size={25} 
+                color="white"
+              />
+            </View>
           </Animated.View>
         )}
         
@@ -399,44 +410,47 @@ export default function Mystoryscreen() {
         {showSuccessToast && (
           <View style={{
             position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: [
-              { translateX: -100 },
-              { translateY: -50 }
-            ],
-            backgroundColor: 'rgba(34, 197, 94, 0.95)',
-            paddingHorizontal: 24,
-            paddingVertical: 16,
-            borderRadius: 16,
-            flexDirection: 'row',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            justifyContent: 'center',
             alignItems: 'center',
-            minWidth: 200,
             zIndex: 1000,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
           }}>
-            <Ionicons name="checkmark-circle" size={24} color="white" style={{ marginRight: 12 }} />
-            <View>
-              <Text style={{
-                color: 'white',
-                fontSize: 16,
-                fontWeight: '600',
-                textAlign: 'center'
-              }}>
-                Story Deleted
-              </Text>
-              <Text style={{
-                color: 'rgba(255, 255, 255, 0.9)',
-                fontSize: 14,
-                marginTop: 2,
-                textAlign: 'center'
-              }}>
-                Successfully removed
-              </Text>
+            <View style={{
+              backgroundColor: 'rgba(34, 197, 94, 0.95)',
+              paddingHorizontal: 24,
+              paddingVertical: 16,
+              borderRadius: 16,
+              flexDirection: 'row',
+              alignItems: 'center',
+              minWidth: 200,
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.3,
+              shadowRadius: 8,
+              elevation: 8,
+            }}>
+              <Ionicons name="checkmark-circle" size={24} color="white" style={{ marginRight: 12 }} />
+              <View>
+                <Text style={{
+                  color: 'white',
+                  fontSize: 16,
+                  fontWeight: '600',
+                  textAlign: 'center'
+                }}>
+                  Story Deleted
+                </Text>
+                <Text style={{
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontSize: 14,
+                  marginTop: 2,
+                  textAlign: 'center'
+                }}>
+                  Successfully removed
+                </Text>
+              </View>
             </View>
           </View>
         )}
