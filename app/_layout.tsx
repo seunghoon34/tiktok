@@ -230,7 +230,6 @@
       <GestureHandlerRootView style={{ flex: 1 }}>
         <Host>
           <AuthProvider>
-            <ProfileProvider>
               <NotificationProvider>
                 <Stack screenOptions={{ gestureEnabled: false}}>
                   <Stack.Screen name="(auth)" options={{ headerShown: false }} />
@@ -253,7 +252,6 @@
                   <Stack.Screen name="+not-found" />
                 </Stack>
               </NotificationProvider>
-            </ProfileProvider>
           </AuthProvider>
         </Host>
         <Toast 

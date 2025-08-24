@@ -29,6 +29,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);   
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [isProcessingAuth, setIsProcessingAuth] = useState(false);
 
     const getLikes = async (userId: string, immediateUpdate?: any[]) => {
         if(!user) return;
@@ -46,6 +47,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     const getUser = async (id: string) => {
         try {
+            console.log('[getUser] ***** CALLED WITH ID:', id, '*****');
+            console.log('[getUser] Stack trace:', new Error().stack);
             const { data, error } = await supabase
                 .from("User")
                 .select("*")
@@ -103,19 +106,24 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                 .eq('user_id', id)
                 .single();
 
+            console.log('[getUser] Profile data:', !!profileData);
             if (!profileData) {
+                console.log('[getUser] ***** NO PROFILE FOUND, REDIRECTING TO CREATEPROFILE *****');
                 router.push('/createprofile');
             } else {
+                console.log('[getUser] Profile found, redirecting to profile tab');
                 router.push('/(tabs)/profile');
             }
         } catch (error) {
             console.error('Error in getUser:', error);
-            router.push('/createprofile');
+            // On technical errors, redirect to sign-in instead of createprofile
+            router.push('/(auth)');
         }
     };
 
     const signIn = async (email: string, password: string) => {
         try {
+            setIsProcessingAuth(true);
             const { data, error } = await supabase.auth.signInWithPassword({ 
                 email, 
                 password 
@@ -130,11 +138,14 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         } catch (error: unknown) {
             console.error('Sign in error:', error);
             throw error;
+        } finally {
+            setIsProcessingAuth(false);
         }
     };
 
     const signUp = async (email: string, password: string) => {
         try {
+            setIsProcessingAuth(true);
             const { data: authData, error: authError } = await supabase.auth.signUp({
                 email: email,
                 password: password,
@@ -168,6 +179,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         } catch (error) {
             console.error('Sign up error:', error);
             throw error;
+        } finally {
+            setIsProcessingAuth(false);
         }
     };
 
@@ -274,7 +287,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
   useEffect(() => {
     initializeAuth();
       const handleAuthStateChange = async (event: string, newSession: any) => {
-          console.log('Auth state changed:', event);
+          console.log('***** AUTH STATE CHANGED:', event, 'isProcessingAuth:', isProcessingAuth, 'user exists:', !!user, '*****');
           
           try {
               switch (event) {
@@ -286,9 +299,12 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                       break;
                       
                   case 'SIGNED_IN':
-                      if (newSession) {
+                      if (newSession && !isProcessingAuth && !user) {
+                          console.log('***** PROCESSING SIGNED_IN EVENT, CALLING GETUSER *****');
                           setSession(newSession);
                           await getUser(newSession.user.id);
+                      } else {
+                          console.log('***** SKIPPING SIGNED_IN EVENT - isProcessingAuth:', isProcessingAuth, 'user exists:', !!user, '*****');
                       }
                       break;
                       

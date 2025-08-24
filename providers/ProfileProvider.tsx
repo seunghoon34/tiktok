@@ -24,6 +24,7 @@ export const ProfileProvider = ({ children }: { children: React.ReactNode }) => 
 
       if (error || !data) {
         setHasProfile(false);
+        console.log('No profile found, redirecting to createprofile (profile provider');
         router.push('/createprofile');
         return false;
       }
