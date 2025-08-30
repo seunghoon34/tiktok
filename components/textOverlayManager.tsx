@@ -86,11 +86,21 @@ const DraggableText = ({
 
 
   const handleTransformUpdate = () => {
+    // Calculate center points
+    const containerCenterX = containerWidth / 2;
+    const containerCenterY = containerHeight / 2;
+    
+    // Convert absolute position to percentage offset from center
+    const positionXPercent = containerWidth > 0 ? 
+      Math.round(((translateX.value - containerCenterX) / containerWidth) * 100 * 100) / 100 : 0;
+    const positionYPercent = containerHeight > 0 ? 
+      Math.round(((translateY.value - containerCenterY) / containerHeight) * 100 * 100) / 100 : 0;
+    
     const updateData = {
       id,
       text,
-      position_x: containerWidth > 0 ? Math.round(((translateX.value / containerWidth) * 100) * 100) / 100 : 50, // percent of container width
-      position_y: containerHeight > 0 ? Math.round(((translateY.value / containerHeight) * 100) * 100) / 100 : 50, // percent of container height
+      position_x: positionXPercent, // percent offset from center (-50 to +50)
+      position_y: positionYPercent, // percent offset from center (-50 to +50)
       scale: scale.value,
       rotation: rotation.value,
       fontSize: containerHeight > 0 ? Math.round(((fontSize / containerHeight) * 100) * 100) / 100 : 10, // percent of container height
@@ -100,6 +110,13 @@ const DraggableText = ({
       screen_width: SCREEN_WIDTH,
       screen_height: SCREEN_HEIGHT
     };
+    
+    console.log('[TextOverlayManager] Center-anchor overlay created:', {
+      absolute: { x: translateX.value, y: translateY.value },
+      center: { x: containerCenterX, y: containerCenterY },
+      relative: { x: positionXPercent, y: positionYPercent }
+    });
+    
     onOverlayUpdate?.(updateData);
   };
 
@@ -147,9 +164,13 @@ const DraggableText = ({
     if (hasInitializedPosition.current) return;
     if (containerWidth > 0 && containerHeight > 0) {
       if (initialOverlay) {
-        // Seed from saved percentages
-        translateX.value = (initialOverlay.position_x / 100) * containerWidth;
-        translateY.value = (initialOverlay.position_y / 100) * containerHeight;
+        // Calculate center points
+        const containerCenterX = containerWidth / 2;
+        const containerCenterY = containerHeight / 2;
+        
+        // Convert center-relative percentages back to absolute positions
+        translateX.value = containerCenterX + (initialOverlay.position_x / 100) * containerWidth;
+        translateY.value = containerCenterY + (initialOverlay.position_y / 100) * containerHeight;
         scale.value = initialOverlay.scale ?? 1;
         rotation.value = initialOverlay.rotation ?? 0;
         // Convert font size percent-of-height to pixels
@@ -157,6 +178,7 @@ const DraggableText = ({
         runOnJS(setText)(initialOverlay.text ?? '');
         runOnJS(setFontSize)(pxFontSize > 0 ? pxFontSize : initialFontSize);
       } else {
+        // Default position: slightly off-center
         translateX.value = containerWidth * 0.25;
         translateY.value = containerHeight * 0.5;
       }

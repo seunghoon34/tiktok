@@ -88,7 +88,7 @@ export function convertOverlayPosition(
 } {
   const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
   
-  // If overlay has stored media dimensions, use aspect-ratio aware positioning
+  // If overlay has stored media dimensions, use center-anchor positioning
   if (overlay.media_width && overlay.media_height && overlay.screen_width && overlay.screen_height) {
     // Calculate the actual media display area on original device
     const originalDisplayArea = calculateCoverDisplayArea(
@@ -106,36 +106,47 @@ export function convertOverlayPosition(
       overlay.media_height
     );
 
-    // Convert original screen coordinates to media-relative coordinates
-    const originalScreenX = (overlay.position_x / 100) * overlay.screen_width;
-    const originalScreenY = (overlay.position_y / 100) * overlay.screen_height;
+    // Calculate center points of media areas
+    const originalCenterX = originalDisplayArea.x + originalDisplayArea.width / 2;
+    const originalCenterY = originalDisplayArea.y + originalDisplayArea.height / 2;
+    const currentCenterX = currentDisplayArea.x + currentDisplayArea.width / 2;
+    const currentCenterY = currentDisplayArea.y + currentDisplayArea.height / 2;
 
-    // Calculate position relative to the original media area (0-1 range)
-    const mediaRelativeX = (originalScreenX - originalDisplayArea.x) / originalDisplayArea.width;
-    const mediaRelativeY = (originalScreenY - originalDisplayArea.y) / originalDisplayArea.height;
+    // Convert center-relative percentages to absolute offset from original center
+    const originalOffsetX = (overlay.position_x / 100) * overlay.media_width;
+    const originalOffsetY = (overlay.position_y / 100) * overlay.media_height;
 
-    // Apply the same media-relative position to current device's media area
-    const currentX = mediaRelativeX * currentDisplayArea.width + currentDisplayArea.x;
-    const currentY = mediaRelativeY * currentDisplayArea.height + currentDisplayArea.y;
+    // Scale the offset proportionally to the new media area
+    const scaleX = currentDisplayArea.width / originalDisplayArea.width;
+    const scaleY = currentDisplayArea.height / originalDisplayArea.height;
+    
+    const currentOffsetX = originalOffsetX * scaleX;
+    const currentOffsetY = originalOffsetY * scaleY;
+
+    // Calculate final position relative to current center
+    const currentX = currentCenterX + currentOffsetX;
+    const currentY = currentCenterY + currentOffsetY;
 
     // Scale font size based on media area scale
-    const mediaScale = Math.min(
-      currentDisplayArea.width / originalDisplayArea.width,
-      currentDisplayArea.height / originalDisplayArea.height
-    );
-    const originalFontSize = (overlay.font_size / 100) * overlay.screen_height;
+    const mediaScale = Math.min(scaleX, scaleY);
+    const originalFontSize = (overlay.font_size / 100) * overlay.media_height;
     const currentFontSize = originalFontSize * mediaScale;
 
-    console.log('[MediaPositioning] Conversion:', {
+    console.log('[MediaPositioning] Center-anchor conversion:', {
       overlay: { x: overlay.position_x, y: overlay.position_y },
       original: { 
         screen: `${overlay.screen_width}x${overlay.screen_height}`,
         media: `${overlay.media_width}x${overlay.media_height}`,
-        area: originalDisplayArea 
+        area: originalDisplayArea,
+        center: { x: originalCenterX, y: originalCenterY },
+        offset: { x: originalOffsetX, y: originalOffsetY }
       },
       current: { 
         screen: `${screenWidth}x${screenHeight}`,
-        area: currentDisplayArea 
+        area: currentDisplayArea,
+        center: { x: currentCenterX, y: currentCenterY },
+        offset: { x: currentOffsetX, y: currentOffsetY },
+        scale: { x: scaleX, y: scaleY }
       },
       result: { x: currentX, y: currentY, fontSize: currentFontSize }
     });
@@ -147,11 +158,16 @@ export function convertOverlayPosition(
     };
   }
 
-  // Fallback: use old behavior for overlays without media dimensions
-  console.log('[MediaPositioning] Using fallback positioning');
+  // Fallback: use center-relative behavior for overlays without media dimensions
+  console.log('[MediaPositioning] Using center-relative fallback positioning');
+  const centerX = screenWidth / 2;
+  const centerY = screenHeight / 2;
+  const offsetX = (overlay.position_x / 100) * screenWidth;
+  const offsetY = (overlay.position_y / 100) * screenHeight;
+  
   return {
-    left: (overlay.position_x / 100) * screenWidth,
-    top: (overlay.position_y / 100) * screenHeight,
+    left: centerX + offsetX,
+    top: centerY + offsetY,
     fontSize: (overlay.font_size / 100) * screenHeight
   };
 }
