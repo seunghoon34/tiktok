@@ -194,7 +194,7 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
 };
 
 export default function InboxScreen() {
- const [chats, setChats] = useState([]);
+ const [chats, setChats] = useState<any[]>([]);
  const { user } = useAuth();
 
  const fetchChats = async () => {
@@ -242,27 +242,47 @@ export default function InboxScreen() {
 
      if (error) throw error;
 
-     const chatsWithDetails = await Promise.all(data.map(async (chat) => {
-       const { data: messagesData } = await supabase
-         .from('Message')
-         .select('content, created_at')
-         .eq('chat_id', chat.id)
-         .order('created_at', { ascending: false })
-         .limit(1);
+     // Optimized: Get all last messages and unread counts in 2 queries instead of N+1
+     const chatIds = data.map(chat => chat.id);
+     
+     // Get last messages for all chats in one query
+     const { data: lastMessages } = await supabase
+       .from('Message')
+       .select('chat_id, content, created_at')
+       .in('chat_id', chatIds)
+       .order('created_at', { ascending: false });
 
-       const { count } = await supabase
-         .from('Message')
-         .select('*', { count: 'exact' })
-         .eq('chat_id', chat.id)
-         .eq('read', false)
-         .neq('sender_id', user.id);
+     // Get unread counts for all chats in one query  
+     const { data: unreadMessages } = await supabase
+       .from('Message')
+       .select('chat_id')
+       .in('chat_id', chatIds)
+       .eq('read', false)
+       .neq('sender_id', user.id);
 
-       return {
-         ...chat,
-         lastMessage: messagesData[0] || null,
-         unreadCount: count || 0
-       };
+     // Process the data efficiently
+     const lastMessageMap = new Map();
+     const unreadCountMap = new Map();
+
+     // Group last messages by chat_id
+     lastMessages?.forEach(msg => {
+       if (!lastMessageMap.has(msg.chat_id)) {
+         lastMessageMap.set(msg.chat_id, msg);
+       }
+     });
+
+     // Count unread messages by chat_id
+     unreadMessages?.forEach(msg => {
+       unreadCountMap.set(msg.chat_id, (unreadCountMap.get(msg.chat_id) || 0) + 1);
+     });
+
+     const chatsWithDetails = data.map(chat => ({
+       ...chat,
+       lastMessage: lastMessageMap.get(chat.id) || null,
+       unreadCount: unreadCountMap.get(chat.id) || 0
      }));
+
+     console.log(`[Inbox] Optimized fetch: ${chatIds.length} chats loaded with 2 queries instead of ${chatIds.length * 2}`);
 
      const sortedChats = chatsWithDetails.sort((a, b) => {
        const aTime = a.lastMessage 

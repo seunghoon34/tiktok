@@ -9,13 +9,14 @@ import CustomHeader from '@/components/customHeader';
 import { sendMessageNotification } from '@/utils/notifications';
 
 export default function ChatScreen() {
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const { id } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
-  const [otherUser, setOtherUser] = useState(null);
+  const [otherUser, setOtherUser] = useState<any>(null);
   const flatListRef = useRef();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [inputHeight, setInputHeight] = useState(44); // Track input height
   const [otherUserProfile, setOtherUserProfile] = useState(null);
   const [hasVideos, setHasVideos] = useState(false);
 
@@ -56,7 +57,7 @@ export default function ChatScreen() {
   }, [id, user]);
 
   useEffect(() => {
-    setActiveChatId(id);
+    setActiveChatId(Array.isArray(id) ? id[0] : id);
     return () => setActiveChatId(null);
   }, [id]);
 
@@ -74,8 +75,10 @@ export default function ChatScreen() {
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
+        // Fix: Use scrollViewRef instead of flatListRef
+        console.log(`[Chat] Keyboard shown, height: ${e.endCoordinates.height}, scrolling to end`);
         setTimeout(() => {
-          flatListRef.current?.scrollToEnd({ animated: true });
+          scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 100);
       }
     );
@@ -106,20 +109,28 @@ export default function ChatScreen() {
         .eq('id', id)
         .single();
 
-      setOtherUser(chatData.user1.id === user.id ? chatData.user2 : chatData.user1);
+      if (chatData) {
+        setOtherUser(chatData.user1.id === user.id ? chatData.user2 : chatData.user1);
+      }
 
+      // Load only the most recent 50 messages for faster loading
       const { data: messagesData } = await supabase
-  .from('Message')
-  .select(`
-    *,
-    sender:sender_id (id, username),
-    read,
-    created_at
-  `)
-  .eq('chat_id', id)
-  .order('created_at', { ascending: true });
+        .from('Message')
+        .select(`
+          *,
+          sender:sender_id (id, username),
+          read,
+          created_at
+        `)
+        .eq('chat_id', id)
+        .order('created_at', { ascending: false }) // Get newest first
+        .limit(50); // Only load 50 most recent messages
 
-      setMessages(messagesData);
+      // Reverse to show oldest first in UI (chronological order)
+      const sortedMessages = messagesData ? messagesData.reverse() : [];
+      setMessages(sortedMessages);
+      
+      console.log(`[Chat] Loaded ${sortedMessages.length} recent messages for chat ${id}`);
       
     };
 
@@ -144,23 +155,23 @@ export default function ChatScreen() {
             .eq('id', payload.new.id);
         }
 
-        const { data: messageData } = await supabase
-          .from('Message')
-          .select(`
-            *,
-            sender:sender_id (id, username),
-            read,
-            created_at
-          `)
-          .eq('id', payload.new.id)
-          .single();
+        // Optimize: Use payload data directly instead of fetching again
+        const newMessage = {
+          ...payload.new,
+          sender: payload.new.sender_id === user.id ? 
+            { id: user.id, username: user.username } : 
+            otherUser,
+          read: payload.new.read,
+          created_at: payload.new.created_at
+        };
 
-        if (messageData) {
-          setMessages(current => [...current, messageData]);
-          setTimeout(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: true });
-          }, 100);
-        }
+        setMessages(current => [...current, newMessage]);
+        // Ensure scroll happens after message is rendered
+        setTimeout(() => {
+          scrollViewRef.current?.scrollToEnd({ animated: true });
+        }, 150);
+        
+        console.log(`[Chat] Real-time message added without additional fetch`);
       }
     )
     .on(
@@ -285,18 +296,7 @@ export default function ChatScreen() {
               const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
               console.log('[ChatScreen] Setting image URL:', imageUrl);
               
-              // Test if the image actually loads (web only)
-              if (typeof window !== 'undefined' && window.Image) {
-                const testImage = new window.Image();
-                testImage.onload = () => {
-                  console.log('[ChatScreen] ✅ Image loaded successfully');
-                };
-                testImage.onerror = (error: any) => {
-                  console.error('[ChatScreen] ❌ Failed to load image:', error);
-                  console.error('[ChatScreen] Image URL that failed:', imageUrl);
-                };
-                testImage.src = imageUrl;
-              }
+              // Image URL ready - no need to test load
               
               setOtherUserProfile({...data, profilepicture: imageUrl});
             } else {
@@ -345,7 +345,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
-          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 10}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View className="flex-1">
            
@@ -399,7 +399,7 @@ export default function ChatScreen() {
             <Image
               source={{ uri: otherUserProfile.profilepicture }}
               className="w-10 h-10 rounded-full"
-              onLoad={() => console.log('[ChatScreen] Image component loaded successfully')}
+              onLoad={() => {}}
               onError={(error) => {
                 console.error('[ChatScreen] Image component failed to load:', error.nativeEvent);
                 console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
@@ -423,7 +423,7 @@ export default function ChatScreen() {
         <Image
           source={{ uri: otherUserProfile.profilepicture }}
           className="w-10 h-10 rounded-full"
-          onLoad={() => console.log('[ChatScreen] Image component loaded successfully (with stories)')}
+          onLoad={() => {}}
           onError={(error) => {
             console.error('[ChatScreen] Image component failed to load (with stories):', error.nativeEvent);
             console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
@@ -466,18 +466,36 @@ export default function ChatScreen() {
             
             <View className="px-4 py-2 border-t border-gray-200 flex-row items-center bg-white">
             <TextInput
-              className="flex-1 bg-gray-100 px-4 py-2 rounded-full mr-2 min-h-[40px]" // Removed max-h
+              className="flex-1 bg-gray-100 px-4 py-3 mr-2 min-h-[44px]"
               value={newMessage}
               onChangeText={setNewMessage}
               placeholder="Type a message..."
-              multiline={true} // Add this
-              numberOfLines={1} // This sets initial number of lines
-              style={{ maxHeight: 100,
-                borderRadius: 20, // Add fixed border radius instead of rounded-full
-                textAlignVertical: 'center',
-              }} // Limit maximum height if needed
+              multiline={true}
+              style={{ 
+                maxHeight: 120, // Allow more height for expansion
+                borderRadius: 20,
+                textAlignVertical: 'top', // Align text to top for multiline
+                fontSize: 16,
+                lineHeight: 20, // Better line spacing
+              }}
+              onContentSizeChange={(event) => {
+                const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24)); // 24 for padding
+                const previousHeight = inputHeight;
+                setInputHeight(newHeight);
+                
+                // Force scroll when input height changes (expanding or shrinking)
+                if (newHeight !== previousHeight) {
+                  console.log(`[Chat] Input height changed: ${previousHeight} → ${newHeight}, scrolling to end`);
+                  setTimeout(() => {
+                    scrollViewRef.current?.scrollToEnd({ animated: true });
+                  }, 50);
+                }
+              }}
               onFocus={() => {
-                scrollViewRef.current?.scrollToEnd({ animated: false });
+                // Delay scroll to ensure keyboard is showing
+                setTimeout(() => {
+                  scrollViewRef.current?.scrollToEnd({ animated: true });
+                }, 300);
               }}
             />
               <TouchableOpacity
