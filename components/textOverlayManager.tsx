@@ -32,6 +32,11 @@ interface OverlayData {
   rotation: number; // radians
   // Font size stored as percentage of container height (0-100)
   fontSize: number;
+  // Media dimensions when overlay was created
+  media_width?: number;
+  media_height?: number;
+  screen_width?: number;
+  screen_height?: number;
 }
 
 interface DraggableTextProps {
@@ -88,7 +93,12 @@ const DraggableText = ({
       position_y: containerHeight > 0 ? Math.round(((translateY.value / containerHeight) * 100) * 100) / 100 : 50, // percent of container height
       scale: scale.value,
       rotation: rotation.value,
-      fontSize: containerHeight > 0 ? Math.round(((fontSize / containerHeight) * 100) * 100) / 100 : 10 // percent of container height
+      fontSize: containerHeight > 0 ? Math.round(((fontSize / containerHeight) * 100) * 100) / 100 : 10, // percent of container height
+      // Store media dimensions and screen dimensions for cross-device compatibility
+      media_width: containerWidth,
+      media_height: containerHeight,
+      screen_width: SCREEN_WIDTH,
+      screen_height: SCREEN_HEIGHT
     };
     onOverlayUpdate?.(updateData);
   };
@@ -261,11 +271,11 @@ interface TextOverlayManagerProps {
   onOverlaysUpdate?: (overlays: any[]) => void; // Add this
   video?: boolean
   initialOverlays?: OverlayData[];
-
-
+  mediaWidth?: number;  // Add media dimensions
+  mediaHeight?: number;
 }
 
-export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video, initialOverlays  }: TextOverlayManagerProps) => {
+export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video, initialOverlays, mediaWidth, mediaHeight  }: TextOverlayManagerProps) => {
   const [textElements, setTextElements] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [binPosition, setBinPosition] = useState<BinPosition>({ 

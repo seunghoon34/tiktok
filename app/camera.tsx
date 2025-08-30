@@ -33,9 +33,9 @@ export default function CameraScreen() {
     
     if (isRecording) {
       setElapsedTime(0); // Reset timer when starting recording
-      intervalId = setInterval(() => {
-        setElapsedTime((prev) => prev + 1);
-      }, 1000);
+          intervalId = setInterval(() => {
+      setElapsedTime((prev) => prev + 1);
+    }, 1000) as any;
     } else {
       setElapsedTime(0); // Reset timer when stopping
     }
@@ -77,7 +77,7 @@ export default function CameraScreen() {
         const video = await cameraRef.current?.recordAsync({
           maxDuration: 5, // in seconds
         });
-        setUri(video?.uri);
+        setUri(video?.uri || "");
       } finally {
         setIsRecording(false);
         setIsTorchOn(false)
@@ -87,35 +87,39 @@ export default function CameraScreen() {
   };
 
 
-  const saveUri = async (isMuted: boolean = false, textOverlays = []) => {
+  const saveUri = async (isMuted: boolean = false, textOverlays: any[] = []) => {
     setIsUploading(true);
     try {
-      // Upload video first
+      // Determine if it's a video or image based on camera mode
+      const fileExt = uri?.split('.').pop()?.toLowerCase();
+      const isVideo = !cameraMode || fileExt === 'mov' || fileExt === 'mp4';
+      
+      // Upload media file
       const formData = new FormData;
       const fileName = uri?.split('/').pop()
       formData.append('file', {
         uri: uri,
-        type: `video/${fileName?.split('.').pop()}`,
+        type: isVideo ? `video/${fileExt}` : `image/${fileExt}`,
         name: fileName,
-      });
+      } as any);
       
       const { data, error } = await supabase.storage
-        .from('videos')
-        .upload(fileName, formData, {
+        .from('videos') // Using same bucket for both videos and images
+        .upload(fileName || "", formData, {
           cacheControl: '3600000000',
           upsert: false
         });
       
       if(error) throw error;
   
-      // Insert video and get its ID
+      // Insert media record and get its ID
       const { data: videoData, error: videoError } = await supabase
         .from('Video')
         .insert({
           title: "test_title",
           uri: data?.path,
           user_id: user?.id,
-          is_muted: isMuted,
+          is_muted: isVideo ? isMuted : false, // Images don't have mute state
         })
         .select()
         .single();
@@ -135,7 +139,11 @@ export default function CameraScreen() {
               position_y: overlay.position_y,
               scale: overlay.scale,
               rotation: overlay.rotation,
-              font_size: overlay.fontSize
+              font_size: overlay.fontSize,
+              media_width: overlay.media_width,
+              media_height: overlay.media_height,
+              screen_width: overlay.screen_width,
+              screen_height: overlay.screen_height
             }))
           );
         if(textError) throw textError;
@@ -156,10 +164,7 @@ const deleteUri = () =>{
 
   const takePicture = async () => {
     const picture = await cameraRef.current?.takePictureAsync();
-    setUri(picture?.uri);
-
-
-
+    setUri(picture?.uri || "");
   }
 
   const toggleFlash = () => {

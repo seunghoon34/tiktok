@@ -149,16 +149,20 @@ model Report {
 }
 
 model TextOverlay {
-  id         String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  video_id   String?
-  text       String
-  position_x Float
-  position_y Float
-  scale      Float
-  rotation   Float
-  font_size  Float
-  created_at DateTime? @default(now()) @db.Timestamptz(6)
-  Video      Video?    @relation(fields: [video_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id               String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  video_id         String?
+  text             String
+  position_x       Float
+  position_y       Float
+  scale            Float
+  rotation         Float
+  font_size        Float
+  media_width      Float?    // Width of the media container when overlay was created
+  media_height     Float?    // Height of the media container when overlay was created
+  screen_width     Float?    // Screen width when overlay was created
+  screen_height    Float?    // Screen height when overlay was created
+  created_at       DateTime? @default(now()) @db.Timestamptz(6)
+  Video            Video?    @relation(fields: [video_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 }
 
 enum NotificationType {

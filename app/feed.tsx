@@ -18,7 +18,7 @@ interface MediaItem {
   };
   title: string;
   id: string;
-  display_id: string
+  displayId: string
   TextOverlay?: Array<{
     text: string;
     position_x: number;
@@ -26,6 +26,10 @@ interface MediaItem {
     scale: number;
     rotation: number;
     font_size: number;
+    media_width?: number;
+    media_height?: number;
+    screen_width?: number;
+    screen_height?: number;
   }>;
 }
 
@@ -43,6 +47,7 @@ export default function HomeScreen() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const [videoIds, setVideoIds] = useState<Set<string>>(new Set());
+  const [screenReady, setScreenReady] = useState(false);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -171,7 +176,11 @@ export default function HomeScreen() {
       position_y,
       scale,
       rotation,
-      font_size
+      font_size,
+      media_width,
+      media_height,
+      screen_width,
+      screen_height
     )
   `)
   .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
@@ -210,6 +219,33 @@ export default function HomeScreen() {
     );
   };
 
+  // Get safe screen dimensions with validation
+  const screenDimensions = Dimensions.get('window');
+  const SCREEN_HEIGHT = screenDimensions.height || 800; // Fallback for iPad issue
+  const SCREEN_WIDTH = screenDimensions.width || 600;
+  
+  // Debug logging for dimensions
+  console.log('[Feed] Screen Dimensions:', {
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    original: screenDimensions
+  });
+
+  // Wait for valid screen dimensions before rendering feed
+  useEffect(() => {
+    const checkDimensions = () => {
+      const dims = Dimensions.get('window');
+      if (dims.width > 0 && dims.height > 0) {
+        setScreenReady(true);
+        console.log('[Feed] Screen ready:', dims);
+      } else {
+        console.log('[Feed] Waiting for valid dimensions...', dims);
+        setTimeout(checkDimensions, 100);
+      }
+    };
+    checkDimensions();
+  }, []);
+
   const handleLoadMore = () => {
     console.log("Loading more videos...");
     if (isLoading || loadingMore) return;
@@ -219,7 +255,15 @@ export default function HomeScreen() {
   return (
     <View className="flex-1 bg-black">
       {
-        isLoading ? (
+        !screenReady ? (
+          <SafeAreaView className="flex-1 bg-black">
+            <Header title="" color="white" goBack={true}/>
+            <View className="flex-1 items-center justify-center">
+              <SimpleSpinner size={60} />
+              <Text className="text-white mt-4 text-lg">Initializing screen...</Text>
+            </View>
+          </SafeAreaView>
+        ) : isLoading ? (
           <SafeAreaView className="flex-1 bg-black">
             <Header title="" color="white" goBack={true}/>
             <View className="flex-1 items-center justify-center">
@@ -247,7 +291,7 @@ export default function HomeScreen() {
           decelerationRate="fast"
           disableIntervalMomentum={true}
           showsVerticalScrollIndicator={false}
-          snapToInterval={Dimensions.get('window').height}
+          snapToInterval={SCREEN_HEIGHT}
           viewabilityConfig={viewabilityConfig}
           onViewableItemsChanged={onViewableItemsChanged}
           style={{ flex: 1 }}

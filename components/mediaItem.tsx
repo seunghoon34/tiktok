@@ -12,6 +12,7 @@ import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
+import { convertOverlayPosition } from '@/utils/mediaPositioning';
 
 interface MediaItemProps {
   item: {
@@ -34,6 +35,10 @@ interface MediaItemProps {
       scale: number;
       rotation: number;
       font_size: number;
+      media_width?: number;
+      media_height?: number;
+      screen_width?: number;
+      screen_height?: number;
     }>;
   };
   isVisible: boolean;
@@ -68,34 +73,41 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   
 
   const renderTextOverlays = () => {
-    return item.TextOverlay?.map((overlay, index) => (
-      <Animated.View
-        key={index}
-        style={[{
-          position: 'absolute',
-          left: (overlay.position_x / 100) * SCREEN_WIDTH,
-          top: (overlay.position_y / 100) * SCREEN_HEIGHT,
-          minWidth: 100,
-          maxWidth: '80%',
-          transform: [
-            { scale: overlay.scale },
-            { rotate: `${overlay.rotation}rad` }
-          ],
-        }]}
-      >
-        <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-          <Text
-            style={{
-              color: 'white',
-              fontSize: (overlay.font_size / 100) * SCREEN_HEIGHT,
-              
-            }}
-          >
-            {overlay.text}
-          </Text>
-        </View>
-      </Animated.View>
-    ));
+    return item.TextOverlay?.map((overlay, index) => {
+      const { left, top, fontSize } = convertOverlayPosition(
+        overlay,
+        SCREEN_WIDTH,
+        SCREEN_HEIGHT
+      );
+
+      return (
+        <Animated.View
+          key={index}
+          style={[{
+            position: 'absolute',
+            left: left,
+            top: top,
+            minWidth: 100,
+            maxWidth: '80%',
+            transform: [
+              { scale: overlay.scale },
+              { rotate: `${overlay.rotation}rad` }
+            ],
+          }]}
+        >
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+            <Text
+              style={{
+                color: 'white',
+                fontSize: fontSize,
+              }}
+            >
+              {overlay.text}
+            </Text>
+          </View>
+        </Animated.View>
+      );
+    });
   };
 
 
