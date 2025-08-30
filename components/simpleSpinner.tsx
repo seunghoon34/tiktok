@@ -9,7 +9,7 @@ interface SimpleSpinnerProps {
 
 const SimpleSpinner: React.FC<SimpleSpinnerProps> = ({ 
   size = 40, 
-  color = '#ff5757', 
+  color = '#ffffff', 
   borderWidth = 3 
 }) => {
   const spinValue = useRef(new Animated.Value(0)).current;
