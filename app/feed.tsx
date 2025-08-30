@@ -56,13 +56,20 @@ export default function HomeScreen() {
       .channel('public:UserBlock')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'UserBlock', 
-          filter: `blocker_id=eq.${user.id},blocked_id=eq.${user.id}` }, 
-        () => {
+          filter: `or(blocker_id.eq.${user.id},blocked_id.eq.${user.id})` }, 
+        (payload) => {
+          console.log('UserBlock change detected:', payload)
           setIsLoading(true)
           onRefresh()
           setIsLoading(false)
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Successfully subscribed to UserBlock changes')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Error subscribing to UserBlock changes:', err)
+        }
+      });
   
     return () => {
       subscription.unsubscribe();
