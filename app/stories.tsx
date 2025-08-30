@@ -46,7 +46,7 @@ export default function Mystoryscreen() {
   const [mediaType, setMediaType] = useState('');
   const [showMuteIcon, setShowMuteIcon] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [showSuccessToast, setShowSuccessToast] = useState(false);
+
   
   const modalRef = useRef<Modalize>(null);
   const videoRef = useRef(null);
@@ -249,30 +249,23 @@ export default function Mystoryscreen() {
       modalRef.current?.close();
       setShowDeleteConfirm(false);
       
-      // Show both global toast and local state toast
+      // Show only the global toast (remove duplicate local toast)
       Toast.show({ 
         type: 'success', 
         text1: 'Story Deleted',
         text2: 'Your story has been removed successfully'
       });
       
-      setShowSuccessToast(true);
-      
       // Handle navigation after toast (with delay)
       if (newStories.length === 0) {
         console.log('[Stories] No more stories, navigating back');
         // Delay navigation to allow toast to show
         setTimeout(() => {
-          setShowSuccessToast(false);
           router.back();
         }, 1500); // Longer delay to ensure toast visibility
       } else if (currentIndex >= newStories.length) {
         console.log('[Stories] Adjusting current index after deletion');
         setCurrentIndex(newStories.length - 1);
-        // Hide success toast after delay
-        setTimeout(() => {
-          setShowSuccessToast(false);
-        }, 3000);
       }
       
     } catch (error) {
@@ -407,77 +400,32 @@ export default function Mystoryscreen() {
             />
           </Animated.View>
         )}
-        
-        {/* Success toast overlay */}
-        {showSuccessToast && (
-          <View style={{
-            position: 'absolute',
-            top: '50%',
-            left: '50%',
-            transform: [
-              { translateX: -100 },
-              { translateY: -50 }
-            ],
-            backgroundColor: 'rgba(34, 197, 94, 0.95)',
-            paddingHorizontal: 24,
-            paddingVertical: 16,
-            borderRadius: 16,
-            flexDirection: 'row',
-            alignItems: 'center',
-            minWidth: 200,
-            zIndex: 1000,
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: 4 },
-            shadowOpacity: 0.3,
-            shadowRadius: 8,
-            elevation: 8,
-          }}>
-            <Ionicons name="checkmark-circle" size={24} color="white" style={{ marginRight: 12 }} />
-            <View>
-              <Text style={{
-                color: 'white',
-                fontSize: 16,
-                fontWeight: '600',
-                textAlign: 'center'
-              }}>
-                Story Deleted
-              </Text>
-              <Text style={{
-                color: 'rgba(255, 255, 255, 0.9)',
-                fontSize: 14,
-                marginTop: 2,
-                textAlign: 'center'
-              }}>
-                Successfully removed
-              </Text>
-            </View>
-          </View>
-        )}
+
       </Pressable>
 
       <Portal>
         <Modalize
           ref={modalRef}
-          modalHeight={200}
-          modalStyle={{ backgroundColor: '#1f1f1f', borderTopLeftRadius: 12 }}
-          handleStyle={{ backgroundColor: '#636363', width: 40 }}
+          modalHeight={180}
+          modalStyle={{ backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
+          handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
           onClose={() => setShowDeleteConfirm(false)}
         >
-          <View className="py-2 pb-10">
+          <View className="pt-4 pb-6">
             {!showDeleteConfirm ? (
               <TouchableOpacity
-                className="flex-row items-center px-4 py-3"
+                className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
                 onPress={() => setShowDeleteConfirm(true)}
               >
-                <Ionicons name="trash-outline" size={24} color="red" />
-                <View className="ml-3">
-                  <Text className="text-red-500 text-base">Delete Story</Text>
+                <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
+                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
                 </View>
+                <Text className="text-white text-base font-medium">Delete Story</Text>
               </TouchableOpacity>
             ) : (
-              <View className="px-4 py-3">
-                <Text className="text-white text-lg mb-4 text-center">
-                  Are you sure you want to delete this story?
+              <View className="px-6 py-3">
+                <Text className="text-white text-lg mb-2 text-center font-semibold">
+                  Delete Story?
                 </Text>
                 <Text className="text-gray-400 text-sm mb-6 text-center">
                   This action cannot be undone.
@@ -485,19 +433,19 @@ export default function Mystoryscreen() {
                 
                 <View className="flex-row justify-between gap-3">
                   <TouchableOpacity
-                    className="flex-1 bg-gray-600 rounded-lg py-3"
+                    className="flex-1 bg-gray-700/60 rounded-2xl py-4"
                     onPress={() => setShowDeleteConfirm(false)}
                   >
-                    <Text className="text-white text-center text-base font-medium">
+                    <Text className="text-gray-300 text-center text-base font-medium">
                       Cancel
                     </Text>
                   </TouchableOpacity>
                   
                   <TouchableOpacity
-                    className="flex-1 bg-red-500 rounded-lg py-3"
+                    className="flex-1 bg-red-500/90 rounded-2xl py-4"
                     onPress={handleDelete}
                   >
-                    <Text className="text-white text-center text-base font-medium">
+                    <Text className="text-white text-center text-base font-semibold">
                       Delete
                     </Text>
                   </TouchableOpacity>
@@ -507,10 +455,6 @@ export default function Mystoryscreen() {
           </View>
         </Modalize>
       </Portal>
-      <Toast 
-        visibilityTime={3000}
-        autoHide={true}
-      />
     </View>
   );
 }

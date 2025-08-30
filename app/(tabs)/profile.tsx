@@ -247,27 +247,29 @@ useFocusEffect(
      <Portal>
   <Modalize
     ref={modalRef}
-    modalHeight={250}
+    modalHeight={200}
     modalStyle={{
-      backgroundColor: '#1f1f1f',
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
+      backgroundColor: '#1a1a1a',
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
     }}
     closeOnOverlayTap
-    handleStyle={{ backgroundColor: '#636363', width: 40 }}
+    handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
     onClose={() => setModalView('menu')}  // Reset view when modal closes
   >
-    <View className="py-2 pb-10">
+    <View className="pt-4 pb-6">
       {modalView === 'menu' ? (
         <>
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
             onPress={()=> {console.log("delete account?")
               setModalView("confirmDelete")
             }}
           >
-            <Ionicons name="person-outline" size={24} color="red" className="mr-3" />
-            <Text className="text-red-600 text-[16px]">Delete Account</Text>
+            <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
+              <Ionicons name="person-remove-outline" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-white text-base font-medium">Delete Account</Text>
           </TouchableOpacity>
 
           

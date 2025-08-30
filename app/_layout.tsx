@@ -44,136 +44,121 @@
 
   // Define modern, centered toast styles with enhanced animations
   const toastConfig = {
-    success: (props) => (
+    success: (props: any) => (
       <Animated.View style={{
-        backgroundColor: 'rgba(34, 197, 94, 0.95)', // Modern green with transparency
+        backgroundColor: 'rgba(0, 0, 0, 0.8)', // iOS-style black semi-transparent
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 20, // More rounded for modern look
-        flexDirection: 'row',
+        paddingVertical: 20,
+        borderRadius: 16, // iOS-style rounded corners
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 200,
-        maxWidth: Dimensions.get('window').width - 60, // More margin
+        minWidth: 150,
+        maxWidth: 280,
+        // iOS-style blur effect simulation with shadows
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
       }}>
-        <Ionicons name="checkmark-circle" size={26} color="white" style={{ marginRight: 12 }} />
-        <View style={{ flex: 1 }}>
+        <Ionicons name="checkmark-circle" size={28} color="#4ADE80" style={{ marginBottom: 8 }} />
+        <Text style={{
+          color: 'white',
+          fontSize: 16,
+          fontWeight: '600',
+          textAlign: 'center',
+          marginBottom: 4,
+        }}>
+          {props.text1}
+        </Text>
+        {props.text2 && (
           <Text style={{
-            color: 'white',
-            fontSize: 16,
-            fontWeight: '700', // Bolder text
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 13,
             textAlign: 'center',
-            letterSpacing: 0.3, // Better spacing
+            lineHeight: 18,
           }}>
-            {props.text1}
+            {props.text2}
           </Text>
-          {props.text2 && (
-            <Text style={{
-              color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: 14,
-              marginTop: 4,
-              textAlign: 'center',
-              letterSpacing: 0.2,
-            }}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
+        )}
       </Animated.View>
     ),
-    error: (props) => (
+    error: (props: any) => (
       <Animated.View style={{
-        backgroundColor: 'rgba(239, 68, 68, 0.95)', // Modern red with transparency
+        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Same iOS-style black background
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 20, // More rounded for modern look
-        flexDirection: 'row',
+        paddingVertical: 20,
+        borderRadius: 16, // iOS-style rounded corners
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 200,
-        maxWidth: Dimensions.get('window').width - 60, // More margin
+        minWidth: 150,
+        maxWidth: 280,
+        // iOS-style blur effect simulation with shadows
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
       }}>
-        <Ionicons name="close-circle" size={26} color="white" style={{ marginRight: 12 }} />
-        <View style={{ flex: 1 }}>
+        <Ionicons name="close-circle" size={28} color="#EF4444" style={{ marginBottom: 8 }} />
+        <Text style={{
+          color: 'white',
+          fontSize: 16,
+          fontWeight: '600',
+          textAlign: 'center',
+          marginBottom: 4,
+        }}>
+          {props.text1}
+        </Text>
+        {props.text2 && (
           <Text style={{
-            color: 'white',
-            fontSize: 16,
-            fontWeight: '700', // Bolder text
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 13,
             textAlign: 'center',
-            letterSpacing: 0.3, // Better spacing
+            lineHeight: 18,
           }}>
-            {props.text1}
+            {props.text2}
           </Text>
-          {props.text2 && (
-            <Text style={{
-              color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: 14,
-              marginTop: 4,
-              textAlign: 'center',
-              letterSpacing: 0.2,
-            }}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
+        )}
       </Animated.View>
     ),
-    info: (props) => (
+    info: (props: any) => (
       <Animated.View style={{
-        backgroundColor: 'rgba(59, 130, 246, 0.95)', // Modern blue with transparency
+        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Same iOS-style black background
         paddingHorizontal: 24,
-        paddingVertical: 16,
-        borderRadius: 20, // More rounded for modern look
-        flexDirection: 'row',
+        paddingVertical: 20,
+        borderRadius: 16, // iOS-style rounded corners
         alignItems: 'center',
         justifyContent: 'center',
-        minWidth: 200,
-        maxWidth: Dimensions.get('window').width - 60, // More margin
+        minWidth: 150,
+        maxWidth: 280,
+        // iOS-style blur effect simulation with shadows
         shadowColor: '#000',
-        shadowOffset: { width: 0, height: 8 }, // Deeper shadow
-        shadowOpacity: 0.25,
-        shadowRadius: 12,
-        elevation: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(255, 255, 255, 0.2)', // Subtle border
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.3,
+        shadowRadius: 20,
+        elevation: 15,
       }}>
-        <Ionicons name="information-circle" size={26} color="white" style={{ marginRight: 12 }} />
-        <View style={{ flex: 1 }}>
+        <Ionicons name="information-circle" size={28} color="#3B82F6" style={{ marginBottom: 8 }} />
+        <Text style={{
+          color: 'white',
+          fontSize: 16,
+          fontWeight: '600',
+          textAlign: 'center',
+          marginBottom: 4,
+        }}>
+          {props.text1}
+        </Text>
+        {props.text2 && (
           <Text style={{
-            color: 'white',
-            fontSize: 16,
-            fontWeight: '700', // Bolder text
+            color: 'rgba(255, 255, 255, 0.8)',
+            fontSize: 13,
             textAlign: 'center',
-            letterSpacing: 0.3, // Better spacing
+            lineHeight: 18,
           }}>
-            {props.text1}
+            {props.text2}
           </Text>
-          {props.text2 && (
-            <Text style={{
-              color: 'rgba(255, 255, 255, 0.9)',
-              fontSize: 14,
-              marginTop: 4,
-              textAlign: 'center',
-              letterSpacing: 0.2,
-            }}>
-              {props.text2}
-            </Text>
-          )}
-        </View>
+        )}
       </Animated.View>
     ),
   };
@@ -183,8 +168,9 @@
       shouldShowAlert: true,
       shouldPlaySound: true,  
       shouldSetBadge: false,
+      shouldShowBanner: true,
+      shouldShowList: true,
       priority: Notifications.AndroidNotificationPriority.HIGH,
-
     }),
   });
 
@@ -252,8 +238,8 @@
         </Host>
         <Toast 
           config={toastConfig} 
-          position='center'
-          visibilityTime={3500} // Slightly longer for better readability
+          position={'center' as any}
+          visibilityTime={1500} // 1.5 seconds for better readability
           autoHide={true}
           topOffset={30}
           bottomOffset={40}

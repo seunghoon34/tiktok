@@ -328,7 +328,6 @@ export default function UserStoryScreen() {
           </Animated.View>
         )}
       </Pressable>
-      <Toast />
     </View>
   );
 }

@@ -588,49 +588,57 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       <Portal>
   <Modalize
     ref={modalRef}
-    modalHeight={400}
+    modalHeight={360}
     modalStyle={{
-      backgroundColor: '#1f1f1f',
-      borderTopLeftRadius: 12,
-      borderTopRightRadius: 12,
+      backgroundColor: '#1a1a1a',
+      borderTopLeftRadius: 20,
+      borderTopRightRadius: 20,
     }}
     closeOnOverlayTap
-    handleStyle={{ backgroundColor: '#636363', width: 40 }}
+    handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
     onClose={() => setModalView('menu')}  // Reset view when modal closes
   >
-    <View className="py-2 pb-10">
+    <View className="pt-4 pb-6">
       {modalView === 'menu' ? (
         <>
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
             onPress={() => handleAction('reportContent')}
           >
-            <Ionicons name="flag-outline" size={24} color="red" className="mr-3" />
-            <Text className="text-red-600 text-[16px]">Report Content</Text>
+            <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
+              <Ionicons name="flag-outline" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-white text-base font-medium">Report Content</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-gray-800"
+            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
             onPress={() => handleAction('reportUser')}
           >
-            <Ionicons name="person-remove-outline" size={24} color="red" className="mr-3" />
-            <Text className="text-red-600 text-[16px]">Report User</Text>
+            <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
+              <Ionicons name="person-remove-outline" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-white text-base font-medium">Report User</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-black"
+            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
             onPress={() => handleAction('block')}
           >
-            <Ionicons name="ban-outline" size={24} color="red" className="mr-3" />
-            <Text className="text-red-600 text-[16px]">Block {item.User.username}</Text>
+            <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
+              <Ionicons name="ban-outline" size={18} color="#ef4444" />
+            </View>
+            <Text className="text-white text-base font-medium">Block {item.User.username}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
-            className="flex-row items-center px-4 py-3 active:bg-black"
+            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-700/50 rounded-2xl active:bg-gray-600/60"
             onPress={() => modalRef.current?.close()}
           >
-            <Ionicons name="close-outline" size={24} color="white" className="mr-3" />
-            <Text className="text-white text-[16px]">Cancel</Text>
+            <View className="w-8 h-8 bg-gray-500/20 rounded-full items-center justify-center mr-4">
+              <Ionicons name="close-outline" size={18} color="#9ca3af" />
+            </View>
+            <Text className="text-gray-300 text-base font-medium">Cancel</Text>
           </TouchableOpacity>
         </>
       ) : modalView === 'reportReasons' ? (
@@ -727,7 +735,6 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     </View>
   </Modalize>
 </Portal>
-      <Toast />
     </Pressable>
   );
 
