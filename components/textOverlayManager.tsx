@@ -50,7 +50,8 @@ interface DraggableTextProps {
   containerWidth: number;
   containerHeight: number;
   initialOverlay?: OverlayData;
-
+  tapPosition?: { x: number; y: number } | null;
+  onClearTapPosition?: () => void;
 }
 
 const DraggableText = ({
@@ -65,7 +66,8 @@ const DraggableText = ({
   containerWidth,
   containerHeight,
   initialOverlay,
-
+  tapPosition,
+  onClearTapPosition,
 }: DraggableTextProps & { onDragStateChange?: (isDragging: boolean) => void }) => {
   const [text, setText] = useState('');
   const initialFontSize = Math.min(containerWidth || SCREEN_WIDTH, containerHeight || SCREEN_HEIGHT) * 0.13;
@@ -177,8 +179,17 @@ const DraggableText = ({
         const pxFontSize = (initialOverlay.fontSize / 100) * containerHeight;
         runOnJS(setText)(initialOverlay.text ?? '');
         runOnJS(setFontSize)(pxFontSize > 0 ? pxFontSize : initialFontSize);
+      } else if (tapPosition) {
+        // Use tap position for new overlay
+        translateX.value = tapPosition.x;
+        translateY.value = tapPosition.y;
+        console.log('[DraggableText] Created overlay at tap position:', tapPosition);
+        // Clear tap position after using it
+        if (onClearTapPosition) {
+          runOnJS(onClearTapPosition)();
+        }
       } else {
-        // Default position: slightly off-center
+        // Default position: slightly left of center (for Aa button)
         translateX.value = containerWidth * 0.25;
         translateY.value = containerHeight * 0.5;
       }
@@ -186,7 +197,7 @@ const DraggableText = ({
       handleTransformUpdate();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [containerWidth, containerHeight, initialOverlay]);
+  }, [containerWidth, containerHeight, initialOverlay, tapPosition]);
 
   const panGesture = Gesture.Pan()
     .onStart(() => {
@@ -274,12 +285,13 @@ const DraggableText = ({
               autoFocus
               multiline
               placeholder="Enter text"
+              textAlign="left"
               placeholderTextColor="rgba(255, 255, 255, 0.5)"
               onBlur={handleBlur}
               
             />
           ) : (
-            <Animated.Text style={[styles.text, { fontSize }]}>{text}</Animated.Text>
+            <Animated.Text style={[styles.text, { fontSize, textAlign: 'left' }]}>{text}</Animated.Text>
           )}
         </View>
       </Animated.View>
@@ -343,11 +355,18 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverla
   };
   
 
-  const addNewText = () => {
+  const addNewText = (tapPosition?: { x: number; y: number }) => {
     const newId = Date.now().toString();
     setTextElements(prev => [...prev, newId]);
     setEditingId(newId);
+    
+    // Store tap position for initial overlay placement
+    if (tapPosition) {
+      setTapPosition(tapPosition);
+    }
   };
+
+  const [tapPosition, setTapPosition] = useState<{ x: number; y: number } | null>(null);
 
   
   const backgroundPress = () => {
@@ -356,25 +375,44 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverla
     }
   };
 
-  const containerGesture = Gesture.Tap()
-    .onEnd(() => {
-      runOnJS(backgroundPress)();
+  const handleTapToCreate = (event: any) => {
+    // If currently editing, unfocus instead of creating new overlay
+    if (editingId) {
+      setEditingId(null);
+    } else {
+      // Create new overlay
+      const tapX = event.absoluteX || event.x;
+      const tapY = event.absoluteY || event.y;
+      addNewText({ x: tapX, y: tapY });
+    }
+  };
+
+  // Tap gesture for creating overlays anywhere OR unfocusing when editing
+  const tapToCreateGesture = Gesture.Tap()
+    .onEnd((event) => {
+      runOnJS(handleTapToCreate)(event);
     });
 
   return (
-    <GestureDetector gesture={containerGesture}>
-      <View
-        style={[styles.overlayContainer, containerStyle]}
-        onLayout={({ nativeEvent: { layout } }) => {
-          setContainerSize({ width: layout.width, height: layout.height });
-          setBinPosition({
-            x: 0,
-            y: layout.height - 140,
-            width: layout.width,
-            height: 100,
-          });
-        }}
-      >
+    <View
+      style={[styles.overlayContainer, containerStyle]}
+      onLayout={({ nativeEvent: { layout } }) => {
+        setContainerSize({ width: layout.width, height: layout.height });
+        setBinPosition({
+          x: 0,
+          y: layout.height - 140,
+          width: layout.width,
+          height: 100,
+        });
+      }}
+    >
+      {/* Transparent tap layer for creating overlays OR unfocusing when editing */}
+      <GestureDetector gesture={tapToCreateGesture}>
+        <View style={styles.tapLayer} pointerEvents="box-only" />
+      </GestureDetector>
+
+      {/* Text overlays layer */}
+      <View style={styles.backgroundLayer} pointerEvents="box-none">
         {textElements.map(id => (
           <DraggableText
             key={id}
@@ -389,16 +427,22 @@ export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverla
             containerWidth={containerSize.width}
             containerHeight={containerSize.height}
             initialOverlay={initialOverlays?.find(o => o.id === id)}
-
+            tapPosition={tapPosition}
+            onClearTapPosition={() => setTapPosition(null)}
           />
         ))}
-        <TouchableOpacity style={!video? styles.addButton : styles.addVideoButton } onPress={addNewText}>
+      </View>
+
+      {/* UI Controls layer - highest z-index */}
+      <View style={styles.uiControlsLayer} pointerEvents="box-none">
+        <TouchableOpacity 
+          style={!video? styles.addButton : styles.addVideoButton } 
+          onPress={() => addNewText()}
+        >
           <Ionicons name="text" size={40} color="white" />
         </TouchableOpacity>
-
-       
       </View>
-    </GestureDetector>
+    </View>
   );
 };
 
@@ -406,6 +450,18 @@ const styles = StyleSheet.create({
   overlayContainer: {
     ...StyleSheet.absoluteFillObject,
     zIndex: 1,
+  },
+  tapLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 2,
+  },
+  backgroundLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 3,
+  },
+  uiControlsLayer: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 999,
   },
   textContainer: {
     position: 'absolute',
@@ -429,14 +485,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 40,
     right: 20,
-    zIndex: 999,
   },
 
   addVideoButton: {
     position: 'absolute',
     top: 90,
     right: 20,
-    zIndex: 999,
   },
   binIcon: {
     position: 'absolute',
