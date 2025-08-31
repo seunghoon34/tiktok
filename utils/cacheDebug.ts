@@ -4,6 +4,7 @@ import { chatCache } from './chatCache';
 import { mediaCache } from './mediaCache';
 import { feedCache } from './feedCache';
 import { notificationCache } from './notificationCache';
+import { inboxCache } from './inboxCache';
 
 export class CacheDebugService {
   /**
@@ -45,9 +46,13 @@ export class CacheDebugService {
       // User stories cache is included in feed cache stats as feed_data entries
       
       // Notification cache stats
-      console.log('\n🔔 Notification Cache:');
-      const notificationStats = await notificationCache.getStats();
-      console.log(`   Cached notifications: ${notificationStats.cachedNotifications}`);
+          console.log('\n🔔 Notification Cache:');
+    const notificationStats = await notificationCache.getStats();
+    console.log(`   Cached notifications: ${notificationStats.cachedNotifications}`);
+    
+    console.log('\n📥 Inbox Cache:');
+    const inboxStats = await inboxCache.getStats();
+    console.log(`   Cached inboxes: ${inboxStats.cachedInboxes}`);
       
       console.log('========================\n');
     } catch (error) {
@@ -161,6 +166,38 @@ export class CacheDebugService {
     console.log(`   Source: ${result1.source} → ${result2.source}`);
     console.log(`   Cache hit: ${result2.source === 'cache' ? '✅' : '❌'}`);
   }
+
+  /**
+   * Test inbox cache performance
+   */
+  static async testInboxCache(userId: string = 'test-user-id'): Promise<void> {
+    console.log('\n📥 Testing Inbox Cache Performance...');
+    
+    // First load (should be fresh)
+    const start1 = Date.now();
+    const result1 = await inboxCache.getInboxWithSync(userId);
+    const firstLoad = Date.now() - start1;
+    
+    // Second load (should use cache + sync)
+    const start2 = Date.now();
+    const result2 = await inboxCache.getInboxWithSync(userId);
+    const cachedLoad = Date.now() - start2;
+    
+    // Test unread count retrieval
+    const start3 = Date.now();
+    const unreadCount = await inboxCache.getTotalUnreadCount(userId);
+    const unreadTime = Date.now() - start3;
+    
+    console.log(`📈 Inbox load times:`);
+    console.log(`   First load: ${firstLoad}ms (${result1.chats.length} chats, ${result1.totalUnreadCount} unread)`);
+    console.log(`   Second load: ${cachedLoad}ms (${result2.chats.length} chats, ${result2.totalUnreadCount} unread)`);
+    console.log(`   Unread count: ${unreadTime}ms (${unreadCount} unread)`);
+    if (cachedLoad > 0) {
+      console.log(`   Speed improvement: ${Math.round((firstLoad / cachedLoad) * 100)}%`);
+    }
+    console.log(`   Source: ${result1.source} → ${result2.source}`);
+    console.log(`   Cache hit: ${result2.source.includes('cache') ? '✅' : '❌'}`);
+  }
 }
 
 // Helper to enable cache debugging in development
@@ -169,9 +206,13 @@ export const enableCacheDebug = () => {
     // Add global function for easy debugging
     (global as any).printCacheStats = CacheDebugService.printCacheStats;
     (global as any).clearCaches = CacheDebugService.clearAllCaches;
+    (global as any).testInboxCache = CacheDebugService.testInboxCache;
+    (global as any).testNotificationCache = CacheDebugService.testNotificationCache;
     
     console.log('🔧 Cache debugging enabled:');
     console.log('   Run "printCacheStats()" to see cache statistics');
     console.log('   Run "clearCaches()" to clear all caches');
+    console.log('   Run "testInboxCache(\'your-user-id\')" to test inbox performance');
+    console.log('   Run "testNotificationCache(\'your-user-id\')" to test notification performance');
   }
 };

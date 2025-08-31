@@ -10,6 +10,7 @@ import { sendMessageNotification } from '@/utils/notifications';
 import { chatCache, CachedMessage } from '@/utils/chatCache';
 import { profileCache } from '@/utils/profileCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
+import { inboxCache } from '@/utils/inboxCache';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -17,7 +18,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
   const [otherUser, setOtherUser] = useState<any>(null);
-  const flatListRef = useRef<any>();
+  const flatListRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44); // Track input height
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
@@ -49,6 +50,8 @@ export default function ChatScreen() {
     // Mark messages as read when entering chat
     const markMessagesAsRead = async () => {
       await EnhancedChatService.markMessagesAsRead(id as string, user.id);
+      // Also mark chat as read in inbox cache
+      await inboxCache.markChatAsReadInCache(user.id, id as string);
     };
   
     markMessagesAsRead();
@@ -108,7 +111,9 @@ export default function ChatScreen() {
         .single();
 
       if (chatData) {
-        setOtherUser(chatData.user1?.id === user.id ? chatData.user2 : chatData.user1);
+        const user1 = Array.isArray(chatData.user1) ? chatData.user1[0] : chatData.user1;
+        const user2 = Array.isArray(chatData.user2) ? chatData.user2[0] : chatData.user2;
+        setOtherUser(user1?.id === user.id ? user2 : user1);
       }
 
       // Use enhanced chat service for smart loading
@@ -146,18 +151,31 @@ export default function ChatScreen() {
 
         // Optimize: Use payload data directly instead of fetching again
         const newMessage = {
-          ...payload.new,
+          id: payload.new.id,
+          content: payload.new.content,
+          sender_id: payload.new.sender_id,
+          chat_id: payload.new.chat_id,
+          created_at: payload.new.created_at,
+          read: payload.new.read,
           sender: payload.new.sender_id === user.id ? 
             { id: user.id, username: user.username } : 
-            otherUser,
-          read: payload.new.read,
-          created_at: payload.new.created_at
+            otherUser
         };
 
         setMessages(current => [...current, newMessage]);
         
         // Update cache with new message
         await chatCache.addMessage(id as string, newMessage as CachedMessage);
+        
+        // Update inbox cache with new message
+        const cachedLastMessage = {
+          chat_id: id as string,
+          content: newMessage.content,
+          created_at: newMessage.created_at,
+          sender_id: newMessage.sender_id
+        };
+        const isFromOtherUser = newMessage.sender_id !== user.id;
+        await inboxCache.updateChatInCache(user.id, id as string, cachedLastMessage, isFromOtherUser);
         
         // Ensure scroll happens after message is rendered
         setTimeout(() => {
@@ -295,7 +313,7 @@ export default function ChatScreen() {
 
   return (
     <View className="flex-1 bg-white">
-      <SafeAreaView edges={['top']} className="flex-1 bg-white">
+      <SafeAreaView className="flex-1 bg-white">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
