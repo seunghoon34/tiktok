@@ -7,6 +7,9 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
 import { sendMessageNotification } from '@/utils/notifications';
+import { chatCache, CachedMessage } from '@/utils/chatCache';
+import { profileCache } from '@/utils/profileCache';
+import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -14,11 +17,11 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
   const [otherUser, setOtherUser] = useState<any>(null);
-  const flatListRef = useRef();
+  const flatListRef = useRef<any>();
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44); // Track input height
-  const [otherUserProfile, setOtherUserProfile] = useState(null);
-  const [hasVideos, setHasVideos] = useState(false);
+  const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+  const [hasVideos, setHasVideos] = useState<boolean>(false);
 
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -45,15 +48,10 @@ export default function ChatScreen() {
   
     // Mark messages as read when entering chat
     const markMessagesAsRead = async () => {
-      await supabase
-        .from('Message')
-        .update({ read: true })
-        .eq('chat_id', id)
-        .neq('sender_id', user.id);
+      await EnhancedChatService.markMessagesAsRead(id as string, user.id);
     };
   
     markMessagesAsRead();
-    // ... rest of your existing chat fetch code
   }, [id, user]);
 
   useEffect(() => {
@@ -110,28 +108,19 @@ export default function ChatScreen() {
         .single();
 
       if (chatData) {
-        setOtherUser(chatData.user1.id === user.id ? chatData.user2 : chatData.user1);
+        setOtherUser(chatData.user1?.id === user.id ? chatData.user2 : chatData.user1);
       }
 
-      // Load only the most recent 50 messages for faster loading
-      const { data: messagesData } = await supabase
-        .from('Message')
-        .select(`
-          *,
-          sender:sender_id (id, username),
-          read,
-          created_at
-        `)
-        .eq('chat_id', id)
-        .order('created_at', { ascending: false }) // Get newest first
-        .limit(50); // Only load 50 most recent messages
-
-      // Reverse to show oldest first in UI (chronological order)
-      const sortedMessages = messagesData ? messagesData.reverse() : [];
-      setMessages(sortedMessages);
+      // Use enhanced chat service for smart loading
+      const result = await EnhancedChatService.loadMessagesWithSync(id as string, user.id);
       
-      console.log(`[Chat] Loaded ${sortedMessages.length} recent messages for chat ${id}`);
+      setMessages(result.messages);
       
+      if (result.hasNewMessages) {
+        console.log(`[Chat] Loaded ${result.messages.length} total messages (${result.newMessageCount} new)`);
+      } else {
+        console.log(`[Chat] Loaded ${result.messages.length} messages from cache (no new messages)`);
+      }
     };
 
     fetchMessages();
@@ -166,12 +155,16 @@ export default function ChatScreen() {
         };
 
         setMessages(current => [...current, newMessage]);
+        
+        // Update cache with new message
+        await chatCache.addMessage(id as string, newMessage as CachedMessage);
+        
         // Ensure scroll happens after message is rendered
         setTimeout(() => {
           scrollViewRef.current?.scrollToEnd({ animated: true });
         }, 150);
         
-        console.log(`[Chat] Real-time message added without additional fetch`);
+        console.log(`[Chat] Real-time message added and cached`);
       }
     )
     .on(
@@ -247,8 +240,8 @@ export default function ChatScreen() {
       await sendMessageNotification(
         user.id,
         user.username,
-        otherUser.id,
-        id
+        otherUser?.id,
+        Array.isArray(id) ? id[0] : id
       );
     }
 
@@ -262,53 +255,14 @@ export default function ChatScreen() {
 
     const getOtherUserProfile = async () => {
       try {
-        console.log('[ChatScreen] Fetching profile for other user:', otherUser.id);
-        const { data, error } = await supabase
-          .from('UserProfile')
-          .select(`
-            *,
-            user:User (
-              username
-            )
-          `)
-          .eq('user_id', otherUser.id)
-          .single();
-
-        if (error) {
-          console.error('[ChatScreen] Error fetching profile:', error);
-          return;
-        }
-
-        if (data) {
-          console.log('[ChatScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
-          
-          if (data.profilepicture) {
-            console.log('[ChatScreen] Getting public URL for:', data.profilepicture);
-            const { data: publicData, error: storageError } = supabase.storage
-              .from('profile_images')
-              .getPublicUrl(data.profilepicture);
-            
-            if (storageError) {
-              console.error('[ChatScreen] Error getting public URL:', storageError);
-            }
-            
-            if (publicData?.publicUrl) {
-              const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
-              console.log('[ChatScreen] Setting image URL:', imageUrl);
-              
-              // Image URL ready - no need to test load
-              
-              setOtherUserProfile({...data, profilepicture: imageUrl});
-            } else {
-              console.log('[ChatScreen] No public URL returned from storage');
-              setOtherUserProfile({...data, profilepicture: null});
-            }
-          } else {
-            console.log('[ChatScreen] No profile picture path in data');
-            setOtherUserProfile({...data, profilepicture: null});
-          }
+        console.log('[ChatScreen] Loading profile for other user:', otherUser.id);
+        const cachedProfile = await profileCache.getProfile(otherUser.id);
+        
+        if (cachedProfile) {
+          console.log('[ChatScreen] Profile loaded (cached or fresh)');
+          setOtherUserProfile(cachedProfile);
         } else {
-          console.log('[ChatScreen] No profile data returned');
+          console.log('[ChatScreen] No profile data available for user:', otherUser.id);
         }
       } catch (error) {
         console.error('[ChatScreen] Exception in getOtherUserProfile:', error);
@@ -327,7 +281,7 @@ export default function ChatScreen() {
       .gt('expired_at', new Date().toISOString())
       .limit(1);
     
-    setHasVideos(data && data.length > 0);
+            setHasVideos(data ? data.length > 0 : false);
   };
 
   useFocusEffect(

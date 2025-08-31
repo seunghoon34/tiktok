@@ -13,6 +13,7 @@ import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
 import { convertOverlayPosition } from '@/utils/mediaPositioning';
+import { profileCache } from '@/utils/profileCache';
 
 interface MediaItemProps {
   item: {
@@ -64,7 +65,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const heartScale = useRef(new Animated.Value(0)).current;
   const heartOpacity = useRef(new Animated.Value(0)).current;
   const [modalView, setModalView] = useState<ModalView>('menu');
-  const [userProfile, setUserProfile] = useState(null);
+  const [userProfile, setUserProfile] = useState<any>(null);
   const [reportType, setReportType] = useState<ReportType>('CONTENT');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
   const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -136,64 +137,14 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   useEffect(() => {
     const getUserProfile = async () => {
       try {
-        console.log('[MediaItem] Fetching profile for user:', item.User.id);
-        const { data, error } = await supabase
-          .from('UserProfile')
-          .select(`
-            *,
-            user:User (
-              username
-            )
-          `)
-          .eq('user_id', item.User.id)
-          .single();
-
-        if (error) {
-          console.error('[MediaItem] Error fetching profile:', error);
-          return;
-        }
-
-        if (data) {
-          console.log('[MediaItem] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
-          
-          if (data.profilepicture) {
-            console.log('[MediaItem] Getting public URL for:', data.profilepicture);
-            const { data: publicData, error: storageError } = supabase.storage
-              .from('profile_images')
-              .getPublicUrl(data.profilepicture);
-            
-            if (storageError) {
-              console.error('[MediaItem] Error getting public URL:', storageError);
-            }
-            
-            if (publicData?.publicUrl) {
-              const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
-              console.log('[MediaItem] Setting image URL:', imageUrl);
-              
-              // Test if the image actually loads (web only)
-              if (typeof window !== 'undefined' && window.Image) {
-                const testImage = new window.Image();
-                testImage.onload = () => {
-                  console.log('[MediaItem] ✅ Image loaded successfully');
-                };
-                testImage.onerror = (error: any) => {
-                  console.error('[MediaItem] ❌ Failed to load image:', error);
-                  console.error('[MediaItem] Image URL that failed:', imageUrl);
-                };
-                testImage.src = imageUrl;
-              }
-              
-              setUserProfile({...data, profilepicture: imageUrl});
-            } else {
-              console.log('[MediaItem] No public URL returned from storage');
-              setUserProfile({...data, profilepicture: null});
-            }
-          } else {
-            console.log('[MediaItem] No profile picture path in data');
-            setUserProfile({...data, profilepicture: null});
-          }
+        console.log('[MediaItem] Loading profile for user:', item.User.id);
+        const cachedProfile = await profileCache.getProfile(item.User.id);
+        
+        if (cachedProfile) {
+          console.log('[MediaItem] Profile loaded (cached or fresh)');
+          setUserProfile(cachedProfile);
         } else {
-          console.log('[MediaItem] No profile data returned');
+          console.log('[MediaItem] No profile data available for user:', item.User.id);
         }
       } catch (error) {
         console.error('[MediaItem] Exception in getUserProfile:', error);

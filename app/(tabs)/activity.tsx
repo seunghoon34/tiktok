@@ -7,6 +7,7 @@ import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import { formatDate } from '@/utils/formatDate';
 import { useFocusEffect } from '@react-navigation/native';
+import { notificationCache } from '@/utils/notificationCache';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useRouter } from 'expo-router';
 
@@ -20,12 +21,8 @@ export default function ActivityScreen() {
 
   const markSingleAsRead = async (notificationId: string) => {
     try {
-      const { error } = await supabase
-        .from('Notification')
-        .update({ read: true })
-        .eq('id', notificationId);
-
-      if (error) throw error;
+      // Use notification cache for efficient update
+      await notificationCache.markNotificationAsRead(user.id, notificationId);
 
       // Update local state
       setNotifications(prevNotifications =>
@@ -36,7 +33,7 @@ export default function ActivityScreen() {
       
       // Note: unread count is now updated automatically via real-time subscription in tab layout
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('[Activity] Error marking notification as read:', error);
     }
   };
 
@@ -139,7 +136,9 @@ export default function ActivityScreen() {
           // Handle different events
           switch (payload.eventType) {
             case 'INSERT':
-              fetchNotifications(); // Fetch all notifications when new one arrives
+              // Add new notification to cache and refresh
+              notificationCache.addNotificationToCache(user.id, payload.new);
+              fetchNotifications(); // Refresh to get the formatted notification
               break;
             case 'UPDATE':
               // Update the specific notification in state
@@ -151,10 +150,11 @@ export default function ActivityScreen() {
               ));
               break;
             case 'DELETE':
-              // Remove the notification from state
+              // Remove the notification from state and invalidate cache
               setNotifications(prev => 
                 prev.filter(notif => notif.id !== payload.old.id)
               );
+              notificationCache.invalidateNotifications(user.id);
               break;
           }
         }
@@ -202,56 +202,18 @@ export default function ActivityScreen() {
   };
   const fetchNotifications = async () => {
     try {
-      // First, get list of blocked users
-      const { data: blockedUsers, error: blockError } = await supabase
-        .from('UserBlock')
-        .select('blocker_id, blocked_id')
-        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+      // Use notification cache for efficient loading
+      console.log(`[Activity] Loading notifications for user: ${user.id}`);
+      const result = await notificationCache.getNotificationsWithSync(user.id);
+      
+      console.log(`[Activity] Loaded ${result.notifications.length} notifications from ${result.source}`);
+      if (result.hasNewNotifications) {
+        console.log(`[Activity] Found ${result.newNotificationCount} new notifications`);
+      }
 
-      if (blockError) throw blockError;
-
-      // Create array of user IDs to exclude
-      const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
-        if (block.blocker_id === user.id) acc.push(block.blocked_id);
-        if (block.blocked_id === user.id) acc.push(block.blocker_id);
-        return acc;
-      }, []);
-
-      // Get notifications excluding blocked users
-      const { data, error } = await supabase
-        .from('Notification')
-        .select(`
-          id,
-          type,
-          read,
-          created_at,
-          sender:from_user (id, username)
-        `)
-        .eq('to_user', user.id)
-        .not(excludeUserIds.length > 0 ? 'from_user' : 'id', 
-             excludeUserIds.length > 0 ? 'in' : 'eq', 
-             excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
-        .order('created_at', { ascending: false })
-
-
-      if (error) throw error;
-
-      // Note: unread count is now managed globally in tab layout
-
-      const formattedNotifications = data.map((notification: any) => ({
-        id: notification.id,
-        type: notification.type,
-        read: notification.read,
-        username: notification.sender?.username,
-        userId: notification.sender?.id,
-        time: formatDate(notification.created_at),
-        actionable: notification.type === 'SHOT' || notification.type === 'MATCH',
-        content: getNotificationContent(notification.type, notification.sender?.username)
-      }));
-
-      setNotifications(formattedNotifications);
+      setNotifications(result.notifications);
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('[Activity] Error fetching notifications:', error);
     }
   };
 

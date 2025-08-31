@@ -8,9 +8,12 @@ import { MediaItemComponent } from '@/components/mediaItem';
 import SimpleSpinner from '@/components/simpleSpinner';
 import Header from '@/components/header';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { mediaCache } from '@/utils/mediaCache';
+import { feedCache, CachedFeedItem } from '@/utils/feedCache';
+
 interface MediaItem {
   uri: string;
-  signedUrl: string;
+  signedUrl?: string;
   type: 'video' | 'picture';
   User: {
     username: string;
@@ -18,7 +21,11 @@ interface MediaItem {
   };
   title: string;
   id: string;
-  displayId: string
+  displayId?: string;
+  is_muted?: boolean;
+  expired_at?: string;
+  created_at?: string;
+  user_id?: string;
   TextOverlay?: Array<{
     text: string;
     position_x: number;
@@ -57,8 +64,12 @@ export default function HomeScreen() {
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'UserBlock', 
           filter: `or(blocker_id.eq.${user.id},blocked_id.eq.${user.id})` }, 
-        (payload) => {
+        async (payload) => {
           console.log('UserBlock change detected:', payload)
+          
+          // Invalidate feed cache since blocked users changed
+          await feedCache.invalidateFeed(user.id);
+          
           setIsLoading(true)
           onRefresh()
           setIsLoading(false)
@@ -87,8 +98,8 @@ export default function HomeScreen() {
     minimumViewTime: 300,
   }).current;
 
-  const onViewableItemsChanged = useCallback(({ viewableItems }) => {
-    const visibleIndexes = viewableItems.map(item => item.index);
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    const visibleIndexes = viewableItems.map((item: any) => item.index);
     setVisibleItems(visibleIndexes);
   }, []);
 
@@ -126,23 +137,24 @@ export default function HomeScreen() {
   const getSignedUrls = async (media: MediaItem[], loadMore = false) => {
     if (!media || media.length === 0) return;
 
-    const { data, error } = await supabase.storage
-      .from('videos')
-      .createSignedUrls(
-        media.map((item) => item.uri),
-        60 * 60 * 24
-      );
+    console.log(`[Feed] Processing ${media.length} media items for signed URLs`);
+    
+    // Use media cache for efficient URL generation
+    const processedMedia = await mediaCache.processMediaItems(
+      media.map(item => ({ uri: item.uri, id: item.id, type: item.type })),
+      'videos'
+    );
 
     const timestamp = Date.now();
-    let mediaUrls = media?.map((item, index) => ({
-      ...item,
+    let mediaUrls = processedMedia?.map((item, index) => ({
+      ...media[index], // Keep all original properties
       displayId: loadMore ? `${item.id}-${timestamp}-${index}` : item.id, // Use this for FlatList key
       id: item.id, // Keep original ID for database operations
-      signedUrl: data?.find((signedUrl) => signedUrl.path === item.uri)?.signedUrl
+      signedUrl: item.signedUrl
     }));
     
     setVideos(prev => [...prev, ...mediaUrls]);
-    console.log('Updated videos length:', videos.length + mediaUrls.length);
+    console.log(`[Feed] Updated videos length: ${videos.length + mediaUrls.length}`);
   };  
 
   const getVideos = async (loadMore = false) => {
@@ -153,60 +165,19 @@ export default function HomeScreen() {
         setLoadingMore(true);
       }
 
-      // First, get list of blocked users (both directions - users we blocked and users who blocked us)
-      const { data: blockedUsers, error: blockError } = await supabase
-        .from('UserBlock')
-        .select('blocker_id, blocked_id')
-        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
-
-      if (blockError) throw blockError;
-
-      // Create array of user IDs to exclude (both blocked and blockers)
-      const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
-        if (block.blocker_id === user.id) acc.push(block.blocked_id);
-        if (block.blocked_id === user.id) acc.push(block.blocker_id);
-        return acc;
-      }, []);
-
-      // Add current user's ID to exclude list (we already exclude this, but being explicit)
-      excludeUserIds.push(user.id);
-
-      // Get videos excluding blocked users
-      const { data, error } = await supabase
-  .from('Video')
-  .select(`
-    *,
-    User(username, id),
-    TextOverlay(
-      text,
-      position_x,
-      position_y,
-      scale,
-      rotation,
-      font_size,
-      media_width,
-      media_height,
-      screen_width,
-      screen_height
-    )
-  `)
-  .not(excludeUserIds.length > 0 ? 'user_id' : 'id', 
-       excludeUserIds.length > 0 ? 'in' : 'eq', 
-       excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
-  .gt('expired_at', new Date().toISOString())
-  .order('created_at', { ascending: false });
+      // Use feed cache for smart loading
+      const feedResult = await feedCache.getFeedWithSync(user.id, loadMore);
       
-      if (error) throw error;
-      
-      const mediaWithTypes = data?.map(item => ({
-        ...item,
-        type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
-      }));
+      console.log(`[Feed] Loaded ${feedResult.items.length} items from ${feedResult.source}`);
+      if (feedResult.hasNewItems) {
+        console.log(`[Feed] Found ${feedResult.newItemCount} new items`);
+      }
 
-      await getSignedUrls(mediaWithTypes, loadMore);
+      // Process with media cache for signed URLs
+      await getSignedUrls(feedResult.items, loadMore);
       
     } catch (error) {
-      console.error('Error fetching videos:', error);
+      console.error('[Feed] Error fetching videos:', error);
     } finally {
       setIsLoading(false);
       setLoadingMore(false);
@@ -318,7 +289,6 @@ export default function HomeScreen() {
           }
           onEndReached={handleLoadMore}
           onEndReachedThreshold={0.5}
-          onEndReachedThresholdRelative={0.5}
         />
       )}
     </View>

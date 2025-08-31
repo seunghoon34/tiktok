@@ -12,6 +12,8 @@ import { Portal } from 'react-native-portalize';
 import Toast from 'react-native-toast-message';
 import LoadingScreen from '@/components/loading';
 import { convertOverlayPosition } from '@/utils/mediaPositioning';
+import { mediaCache } from '@/utils/mediaCache';
+import { feedCache } from '@/utils/feedCache';
 
 type Story = {
   id: string;
@@ -119,41 +121,31 @@ export default function UserStoryScreen() {
 
   const fetchStories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('Video')
-        .select(`
-          *,
-          TextOverlay (
-            text,
-            position_x,
-            position_y,
-            scale,
-            rotation,
-            font_size
-          )
-        `)
-        .eq('user_id', params.user_id)
-        .gt('expired_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      // Use feed cache for efficient user stories loading
+      console.log(`[UserStories] Loading stories for user: ${params.user_id}`);
+      const cachedStories = await feedCache.getUserStories(params.user_id as string);
       
-      const storiesWithUrls = await Promise.all(
-        data.map(async (story) => {
-          const { data: signedUrl } = await supabase.storage
-            .from('videos')
-            .createSignedUrl(story.uri, 3600);
+      if (cachedStories.length === 0) {
+        console.log(`[UserStories] No stories found for user: ${params.user_id}`);
+        setStories([]);
+        return;
+      }
 
-          return {
-            ...story,
-            signedUrl: signedUrl?.signedUrl,
-          };
-        })
+      // Process with media cache for signed URLs
+      const storiesWithUrls = await mediaCache.processMediaItems(
+        cachedStories.map(story => ({ uri: story.uri, id: story.id })),
+        'videos'
       );
 
-      setStories(storiesWithUrls);
+      const processedStories = cachedStories.map((story, index) => ({
+        ...story,
+        signedUrl: storiesWithUrls[index]?.signedUrl,
+      }));
+
+      setStories(processedStories);
+      console.log(`[UserStories] Loaded ${processedStories.length} stories for user: ${params.user_id}`);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('[UserStories] Error loading stories:', error);
     } finally {
       setInitialLoading(false);
     }

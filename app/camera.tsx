@@ -2,6 +2,7 @@ import PreviewMedia from '@/components/previewMedia';
 import RecordingProgress from '@/components/recordingProgress';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
+import { feedCache } from '@/utils/feedCache';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -147,6 +148,12 @@ export default function CameraScreen() {
             }))
           );
         if(textError) throw textError;
+      }
+
+      // Invalidate user's story cache since we created a new story
+      if (user?.id) {
+        await feedCache.invalidateUserStories(user.id);
+        console.log('[Camera] Invalidated user stories cache after creating new story');
       }
   
       router.back();

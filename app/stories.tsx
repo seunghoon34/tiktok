@@ -12,6 +12,8 @@ import { Portal } from 'react-native-portalize';
 import Toast from 'react-native-toast-message';
 import LoadingScreen from '@/components/loading';
 import { convertOverlayPosition } from '@/utils/mediaPositioning';
+import { mediaCache } from '@/utils/mediaCache';
+import { feedCache } from '@/utils/feedCache';
 
 type Story = {
   id: string;
@@ -124,41 +126,37 @@ export default function Mystoryscreen() {
 
   const fetchStories = async () => {
     try {
-      const { data, error } = await supabase
-        .from('Video')
-        .select(`
-          *,
-          TextOverlay (
-            text,
-            position_x,
-            position_y,
-            scale,
-            rotation,
-            font_size
-          )
-        `)
-        .eq('user_id', user?.id)
-        .gt('expired_at', new Date().toISOString())
-        .order('created_at', { ascending: false });
+      if (!user?.id) {
+        console.log('[MyStories] No user ID available');
+        setStories([]);
+        return;
+      }
 
-      if (error) throw error;
+      // Use feed cache for efficient own stories loading
+      console.log(`[MyStories] Loading own stories for user: ${user.id}`);
+      const cachedStories = await feedCache.getUserStories(user.id);
       
-      const storiesWithUrls = await Promise.all(
-        data.map(async (story) => {
-          const { data: signedUrl } = await supabase.storage
-            .from('videos')
-            .createSignedUrl(story.uri, 3600);
+      if (cachedStories.length === 0) {
+        console.log('[MyStories] No stories found for current user');
+        setStories([]);
+        return;
+      }
 
-          return {
-            ...story,
-            signedUrl: signedUrl?.signedUrl,
-          };
-        })
+      // Process with media cache for signed URLs
+      const storiesWithUrls = await mediaCache.processMediaItems(
+        cachedStories.map(story => ({ uri: story.uri, id: story.id })),
+        'videos'
       );
 
-      setStories(storiesWithUrls);
+      const processedStories = cachedStories.map((story, index) => ({
+        ...story,
+        signedUrl: storiesWithUrls[index]?.signedUrl,
+      }));
+
+      setStories(processedStories);
+      console.log(`[MyStories] Loaded ${processedStories.length} own stories`);
     } catch (error) {
-      console.error('Error:', error);
+      console.error('[MyStories] Error loading own stories:', error);
     } finally {
       setInitialLoading(false);
     }
@@ -240,6 +238,12 @@ export default function Mystoryscreen() {
       }
 
       console.log('[Stories] Story deleted from database successfully');
+      
+      // Invalidate user stories cache since we deleted a story
+      if (user?.id) {
+        await feedCache.invalidateUserStories(user.id);
+        console.log('[Stories] Invalidated user stories cache after deletion');
+      }
       
       // Update local state
       const newStories = stories.filter((_, index) => index !== currentIndex);

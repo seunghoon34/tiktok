@@ -12,6 +12,8 @@
   import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
   import { View, Text, Dimensions, Animated } from 'react-native';
   import { Ionicons } from '@expo/vector-icons';
+  import { cache } from '@/utils/cache';
+  import { enableCacheDebug } from '@/utils/cacheDebug';
 
   // Prevent the splash screen from auto-hiding before asset loading is complete.
   SplashScreen.preventAutoHideAsync();
@@ -185,23 +187,32 @@
     useEffect(() => {
       let mounted = true;
       
-      const loadFonts = async () => {
+      const initializeApp = async () => {
         try {
+          // Initialize cache system and perform daily cleanup
+          await cache.performDailyCleanup();
+          console.log('[App] Cache system initialized');
+          
+          // Enable cache debugging in development
+          enableCacheDebug();
+          
+          // Load fonts
           await Font.loadAsync({
             SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
           });
+          
           if (mounted) {
             setFontsLoaded(true);
           }
         } catch (error) {
           if (mounted) {
-            console.warn('Font loading error:', error);
+            console.warn('App initialization error:', error);
             setFontsLoaded(true); // Continue anyway
           }
         }
       };
       
-      loadFonts();
+      initializeApp();
       
       return () => {
         mounted = false;
