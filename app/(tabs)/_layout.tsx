@@ -5,7 +5,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
-import { inboxCache } from '@/utils/inboxCache';
 
 export default function TabLayout() {
   const [iconColor, setIconColor] = useState<'black' | 'white'>('black');
@@ -21,15 +20,23 @@ export default function TabLayout() {
   const getTotalUnreadMessages = async () => {
     if (!user) return 0;
   
-    // Use inbox cache for efficient unread count
-    try {
-      const unreadCount = await inboxCache.getTotalUnreadCount(user.id);
-      console.log(`[TabLayout] Got unread count from cache: ${unreadCount}`);
-      return unreadCount;
-    } catch (error) {
-      console.error('[TabLayout] Error getting unread count:', error);
-      return 0;
-    }
+    // Get all chats where the user is either user1 or user2
+    const { data: userChats } = await supabase
+      .from('Chat')
+      .select('id')
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id})`);
+  
+    if (!userChats) return 0;
+  
+    // Get unread messages from these chats
+    const { count } = await supabase
+      .from('Message')
+      .select('*', { count: 'exact' })
+      .eq('read', false)
+      .neq('sender_id', user.id)
+      .in('chat_id', userChats.map(chat => chat.id));
+  
+    return count || 0;
   };
 
   const getTotalUnreadNotifications = async () => {

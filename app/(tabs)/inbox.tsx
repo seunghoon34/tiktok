@@ -2,13 +2,11 @@ import { View, Text, FlatList, TouchableOpacity, SafeAreaView, Image } from 'rea
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
-import { inboxCache } from '@/utils/inboxCache';
-import { profileCache } from '@/utils/profileCache';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 
-const formatDate = (dateString: string) => {
+const formatDate = (dateString) => {
  if (!dateString) return '';
 
  try {
@@ -61,8 +59,8 @@ const formatDate = (dateString: string) => {
  }
 };
 
-const ChatItem = ({ chat, user }: { chat: any; user: any }) => {
- const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+const ChatItem = ({ chat, user }) => {
+const [otherUserProfile, setOtherUserProfile] = useState(null);
  const router = useRouter();
  const otherUser = user && chat.user1 && chat.user2 
  ? chat.user1.id === user.id ? chat.user2 : chat.user1
@@ -73,14 +71,64 @@ const ChatItem = ({ chat, user }: { chat: any; user: any }) => {
   if (!otherUser) return;
   const getOtherUserProfile = async () => {
     try {
-      console.log('[InboxScreen] Loading profile for other user:', otherUser.id);
-      const cachedProfile = await profileCache.getProfile(otherUser.id);
-      
-      if (cachedProfile) {
-        console.log('[InboxScreen] Profile loaded (cached or fresh)');
-        setOtherUserProfile(cachedProfile);
+      console.log('[InboxScreen] Fetching profile for other user:', otherUser.id);
+      const { data, error } = await supabase
+        .from('UserProfile')
+        .select(`
+          *,
+          user:User (
+            username
+          )
+        `)
+        .eq('user_id', otherUser.id)
+        .single();
+
+      if (error) {
+        console.error('[InboxScreen] Error fetching profile:', error);
+        return;
+      }
+
+      if (data) {
+        console.log('[InboxScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+        
+        if (data.profilepicture) {
+          console.log('[InboxScreen] Getting public URL for:', data.profilepicture);
+          const { data: publicData, error: storageError } = supabase.storage
+            .from('profile_images')
+            .getPublicUrl(data.profilepicture);
+          
+          if (storageError) {
+            console.error('[InboxScreen] Error getting public URL:', storageError);
+          }
+          
+          if (publicData?.publicUrl) {
+            const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+            console.log('[InboxScreen] Setting image URL:', imageUrl);
+            
+            // Test if the image actually loads (web only)
+            if (typeof window !== 'undefined' && window.Image) {
+              const testImage = new window.Image();
+              testImage.onload = () => {
+                console.log('[InboxScreen] ✅ Image loaded successfully');
+              };
+              testImage.onerror = (error: any) => {
+                console.error('[InboxScreen] ❌ Failed to load image:', error);
+                console.error('[InboxScreen] Image URL that failed:', imageUrl);
+              };
+              testImage.src = imageUrl;
+            }
+            
+            setOtherUserProfile({...data, profilepicture: imageUrl});
+          } else {
+            console.log('[InboxScreen] No public URL returned from storage');
+            setOtherUserProfile({...data, profilepicture: null});
+          }
+        } else {
+          console.log('[InboxScreen] No profile picture path in data');
+          setOtherUserProfile({...data, profilepicture: null});
+        }
       } else {
-        console.log('[InboxScreen] No profile data available for user:', otherUser.id);
+        console.log('[InboxScreen] No profile data returned');
       }
     } catch (error) {
       console.error('[InboxScreen] Exception in getOtherUserProfile:', error);
@@ -150,21 +198,107 @@ export default function InboxScreen() {
  const { user } = useAuth();
 
  const fetchChats = async () => {
-  try {
-    // Use inbox cache for efficient loading
-    console.log(`[Inbox] Loading chats for user: ${user.id}`);
-    const result = await inboxCache.getInboxWithSync(user.id);
-    
-    console.log(`[Inbox] Loaded ${result.chats.length} chats from ${result.source}`);
-    if (result.hasUpdates) {
-      console.log(`[Inbox] Found inbox updates (${result.totalUnreadCount} total unread)`);
-    }
+   try {
+     // First, get list of blocked users
+     const { data: blockedUsers, error: blockError } = await supabase
+       .from('UserBlock')
+       .select('blocker_id, blocked_id')
+       .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
 
-    setChats(result.chats);
-  } catch (error) {
-    console.error('[Inbox] Error fetching chats:', error);
-  }
-};
+     if (blockError) throw blockError;
+
+     // Create array of user IDs to exclude
+     const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
+       if (block.blocker_id === user.id) acc.push(block.blocked_id);
+       if (block.blocked_id === user.id) acc.push(block.blocker_id);
+       return acc;
+     }, []);
+
+     // Get chats excluding blocked users
+     const { data, error } = await supabase
+       .from('Chat')
+       .select(`
+         id, 
+         created_at,
+         user1:user1_id (
+           id, 
+           username,
+           UserProfile (profilepicture)
+         ),
+         user2:user2_id (
+           id,
+           username,
+           UserProfile (profilepicture)
+         )
+       `)
+       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+       .not(excludeUserIds.length > 0 ? 'user1_id' : 'id', 
+            excludeUserIds.length > 0 ? 'in' : 'eq', 
+            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+       .not(excludeUserIds.length > 0 ? 'user2_id' : 'id', 
+            excludeUserIds.length > 0 ? 'in' : 'eq', 
+            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
+       .limit(10);
+
+     if (error) throw error;
+
+     // Optimized: Get all last messages and unread counts in 2 queries instead of N+1
+     const chatIds = data.map(chat => chat.id);
+     
+     // Get last messages for all chats in one query
+     const { data: lastMessages } = await supabase
+       .from('Message')
+       .select('chat_id, content, created_at')
+       .in('chat_id', chatIds)
+       .order('created_at', { ascending: false });
+
+     // Get unread counts for all chats in one query  
+     const { data: unreadMessages } = await supabase
+       .from('Message')
+       .select('chat_id')
+       .in('chat_id', chatIds)
+       .eq('read', false)
+       .neq('sender_id', user.id);
+
+     // Process the data efficiently
+     const lastMessageMap = new Map();
+     const unreadCountMap = new Map();
+
+     // Group last messages by chat_id
+     lastMessages?.forEach(msg => {
+       if (!lastMessageMap.has(msg.chat_id)) {
+         lastMessageMap.set(msg.chat_id, msg);
+       }
+     });
+
+     // Count unread messages by chat_id
+     unreadMessages?.forEach(msg => {
+       unreadCountMap.set(msg.chat_id, (unreadCountMap.get(msg.chat_id) || 0) + 1);
+     });
+
+     const chatsWithDetails = data.map(chat => ({
+       ...chat,
+       lastMessage: lastMessageMap.get(chat.id) || null,
+       unreadCount: unreadCountMap.get(chat.id) || 0
+     }));
+
+     console.log(`[Inbox] Optimized fetch: ${chatIds.length} chats loaded with 2 queries instead of ${chatIds.length * 2}`);
+
+     const sortedChats = chatsWithDetails.sort((a, b) => {
+       const aTime = a.lastMessage 
+         ? new Date(a.lastMessage.created_at).getTime() 
+         : new Date(a.created_at).getTime();
+       const bTime = b.lastMessage 
+         ? new Date(b.lastMessage.created_at).getTime() 
+         : new Date(b.created_at).getTime();
+       return bTime - aTime;
+     });
+
+     setChats(sortedChats);
+   } catch (error) {
+     console.error('Error fetching chats:', error);
+   }
+ };
 
  useEffect(() => {
   if (!user) return;
