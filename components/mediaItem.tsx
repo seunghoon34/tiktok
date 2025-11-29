@@ -12,8 +12,12 @@ import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
-import { convertOverlayPosition } from '@/utils/mediaPositioning';
+import { convertOverlayPosition, getFixedContainerDimensions } from '@/utils/mediaPositioning';
 import { profileCache } from '@/utils/profileCache';
+
+// Get fixed 9:16 container dimensions for consistent cross-device display
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const FIXED_CONTAINER = getFixedContainerDimensions(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 interface MediaItemProps {
   item: {
@@ -68,17 +72,17 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   const [userProfile, setUserProfile] = useState<any>(null);
   const [reportType, setReportType] = useState<ReportType>('CONTENT');
   const [selectedReason, setSelectedReason] = useState<ReportReason | null>(null);
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 
   
 
   const renderTextOverlays = () => {
     return item.TextOverlay?.map((overlay, index) => {
+      // Use fixed 9:16 container dimensions for consistent positioning
       const { left, top, fontSize } = convertOverlayPosition(
         overlay,
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT
+        FIXED_CONTAINER.width,
+        FIXED_CONTAINER.height
       );
 
       return (
@@ -165,10 +169,13 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     }
   };
 
+  // Use fixed 9:16 container for consistent cross-device display
   const mediaStyle = {
-    width: Dimensions.get('window').width,
-    height: Dimensions.get('window').height,
-    top: 0,
+    width: FIXED_CONTAINER.width,
+    height: FIXED_CONTAINER.height,
+    backgroundColor: 'black',
+    borderRadius: 20,
+    overflow: 'hidden' as const,
   };
 
   const handleLoadStart = () => {
@@ -196,14 +203,15 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         item.User.id
       );
   
-      if (result.status === 'matched') {
-        console.log("Match: ",result.users[0],'and ', result.users[1]);
+      if (result?.status === 'matched' && result.users) {
+        console.log("Match: ", result.users[0], 'and ', result.users[1]);
       }
   
       
     } catch (error) {
       getLikes(user?.id);
-      console.error('Error liking video:', error);    }
+      console.error('Error liking video:', error);
+    }
     }
   };
 
@@ -324,7 +332,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           item.User.id
         );
     
-        if (result.status === 'matched') {
+        if (result?.status === 'matched' && result.users) {
           console.log("Match: ", result.users[0], 'and ', result.users[1]);
         }
       } catch (error) {
@@ -375,16 +383,23 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   };
 
   return (
+    <View style={{ 
+      width: SCREEN_WIDTH, 
+      height: SCREEN_HEIGHT, 
+      backgroundColor: 'black',
+      justifyContent: 'center',
+      alignItems: 'center'
+    }}>
     <Pressable 
       onPress={handlePress}
       style={mediaStyle}
     >
       <View style={{
   position: 'absolute',
-  top: 60,
+  top: 16,
   left: 0,
   right: 0,
-  paddingHorizontal: 20,
+  paddingHorizontal: 16,
   flexDirection: 'row',
   justifyContent: 'space-between',
   zIndex: 999,
@@ -405,8 +420,8 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       {isVideoLoading && (
         <View style={{
           position: 'absolute',
-          width: Dimensions.get('window').width,
-          height: Dimensions.get('window').height,
+          width: FIXED_CONTAINER.width,
+          height: FIXED_CONTAINER.height,
           zIndex: 1,
           backgroundColor: 'black',
           justifyContent: 'center',
@@ -473,7 +488,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       
       <View style={{
         position: 'absolute',
-        bottom: 50,
+        bottom: 16,
         left: 10,
         padding: 10,
         flexDirection: 'row',
@@ -687,6 +702,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
   </Modalize>
 </Portal>
     </Pressable>
+    </View>
   );
 
   

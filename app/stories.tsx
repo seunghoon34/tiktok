@@ -11,14 +11,18 @@ import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import Toast from 'react-native-toast-message';
 import LoadingScreen from '@/components/loading';
-import { convertOverlayPosition } from '@/utils/mediaPositioning';
+import { convertOverlayPosition, getFixedContainerDimensions } from '@/utils/mediaPositioning';
 import { mediaCache } from '@/utils/mediaCache';
 import { feedCache } from '@/utils/feedCache';
+
+// Get fixed 9:16 container dimensions for consistent cross-device display
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+const FIXED_CONTAINER = getFixedContainerDimensions(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 type Story = {
   id: string;
   uri: string;
-  type: 'video' | 'image';
+  type: 'video' | 'image' | 'picture';
   signedUrl?: string;
   user_id: string;
   created_at: string;
@@ -56,23 +60,22 @@ export default function Mystoryscreen() {
 
   const router = useRouter();
   const { user } = useAuth();
-  const screenWidth = Dimensions.get('window').width;
 
   const isContentLoading = isMediaLoading || isTextLoading || initialLoading;
-  const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 
   const renderTextOverlays = () => {
-    console.log('Screen Dimensions:', {
-      width: SCREEN_WIDTH,
-      height: SCREEN_HEIGHT,
-      aspectRatio: SCREEN_WIDTH / SCREEN_HEIGHT
+    console.log('Fixed Container Dimensions:', {
+      width: FIXED_CONTAINER.width,
+      height: FIXED_CONTAINER.height,
+      aspectRatio: FIXED_CONTAINER.width / FIXED_CONTAINER.height
     });
     return stories[currentIndex]?.TextOverlay?.map((overlay, index) => {
+      // Use fixed 9:16 container dimensions for consistent positioning
       const { left, top, fontSize } = convertOverlayPosition(
         overlay,
-        SCREEN_WIDTH,
-        SCREEN_HEIGHT
+        FIXED_CONTAINER.width,
+        FIXED_CONTAINER.height
       );
 
       return (
@@ -182,7 +185,7 @@ export default function Mystoryscreen() {
   const handlePress = (event: any) => {
     const touchX = event.nativeEvent.locationX;
     
-    if (touchX < screenWidth * 0.3) {
+    if (touchX < SCREEN_WIDTH * 0.3) {
       if (currentIndex > 0) {
         setIsMediaLoading(true);
       setIsTextLoading(true);
@@ -190,7 +193,7 @@ export default function Mystoryscreen() {
       } else {
         router.back();
       }
-    } else if (touchX > screenWidth * 0.7) {
+    } else if (touchX > SCREEN_WIDTH * 0.7) {
       setIsMediaLoading(true);
       setIsTextLoading(true);
       if (currentIndex < stories.length - 1) {
@@ -292,16 +295,18 @@ export default function Mystoryscreen() {
   if (initialLoading || stories.length === 0) return <LoadingScreen />;
 
   return (
-    <View className="flex-1 bg-black">
-      <Pressable onPress={handlePress} className="flex-1">
+    <View style={{ flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' }}>
+      {/* Fixed 9:16 container for consistent cross-device display */}
+      <View style={{ width: FIXED_CONTAINER.width, height: FIXED_CONTAINER.height, overflow: 'hidden', borderRadius: 20 }}>
+      <Pressable onPress={handlePress} style={{ flex: 1 }}>
         {mediaType === 'video' ? (
           <>
             <Video
               ref={videoRef}
               source={{ uri: stories[currentIndex].signedUrl || '' }}
               style={{
-                width: Dimensions.get('window').width,
-                height: Dimensions.get('window').height,
+                width: FIXED_CONTAINER.width,
+                height: FIXED_CONTAINER.height,
                 position: 'absolute',
                 top: 0
               }}
@@ -320,8 +325,8 @@ export default function Mystoryscreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
-                width: Dimensions.get('window').width,
-                height: Dimensions.get('window').height,
+                width: FIXED_CONTAINER.width,
+                height: FIXED_CONTAINER.height,
                 zIndex: 1,
                 backgroundColor: 'black'
               }}>
@@ -342,8 +347,8 @@ export default function Mystoryscreen() {
             {isContentLoading && (
               <View style={{
                 position: 'absolute',
-                width: Dimensions.get('window').width,
-                height: Dimensions.get('window').height,
+                width: FIXED_CONTAINER.width,
+                height: FIXED_CONTAINER.height,
                 zIndex: 1,
                 backgroundColor: 'black'
               }}>
@@ -354,7 +359,7 @@ export default function Mystoryscreen() {
         )}
 
         {/* Progress bar */}
-        <View className="absolute bottom-12 left-2 right-2 flex-row gap-1 z-10">
+        <View className="absolute bottom-4 left-2 right-2 flex-row gap-1 z-10">
           {stories.map((_, index) => (
             <View
               key={index}
@@ -366,7 +371,7 @@ export default function Mystoryscreen() {
         </View>
 
         {/* Top buttons */}
-        <View className="absolute top-14 left-0 right-0 px-5 flex-row justify-between z-10">
+        <View className="absolute top-4 left-0 right-0 px-4 flex-row justify-between z-10">
           <TouchableOpacity onPress={() => router.back()}>
             <Ionicons name="close" size={30} color="white"/>
           </TouchableOpacity>
@@ -406,6 +411,7 @@ export default function Mystoryscreen() {
         )}
 
       </Pressable>
+      </View>
 
       <Portal>
         <Modalize

@@ -72,104 +72,69 @@ export function calculateCoverDisplayArea(
   };
 }
 
+// Fixed 9:16 aspect ratio for consistent cross-device display (like Snapchat/Instagram)
+const ASPECT_RATIO = 9 / 16;
+
+/**
+ * Calculate the fixed 9:16 container dimensions for the current screen
+ * This ensures all devices display content in the same aspect ratio
+ */
+export function getFixedContainerDimensions(screenWidth: number, screenHeight: number): {
+  width: number;
+  height: number;
+} {
+  const screenRatio = screenWidth / screenHeight;
+  
+  if (screenRatio > ASPECT_RATIO) {
+    // Screen is wider than 9:16, fit by height
+    return {
+      width: screenHeight * ASPECT_RATIO,
+      height: screenHeight,
+    };
+  } else {
+    // Screen is taller than 9:16, fit by width
+    return {
+      width: screenWidth,
+      height: screenWidth / ASPECT_RATIO,
+    };
+  }
+}
+
 /**
  * Convert overlay position from creation context to display context
- * This handles the coordinate system transformation between different devices
- * Uses Instagram's approach: aspect-ratio aware positioning
+ * 
+ * Uses FIXED ASPECT RATIO positioning (like Snapchat/Instagram):
+ * - All content is displayed in a fixed 9:16 aspect ratio container
+ * - Position is stored as simple percentage (0-100) of the container
+ * - Since all devices use the same 9:16 ratio, text appears at identical positions
+ *   relative to the image content (not just the screen)
  */
 export function convertOverlayPosition(
   overlay: OverlayData,
-  currentScreenWidth: number,
-  currentScreenHeight: number
+  containerWidth: number,
+  containerHeight: number
 ): {
   left: number;
   top: number;
   fontSize: number;
 } {
-  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  // Simple percentage-based positioning
+  // position_x and position_y are percentages (0-100) of the fixed container
+  // Since all devices use the same aspect ratio, this gives identical positioning
   
-  // If overlay has stored media dimensions, use center-anchor positioning
-  if (overlay.media_width && overlay.media_height && overlay.screen_width && overlay.screen_height) {
-    // Calculate the actual media display area on original device
-    const originalDisplayArea = calculateCoverDisplayArea(
-      overlay.screen_width,
-      overlay.screen_height,
-      overlay.media_width,
-      overlay.media_height
-    );
-    
-    // Calculate the actual media display area on current device
-    const currentDisplayArea = calculateCoverDisplayArea(
-      screenWidth,
-      screenHeight,
-      overlay.media_width,
-      overlay.media_height
-    );
-
-    // Calculate center points of media areas
-    const originalCenterX = originalDisplayArea.x + originalDisplayArea.width / 2;
-    const originalCenterY = originalDisplayArea.y + originalDisplayArea.height / 2;
-    const currentCenterX = currentDisplayArea.x + currentDisplayArea.width / 2;
-    const currentCenterY = currentDisplayArea.y + currentDisplayArea.height / 2;
-
-    // Convert center-relative percentages to absolute offset from original center
-    const originalOffsetX = (overlay.position_x / 100) * overlay.media_width;
-    const originalOffsetY = (overlay.position_y / 100) * overlay.media_height;
-
-    // Scale the offset proportionally to the new media area
-    const scaleX = currentDisplayArea.width / originalDisplayArea.width;
-    const scaleY = currentDisplayArea.height / originalDisplayArea.height;
-    
-    const currentOffsetX = originalOffsetX * scaleX;
-    const currentOffsetY = originalOffsetY * scaleY;
-
-    // Calculate final position relative to current center
-    const currentX = currentCenterX + currentOffsetX;
-    const currentY = currentCenterY + currentOffsetY;
-
-    // Scale font size based on media area scale
-    const mediaScale = Math.min(scaleX, scaleY);
-    const originalFontSize = (overlay.font_size / 100) * overlay.media_height;
-    const currentFontSize = originalFontSize * mediaScale;
-
-    console.log('[MediaPositioning] Center-anchor conversion:', {
-      overlay: { x: overlay.position_x, y: overlay.position_y },
-      original: { 
-        screen: `${overlay.screen_width}x${overlay.screen_height}`,
-        media: `${overlay.media_width}x${overlay.media_height}`,
-        area: originalDisplayArea,
-        center: { x: originalCenterX, y: originalCenterY },
-        offset: { x: originalOffsetX, y: originalOffsetY }
-      },
-      current: { 
-        screen: `${screenWidth}x${screenHeight}`,
-        area: currentDisplayArea,
-        center: { x: currentCenterX, y: currentCenterY },
-        offset: { x: currentOffsetX, y: currentOffsetY },
-        scale: { x: scaleX, y: scaleY }
-      },
-      result: { x: currentX, y: currentY, fontSize: currentFontSize }
-    });
-
-    return {
-      left: currentX,
-      top: currentY,
-      fontSize: currentFontSize
-    };
-  }
-
-  // Fallback: use center-relative behavior for overlays without media dimensions
-  console.log('[MediaPositioning] Using center-relative fallback positioning');
-  const centerX = screenWidth / 2;
-  const centerY = screenHeight / 2;
-  const offsetX = (overlay.position_x / 100) * screenWidth;
-  const offsetY = (overlay.position_y / 100) * screenHeight;
+  const left = (overlay.position_x / 100) * containerWidth;
+  const top = (overlay.position_y / 100) * containerHeight;
   
-  return {
-    left: centerX + offsetX,
-    top: centerY + offsetY,
-    fontSize: (overlay.font_size / 100) * screenHeight
-  };
+  // Font size is stored as percentage of container height
+  const fontSize = (overlay.font_size / 100) * containerHeight;
+  
+  console.log('[MediaPositioning] Fixed 9:16 container positioning:', {
+    overlay: { x: overlay.position_x, y: overlay.position_y, fontSize: overlay.font_size },
+    container: { w: containerWidth, h: containerHeight },
+    result: { left, top, fontSize }
+  });
+
+  return { left, top, fontSize };
 }
 
 /**

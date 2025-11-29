@@ -8,8 +8,10 @@ interface PreviewMediaProps {
   uri: string;
   cameraMode: boolean;
   onDelete: () => void;
-  onSave: (isMuted?: boolean, textOverlays?: any[]) => void; // Updated this
+  onSave: (isMuted?: boolean, textOverlays?: any[]) => void;
   isUploading: boolean;
+  containerWidth: number;  // Fixed 9:16 container width
+  containerHeight: number; // Fixed 9:16 container height
 }
 
 export default function PreviewMedia({
@@ -17,7 +19,9 @@ export default function PreviewMedia({
   cameraMode,
   onDelete,
   onSave,
-  isUploading
+  isUploading,
+  containerWidth,
+  containerHeight
 }: PreviewMediaProps) {
   if (!uri) return <View style={styles.previewContainer} />;
   
@@ -26,7 +30,7 @@ export default function PreviewMedia({
   const [textOverlays, setTextOverlays] = useState<any[]>([]); // Added type
 
   return (
-    <View style={styles.previewContainer}>
+    <View style={[styles.previewContainer, { width: containerWidth, height: containerHeight }]}>
       {/* Close button in top-left corner */}
       <View style={styles.closeButtonContainer}>
         <TouchableOpacity onPress={onDelete}>
@@ -46,7 +50,7 @@ export default function PreviewMedia({
         </View>
       )}
 
-      {/* Media preview */}
+      {/* Media preview - uses cover within fixed 9:16 container */}
       <View style={styles.mediaContainer}>
         {cameraMode ? (
           <Image
@@ -71,6 +75,8 @@ export default function PreviewMedia({
         onDragStateChange={setIsDraggingText}
         onOverlaysUpdate={setTextOverlays}
         video={!cameraMode}
+        fixedContainerWidth={containerWidth}
+        fixedContainerHeight={containerHeight}
       />
 
       {/* Save button centered at bottom */}
@@ -83,9 +89,9 @@ export default function PreviewMedia({
           {isUploading ? (
             <ActivityIndicator size="large" color="white" />
           ) : isDraggingText ? (
-            <Ionicons name="trash-outline" size={100} color="white" />
+            <Ionicons name="trash-outline" size={60} color="white" />
           ) : (
-            <Ionicons name="checkmark-circle-outline" size={100} color="white" />
+            <Ionicons name="checkmark-circle-outline" size={60} color="white" />
           )}
         </TouchableOpacity>
       </View>
@@ -97,13 +103,14 @@ export default function PreviewMedia({
 
 const styles = StyleSheet.create({
   previewContainer: {
-    flex: 1,
     backgroundColor: 'black',
+    overflow: 'hidden',
+    borderRadius: 20,
   },
   closeButtonContainer: {
     position: 'absolute',
-    top: 40,
-    left: 20,
+    top: 16,
+    left: 16,
     zIndex: 2,
   },
   mediaContainer: {
@@ -116,7 +123,7 @@ const styles = StyleSheet.create({
   },
   bottomContainer: {
     position: 'absolute',
-    bottom: 40,
+    bottom: 16,
     width: '100%',
     alignItems: 'center',
     zIndex: 2,
@@ -127,8 +134,8 @@ const styles = StyleSheet.create({
   },
   muteButtonContainer: {
     position: 'absolute',
-    top: 40,
-    right: 20,
+    top: 16,
+    right: 16,
     zIndex: 2,
   },
 });

@@ -14,11 +14,11 @@ export const AuthContext = createContext({
     signOut: async () =>{},
     deleteAccount: async () =>{},
     likes: [] as any[],
-    getLikes: async (userId: string) => {},
+    getLikes: async (userId: string, immediateUpdate?: any[]) => {},
     setActiveChatId: (chatId: string | null) => {},
     currentChatId: null as string | null,
-    loading: true,  // Add this
-    refreshUserData: async () => {},  // Add this
+    loading: true,
+    refreshUserData: async () => {},
 });
 
 export const useAuth = () => useContext(AuthContext)

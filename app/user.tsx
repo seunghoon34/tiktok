@@ -1,26 +1,38 @@
 import { View, Text, TouchableOpacity, SafeAreaView, Image } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider'; 
-import { Link, useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/utils/supabase';
 import { useEffect,  useRef, useState } from 'react';
-import Header from '@/components/header';
 import { Ionicons } from '@expo/vector-icons';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
-import { FlatList } from 'react-native-reanimated/lib/typescript/Animated';
 import { ScrollView } from 'react-native-gesture-handler';
 import SkeletonLoader from '@/components/userSkeleton';
 
+interface UserProfileData {
+  user_id: string;
+  profilepicture: string | null;
+  name: string;
+  birthdate: string | null;
+  aboutme: string | null;
+  user: {
+    username: string;
+  };
+}
+
 export default function UserScreen() {
  const params = useLocalSearchParams();
- const [profile, setProfile] = useState(null);
+ const [profile, setProfile] = useState<UserProfileData | null>(null);
  const router = useRouter();
  const modalRef = useRef<Modalize>(null);
  const [modalView, setModalView] = useState<'menu' | 'confirmBlock' | 'reportReasons' | 'confirmReportReason'>('menu');
  const [selectedReason, setSelectedReason] = useState<'INAPPROPRIATE_CONTENT' | 'HARASSMENT' | 'SPAM' | 'FAKE_PROFILE' | 'OTHER' | null>(null);
  const { user } = useAuth();
+ 
+ // Helper to get user_id as string
+ const userId = Array.isArray(params.user_id) ? params.user_id[0] : params.user_id;
 
  useEffect(() => {
   const getProfile = async () => {
@@ -47,13 +59,9 @@ export default function UserScreen() {
         
         if (data.profilepicture) {
           console.log('[UserScreen] Getting public URL for:', data.profilepicture);
-          const { data: publicData, error: storageError } = supabase.storage
+          const { data: publicData } = supabase.storage
             .from('profile_images')
             .getPublicUrl(data.profilepicture);
-          
-          if (storageError) {
-            console.error('[UserScreen] Error getting public URL:', storageError);
-          }
           
           if (publicData?.publicUrl) {
             const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
@@ -96,7 +104,8 @@ export default function UserScreen() {
   return <SkeletonLoader />;
  }
 
- const getAge = (birthdate) => {
+ const getAge = (birthdate: string | null) => {
+   if (!birthdate) return '';
    return new Date().getFullYear() - new Date(birthdate).getFullYear();
  };
 
@@ -257,9 +266,9 @@ export default function UserScreen() {
                  try {
                    const result = await reportContent(
                      user.id,
-                     params.user_id,
+                     userId,
                      'USER',
-                     params.user_id,
+                     userId,
                      selectedReason
                    );
                    
@@ -304,7 +313,7 @@ export default function UserScreen() {
                className="bg-red-500 rounded-lg py-3 mb-3"
                onPress={async () => {
                  try {
-                   const result = await blockUser(user.id, params.user_id);
+                   const result = await blockUser(user.id, userId);
                    if (result.status === 'success' || result.status === 'already_blocked') {
                      modalRef.current?.close();
                      setModalView('menu');

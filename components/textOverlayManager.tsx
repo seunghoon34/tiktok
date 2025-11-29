@@ -88,35 +88,32 @@ const DraggableText = ({
 
 
   const handleTransformUpdate = () => {
-    // Calculate center points
-    const containerCenterX = containerWidth / 2;
-    const containerCenterY = containerHeight / 2;
-    
-    // Convert absolute position to percentage offset from center
+    // Store position as simple percentage (0-100) of container dimensions
+    // This works because all devices use the same fixed 9:16 aspect ratio container
     const positionXPercent = containerWidth > 0 ? 
-      Math.round(((translateX.value - containerCenterX) / containerWidth) * 100 * 100) / 100 : 0;
+      Math.round((translateX.value / containerWidth) * 100 * 100) / 100 : 0;
     const positionYPercent = containerHeight > 0 ? 
-      Math.round(((translateY.value - containerCenterY) / containerHeight) * 100 * 100) / 100 : 0;
+      Math.round((translateY.value / containerHeight) * 100 * 100) / 100 : 0;
     
     const updateData = {
       id,
       text,
-      position_x: positionXPercent, // percent offset from center (-50 to +50)
-      position_y: positionYPercent, // percent offset from center (-50 to +50)
+      position_x: positionXPercent, // percentage (0-100) of container width
+      position_y: positionYPercent, // percentage (0-100) of container height
       scale: scale.value,
       rotation: rotation.value,
       fontSize: containerHeight > 0 ? Math.round(((fontSize / containerHeight) * 100) * 100) / 100 : 10, // percent of container height
-      // Store media dimensions and screen dimensions for cross-device compatibility
+      // Store container dimensions for reference (should be 9:16 ratio)
       media_width: containerWidth,
       media_height: containerHeight,
       screen_width: SCREEN_WIDTH,
       screen_height: SCREEN_HEIGHT
     };
     
-    console.log('[TextOverlayManager] Center-anchor overlay created:', {
+    console.log('[TextOverlayManager] Overlay position (simple %):', {
       absolute: { x: translateX.value, y: translateY.value },
-      center: { x: containerCenterX, y: containerCenterY },
-      relative: { x: positionXPercent, y: positionYPercent }
+      container: { w: containerWidth, h: containerHeight },
+      percent: { x: positionXPercent, y: positionYPercent }
     });
     
     onOverlayUpdate?.(updateData);
@@ -166,13 +163,9 @@ const DraggableText = ({
     if (hasInitializedPosition.current) return;
     if (containerWidth > 0 && containerHeight > 0) {
       if (initialOverlay) {
-        // Calculate center points
-        const containerCenterX = containerWidth / 2;
-        const containerCenterY = containerHeight / 2;
-        
-        // Convert center-relative percentages back to absolute positions
-        translateX.value = containerCenterX + (initialOverlay.position_x / 100) * containerWidth;
-        translateY.value = containerCenterY + (initialOverlay.position_y / 100) * containerHeight;
+        // Convert simple percentages (0-100) back to absolute positions
+        translateX.value = (initialOverlay.position_x / 100) * containerWidth;
+        translateY.value = (initialOverlay.position_y / 100) * containerHeight;
         scale.value = initialOverlay.scale ?? 1;
         rotation.value = initialOverlay.rotation ?? 0;
         // Convert font size percent-of-height to pixels
@@ -189,8 +182,8 @@ const DraggableText = ({
           runOnJS(onClearTapPosition)();
         }
       } else {
-        // Default position: slightly left of center (for Aa button)
-        translateX.value = containerWidth * 0.25;
+        // Default position: center of container
+        translateX.value = containerWidth * 0.5;
         translateY.value = containerHeight * 0.5;
       }
       hasInitializedPosition.current = true;
@@ -302,14 +295,16 @@ const DraggableText = ({
 interface TextOverlayManagerProps {
   containerStyle?: object;
   onDragStateChange?: (isDragging: boolean) => void;
-  onOverlaysUpdate?: (overlays: any[]) => void; // Add this
+  onOverlaysUpdate?: (overlays: any[]) => void;
   video?: boolean
   initialOverlays?: OverlayData[];
-  mediaWidth?: number;  // Add media dimensions
+  mediaWidth?: number;
   mediaHeight?: number;
+  fixedContainerWidth?: number;  // Fixed 9:16 container width (for creation)
+  fixedContainerHeight?: number; // Fixed 9:16 container height (for creation)
 }
 
-export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video, initialOverlays, mediaWidth, mediaHeight  }: TextOverlayManagerProps) => {
+export const TextOverlayManager = ({ containerStyle, onDragStateChange, onOverlaysUpdate, video, initialOverlays, mediaWidth, mediaHeight, fixedContainerWidth, fixedContainerHeight }: TextOverlayManagerProps) => {
   const [textElements, setTextElements] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [binPosition, setBinPosition] = useState<BinPosition>({ 
@@ -483,14 +478,14 @@ const styles = StyleSheet.create({
   },
   addButton: {
     position: 'absolute',
-    top: 40,
-    right: 20,
+    top: 16,
+    right: 16,
   },
 
   addVideoButton: {
     position: 'absolute',
-    top: 90,
-    right: 20,
+    top: 60,
+    right: 16,
   },
   binIcon: {
     position: 'absolute',

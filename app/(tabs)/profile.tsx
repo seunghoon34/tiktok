@@ -9,10 +9,20 @@ import { supabase } from '@/utils/supabase';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
 
+type ModalView = 'menu' | 'confirmDelete';
+
+interface UserProfile {
+  user_id: string;
+  profilepicture: string | null;
+  name: string;
+  birthdate: string | null;
+  aboutme: string | null;
+}
+
 export default function ProfileScreen() {
  const { signOut, user, deleteAccount } = useAuth();
- const [profile, setProfile] = useState(null);
- const [imageUrl, setImageUrl] = useState(null);
+ const [profile, setProfile] = useState<UserProfile | null>(null);
+ const [imageUrl, setImageUrl] = useState<string | null>(null);
  const [hasVideos, setHasVideos] = useState(false);
  const modalRef = useRef<Modalize>(null);
  const [modalView, setModalView] = useState<ModalView>('menu');
@@ -55,7 +65,7 @@ const checkUserVideos = async () => {
     .gt('expired_at', new Date().toISOString())
     .limit(1);
   
-  setHasVideos(data && data.length > 0);
+  setHasVideos(data ? data.length > 0 : false);
 };
 
 useFocusEffect(
@@ -70,14 +80,9 @@ useFocusEffect(
     try {
       if (profile?.profilepicture) {
         console.log('[ProfileScreen] Getting avatar URL for:', profile.profilepicture);
-        const { data, error } = supabase.storage
+        const { data } = supabase.storage
           .from('profile_images')
           .getPublicUrl(profile.profilepicture);
-        
-        if (error) {
-          console.error('[ProfileScreen] Error getting public URL:', error);
-          return;
-        }
         
         if (data?.publicUrl) {
           const imageUrl = `${data.publicUrl}?t=${Date.now()}`;
@@ -119,18 +124,18 @@ useFocusEffect(
 
  const menuItems = [
    {
-     icon: "person-outline",
+     icon: "person-outline" as const,
      title: "Edit Profile",
      onPress: () => router.push('/editprofile'),
      color: 'black'
    },
    {
-    icon: "person-outline",
+    icon: "ban-outline" as const,
     title: "Blocked users",
     onPress: () => router.push('/blocked'),
   },
   {
-    icon: "person-outline",
+    icon: "trash-outline" as const,
     title: "Delete account",
     onPress: () => modalRef.current?.open(),
   }
@@ -159,7 +164,7 @@ useFocusEffect(
      <View className="p-0.5 rounded-full bg-red-400">
        <View className="p-0.5 bg-white rounded-full">
          <Image 
-           source={{ uri: imageUrl }}
+           source={{ uri: imageUrl ?? undefined }}
            className="h-24 w-24 rounded-full"
            onLoad={() => console.log('[ProfileScreen] Image component loaded successfully')}
            onError={(error) => {
@@ -174,7 +179,7 @@ useFocusEffect(
    <View>
      {profile?.profilepicture ? (
                 <Image 
-           source={{ uri: imageUrl }}
+           source={{ uri: imageUrl ?? undefined }}
            className="h-24 w-24 rounded-full"
            onLoad={() => console.log('[ProfileScreen] Image component loaded successfully (with stories)')}
            onError={(error) => {

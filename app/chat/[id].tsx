@@ -1,4 +1,5 @@
-import { View, Text, TextInput, FlatList, TouchableOpacity, SafeAreaView, KeyboardAvoidingView, Platform, Keyboard, ScrollView, Image } from 'react-native';
+import { View, Text, TextInput, FlatList, TouchableOpacity, KeyboardAvoidingView, Platform, Keyboard, ScrollView, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useEffect, useState, useRef, useCallback,  } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
@@ -17,7 +18,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
   const [otherUser, setOtherUser] = useState<any>(null);
-  const flatListRef = useRef<any>();
+  const flatListRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44); // Track input height
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
@@ -108,7 +109,9 @@ export default function ChatScreen() {
         .single();
 
       if (chatData) {
-        setOtherUser(chatData.user1?.id === user.id ? chatData.user2 : chatData.user1);
+        const user1 = Array.isArray(chatData.user1) ? chatData.user1[0] : chatData.user1;
+        const user2 = Array.isArray(chatData.user2) ? chatData.user2[0] : chatData.user2;
+        setOtherUser(user1?.id === user.id ? user2 : user1);
       }
 
       // Use enhanced chat service for smart loading

@@ -13,7 +13,7 @@ import { feedCache, CachedFeedItem } from '@/utils/feedCache';
 
 interface MediaItem {
   uri: string;
-  signedUrl?: string;
+  signedUrl: string;
   type: 'video' | 'picture';
   User: {
     username: string;
@@ -21,10 +21,10 @@ interface MediaItem {
   };
   title: string;
   id: string;
-  displayId?: string;
-  is_muted?: boolean;
-  expired_at?: string;
-  created_at?: string;
+  displayId: string;
+  is_muted: boolean;
+  expired_at: string;
+  created_at: string;
   user_id?: string;
   TextOverlay?: Array<{
     text: string;
@@ -59,31 +59,39 @@ export default function HomeScreen() {
   useEffect(() => {
     if (!user?.id) return;
   
-    const subscription = supabase
-      .channel('public:UserBlock')
+    // Subscribe to UserBlock changes where current user is the blocker
+    const blockerSubscription = supabase
+      .channel('userblock-blocker')
       .on('postgres_changes', 
         { event: '*', schema: 'public', table: 'UserBlock', 
-          filter: `or(blocker_id.eq.${user.id},blocked_id.eq.${user.id})` }, 
+          filter: `blocker_id=eq.${user.id}` }, 
         async (payload) => {
-          console.log('UserBlock change detected:', payload)
-          
-          // Invalidate feed cache since blocked users changed
+          console.log('UserBlock change detected (as blocker):', payload)
           await feedCache.invalidateFeed(user.id);
-          
           setIsLoading(true)
           onRefresh()
           setIsLoading(false)
       })
-      .subscribe((status, err) => {
-        if (status === 'SUBSCRIBED') {
-          console.log('Successfully subscribed to UserBlock changes')
-        } else if (status === 'CHANNEL_ERROR') {
-          console.error('Error subscribing to UserBlock changes:', err)
-        }
-      });
+      .subscribe();
+
+    // Subscribe to UserBlock changes where current user is blocked
+    const blockedSubscription = supabase
+      .channel('userblock-blocked')
+      .on('postgres_changes', 
+        { event: '*', schema: 'public', table: 'UserBlock', 
+          filter: `blocked_id=eq.${user.id}` }, 
+        async (payload) => {
+          console.log('UserBlock change detected (as blocked):', payload)
+          await feedCache.invalidateFeed(user.id);
+          setIsLoading(true)
+          onRefresh()
+          setIsLoading(false)
+      })
+      .subscribe();
   
     return () => {
-      subscription.unsubscribe();
+      blockerSubscription.unsubscribe();
+      blockedSubscription.unsubscribe();
     };
   }, [user]);
 
@@ -134,7 +142,7 @@ export default function HomeScreen() {
     };
   }, []);
 
-  const getSignedUrls = async (media: MediaItem[], loadMore = false) => {
+  const getSignedUrls = async (media: CachedFeedItem[], loadMore = false) => {
     if (!media || media.length === 0) return;
 
     console.log(`[Feed] Processing ${media.length} media items for signed URLs`);
@@ -150,8 +158,11 @@ export default function HomeScreen() {
       ...media[index], // Keep all original properties
       displayId: loadMore ? `${item.id}-${timestamp}-${index}` : item.id, // Use this for FlatList key
       id: item.id, // Keep original ID for database operations
-      signedUrl: item.signedUrl
-    }));
+      signedUrl: item.signedUrl || '',
+      is_muted: media[index].is_muted ?? false,
+      expired_at: media[index].expired_at ?? '',
+      created_at: media[index].created_at ?? '',
+    })) as MediaItem[];
     
     setVideos(prev => [...prev, ...mediaUrls]);
     console.log(`[Feed] Updated videos length: ${videos.length + mediaUrls.length}`);
@@ -263,7 +274,7 @@ export default function HomeScreen() {
           ref={flatListRef}
           data={videos}
           renderItem={renderMediaItem}
-          keyExtractor={(item) => item.displayId}          
+          keyExtractor={(item) => item.displayId || item.id}          
           pagingEnabled={true}
           snapToAlignment="center"
           decelerationRate="fast"

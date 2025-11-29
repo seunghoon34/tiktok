@@ -63,16 +63,29 @@ export class EnhancedChatService {
    * Mark messages as read and sync with cache
    */
   static async markMessagesAsRead(chatId: string, userId: string) {
-    // Update database
-    await supabase
-      .from('Message')
-      .update({ read: true })
-      .eq('chat_id', chatId)
-      .neq('sender_id', userId);
+    try {
+      // Update database - only update messages that are actually unread
+      const { data, error } = await supabase
+        .from('Message')
+        .update({ read: true })
+        .eq('chat_id', chatId)
+        .eq('read', false)
+        .neq('sender_id', userId)
+        .select();
 
-    // Update cache
-    await chatCache.markChatAsRead(chatId, userId);
-    
-    console.log(`[ChatSync] Marked messages as read for chat: ${chatId}`);
+      if (error) {
+        console.error(`[ChatSync] Error marking messages as read:`, error);
+        return;
+      }
+
+      console.log(`[ChatSync] Marked ${data?.length || 0} messages as read in database for chat: ${chatId}`);
+
+      // Update cache
+      await chatCache.markChatAsRead(chatId, userId);
+      
+      console.log(`[ChatSync] Marked messages as read for chat: ${chatId}`);
+    } catch (err) {
+      console.error(`[ChatSync] Exception marking messages as read:`, err);
+    }
   }
 }

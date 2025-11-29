@@ -7,7 +7,32 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Button, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+
+// Fixed 9:16 aspect ratio for consistent cross-device display (like Snapchat/Instagram)
+const ASPECT_RATIO = 9 / 16;
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Calculate container dimensions to fit 9:16 ratio within screen
+const getMediaContainerDimensions = () => {
+  const screenRatio = SCREEN_WIDTH / SCREEN_HEIGHT;
+  
+  if (screenRatio > ASPECT_RATIO) {
+    // Screen is wider than 9:16, fit by height
+    return {
+      width: SCREEN_HEIGHT * ASPECT_RATIO,
+      height: SCREEN_HEIGHT,
+    };
+  } else {
+    // Screen is taller than 9:16, fit by width
+    return {
+      width: SCREEN_WIDTH,
+      height: SCREEN_WIDTH / ASPECT_RATIO,
+    };
+  }
+};
+
+const MEDIA_CONTAINER = getMediaContainerDimensions();
 
 export default function CameraScreen() {
   const [facing, setFacing] = useState<CameraType>('back');
@@ -181,7 +206,7 @@ const deleteUri = () =>{
   };
 
   return (
-  <View style={{flex: 1, backgroundColor: 'black' } }>
+  <View style={{flex: 1, backgroundColor: 'black', justifyContent: 'center', alignItems: 'center' } }>
     {uri ? (
       <PreviewMedia
         uri={uri}
@@ -189,14 +214,17 @@ const deleteUri = () =>{
         onDelete={deleteUri}
         onSave={saveUri}
         isUploading={isUploading}
+        containerWidth={MEDIA_CONTAINER.width}
+        containerHeight={MEDIA_CONTAINER.height}
       />
     ) : cameraMode ? (
+      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 20 }}>
       <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} flash={flashMode}>
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
-            top: 50,
-            left: 20,
+            top: 16,
+            left: 16,
             zIndex: 1
           }
         }).deleteContainer}>
@@ -208,8 +236,8 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           flashContainer: {
             position: 'absolute',
-            top: 50,
-            right: 20,
+            top: 16,
+            right: 16,
             zIndex: 1
           }
         }).flashContainer}>
@@ -238,13 +266,15 @@ const deleteUri = () =>{
           </View>
         </View>
       </CameraView>
+      </View>
     ) : (
+      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 20 }}>
       <CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} enableTorch={isTorchOn && flashMode == 'on'}>
         <View style={StyleSheet.create({
           deleteContainer: {
             position: 'absolute',
-            top: 50,
-            left: 20,
+            top: 16,
+            left: 16,
             zIndex: 1
           }
         }).deleteContainer}>
@@ -257,7 +287,7 @@ const deleteUri = () =>{
           <View style={StyleSheet.create({
             timerContainer: {
               position: 'absolute',
-              top: 60,
+              top: 20,
               width: '100%',
               alignItems: 'center',
               zIndex: 1
@@ -293,8 +323,8 @@ const deleteUri = () =>{
         <View style={StyleSheet.create({
           flashContainer: {
             position: 'absolute',
-            top: 50,
-            right: 20,
+            top: 16,
+            right: 16,
             zIndex: 1
           }
         }).flashContainer}>
@@ -348,6 +378,7 @@ const deleteUri = () =>{
           </View>
         </View>
       </CameraView>
+      </View>
     )}
   </View>
 );
