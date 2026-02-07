@@ -220,162 +220,340 @@ const deleteUri = () =>{
         containerHeight={MEDIA_CONTAINER.height}
       />
     ) : cameraMode ? (
-      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 20 }}>
+      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 24 }}>
       <CameraView mode="picture" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} flash={flashMode}>
-        <View style={StyleSheet.create({
-          deleteContainer: {
-            position: 'absolute',
-            top: 16,
-            left: 16,
-            zIndex: 1
-          }
-        }).deleteContainer}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name='close-circle' size={40} color="white"/>
+        {/* Top Controls Bar */}
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: 20,
+          paddingTop: 24,
+          zIndex: 1
+        }}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
+            <Ionicons name='close' size={28} color="white"/>
           </TouchableOpacity>
-        </View>
-        
-        <View style={StyleSheet.create({
-          flashContainer: {
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            zIndex: 1
-          }
-        }).flashContainer}>
-          <TouchableOpacity onPress={toggleFlash}>
+          
+          <TouchableOpacity 
+            onPress={toggleFlash}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: flashMode === 'on' ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
             <Ionicons 
               name={flashMode === 'off' ? 'flash-off' : 'flash'} 
-              size={40} 
+              size={24} 
               color="white"
             />
           </TouchableOpacity>
         </View>
         
-        <View className='flex-1 justify-end'>
-          <View className='flex-row items-center justify-around mb-10'>
-            <TouchableOpacity className='items-end justify-end' onPress={() => setCameraMode(false)}>
-              <Ionicons name='videocam' size={50} color="white"/>
+        {/* Bottom Controls */}
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingBottom: 40,
+          paddingHorizontal: 20,
+        }}>
+          {/* Mode Indicator */}
+          <View style={{
+            alignItems: 'center',
+            marginBottom: 20,
+          }}>
+            <View style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+            }}>
+              <Text style={{ color: 'white', fontSize: 15, fontWeight: '600' }}>PHOTO</Text>
+            </View>
+          </View>
+
+          {/* Control Buttons */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
+            <TouchableOpacity 
+              onPress={() => setCameraMode(false)}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Ionicons name='videocam' size={32} color="white"/>
             </TouchableOpacity>
             
-            <TouchableOpacity className='items-end justify-end' onPress={() => takePicture()}>
-              <Ionicons name='radio-button-on' size={100} color="white"/>
+            <TouchableOpacity 
+              onPress={() => takePicture()}
+              style={{
+                width: 80,
+                height: 80,
+                borderRadius: 40,
+                backgroundColor: 'white',
+                justifyContent: 'center',
+                alignItems: 'center',
+                borderWidth: 4,
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+              }}
+            >
+              <View style={{
+                width: 68,
+                height: 68,
+                borderRadius: 34,
+                backgroundColor: 'white',
+              }} />
             </TouchableOpacity>
             
-            <TouchableOpacity className='items-end justify-end' onPress={toggleCameraFacing}>
-              <Ionicons name='camera-reverse' size={50} color="white"/>
+            <TouchableOpacity 
+              onPress={toggleCameraFacing}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Ionicons name='camera-reverse' size={32} color="white"/>
             </TouchableOpacity>
           </View>
         </View>
       </CameraView>
       </View>
     ) : (
-      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 20 }}>
+      <View style={{ width: MEDIA_CONTAINER.width, height: MEDIA_CONTAINER.height, overflow: 'hidden', borderRadius: 24 }}>
       <CameraView mode="video" ref={cameraRef} style={{ flex: 1}} facing={facing} mirror={facing === 'front'} enableTorch={isTorchOn && flashMode == 'on'}>
-        <View style={StyleSheet.create({
-          deleteContainer: {
-            position: 'absolute',
-            top: 16,
-            left: 16,
-            zIndex: 1
-          }
-        }).deleteContainer}>
-          <TouchableOpacity onPress={() => router.back()}>
-            <Ionicons name='close-circle' size={40} color="white"/>
-          </TouchableOpacity>
-        </View>
-
-        {isRecording && (
-          <View style={StyleSheet.create({
-            timerContainer: {
-              position: 'absolute',
-              top: 20,
-              width: '100%',
+        {/* Top Controls Bar */}
+        <View style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          flexDirection: 'row',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          padding: 20,
+          paddingTop: 24,
+          zIndex: 1
+        }}>
+          <TouchableOpacity 
+            onPress={() => router.back()}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: 'rgba(0, 0, 0, 0.4)',
+              justifyContent: 'center',
               alignItems: 'center',
-              zIndex: 1
-            }
-          }).timerContainer}>
-            <Text style={StyleSheet.create({
-              timerText: {
-                color: 'white',
-                fontSize: 20,
-                fontWeight: 'bold'
-              }
-            }).timerText}>
-              {formatTime(elapsedTime)}
-            </Text>
-          </View>
-        )}
-        {facing === 'front' && flashMode == "on" && isRecording && (
-  <View 
-    style={{
-      position: 'absolute',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: '#E8F0FF',
-      opacity: 0.5,
-      zIndex: 999
-    }}
-    pointerEvents="none"
-  />
-)}
-
-        <View style={StyleSheet.create({
-          flashContainer: {
-            position: 'absolute',
-            top: 16,
-            right: 16,
-            zIndex: 1
-          }
-        }).flashContainer}>
-          <TouchableOpacity onPress={toggleFlash}>
+            }}
+          >
+            <Ionicons name='close' size={28} color="white"/>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            onPress={toggleFlash}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: flashMode === 'on' ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
             <Ionicons 
               name={flashMode === 'off' ? 'flash-off' : 'flash'} 
-              size={40} 
+              size={24} 
               color="white"
             />
           </TouchableOpacity>
         </View>
-        
 
-        <View className='flex-1 justify-end'>
-          <View className='flex-row items-center justify-around mb-10'>
+        {/* Recording Timer */}
+        {isRecording && (
+          <View style={{
+            position: 'absolute',
+            top: 24,
+            width: '100%',
+            alignItems: 'center',
+            zIndex: 1
+          }}>
+            <View style={{
+              backgroundColor: '#FF6B6B',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+              flexDirection: 'row',
+              alignItems: 'center',
+              gap: 8,
+            }}>
+              <View style={{
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                backgroundColor: 'white',
+              }} />
+              <Text style={{
+                color: 'white',
+                fontSize: 16,
+                fontWeight: 'bold'
+              }}>
+                {formatTime(elapsedTime)}
+              </Text>
+            </View>
+          </View>
+        )}
+
+        {/* Flash Overlay for Front Camera */}
+        {facing === 'front' && flashMode == "on" && isRecording && (
+          <View 
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: '#E8F0FF',
+              opacity: 0.5,
+              zIndex: 999
+            }}
+            pointerEvents="none"
+          />
+        )}
+
+        {/* Bottom Controls */}
+        <View style={{
+          position: 'absolute',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          paddingBottom: 40,
+          paddingHorizontal: 20,
+        }}>
+          {/* Mode Indicator */}
+          <View style={{
+            alignItems: 'center',
+            marginBottom: 20,
+          }}>
+            <View style={{
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              paddingHorizontal: 16,
+              paddingVertical: 8,
+              borderRadius: 20,
+            }}>
+              <Text style={{ color: 'white', fontSize: 15, fontWeight: '600' }}>VIDEO</Text>
+            </View>
+          </View>
+
+          {/* Control Buttons */}
+          <View style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+          }}>
             <TouchableOpacity 
-              className='items-end justify-end' 
               onPress={() => setCameraMode(true)} 
-              disabled={isRecording} 
-              style={{ opacity: isRecording ? 0.5 : 1 }}
+              disabled={isRecording}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: isRecording ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.4)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
             >
-              <Ionicons name='camera' size={50} color="white"/>
+              <Ionicons name='camera' size={32} color="white"/>
             </TouchableOpacity>
             
-            <View style={{ position: 'relative' }}>
+            <View style={{ 
+              position: 'relative',
+              width: 80,
+              height: 80,
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
               <RecordingProgress
                 isRecording={isRecording}
-                size={100}
+                size={80}
                 maxDuration={5000}
               />
               <TouchableOpacity
-                className='items-end justify-end'
                 onPress={recordVideo}
+                style={{
+                  width: 80,
+                  height: 80,
+                  borderRadius: 40,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                }}
               >
                 {!isRecording ? (
-                  <Ionicons name='radio-button-on' size={100} color="red"/>
+                  <View style={{
+                    width: 64,
+                    height: 64,
+                    borderRadius: 32,
+                    backgroundColor: '#FF6B6B',
+                    borderWidth: 4,
+                    borderColor: 'white',
+                  }} />
                 ) : (
-                  <Ionicons name='stop-circle-outline' size={100} color="red"/>
+                  <View style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: 6,
+                    backgroundColor: '#FF6B6B',
+                  }} />
                 )}
               </TouchableOpacity>
             </View>
 
             <TouchableOpacity 
-              className='items-end justify-end' 
               onPress={toggleCameraFacing} 
-              disabled={isRecording} 
-              style={{ opacity: isRecording ? 0.5 : 1 }}
+              disabled={isRecording}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                backgroundColor: isRecording ? 'rgba(0, 0, 0, 0.2)' : 'rgba(0, 0, 0, 0.4)',
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
             >
-              <Ionicons name='camera-reverse' size={50} color="white"/>
+              <Ionicons name='camera-reverse' size={32} color="white"/>
             </TouchableOpacity>
           </View>
         </View>

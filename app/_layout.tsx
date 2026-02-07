@@ -102,7 +102,7 @@
         shadowRadius: 20,
         elevation: 15,
       }}>
-        <Ionicons name="close-circle" size={28} color="#EF4444" style={{ marginBottom: 8 }} />
+        <Ionicons name="close-circle" size={28} color="#FF6B6B" style={{ marginBottom: 8 }} />
         <Text style={{
           color: 'white',
           fontSize: 16,

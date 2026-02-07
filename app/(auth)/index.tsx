@@ -38,27 +38,27 @@ export default function LoginScreen() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-white">
-      <View className='w-full p-4 items-center'>
+    <View className="flex-1 items-center justify-center bg-white px-6">
+      <View className='w-full items-center'>
         <Image
           source={require('../../assets/images/s2icon.png')}
-          style={{ width: 100, height: 100, marginBottom: 20 }}
+          style={{ width: 100, height: 100, marginBottom: 32 }}
         />
 
         {error ? (
-          <View className="w-full mb-4 p-3 bg-red-100 rounded-lg">
-            <Text className="text-red-500 text-center">{error}</Text>
+          <View className="w-full mb-4 p-3 bg-red-500/10 rounded-xl">
+            <Text className="text-red-500 text-ios-body text-center">{error}</Text>
           </View>
         ) : null}
 
         <TextInput
           placeholder='Email'
-          placeholderTextColor="#666"
-          className='bg-white p-4 rounded-lg border border-gray-300 w-full mb-3'
+          placeholderTextColor="#8E8E93"
+          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-3 text-ios-body'
           value={email}
           onChangeText={(text) => {
             setEmail(text);
-            setError(''); // Clear error when user types
+            setError('');
           }}
           autoCapitalize="none"
           keyboardType="email-address"
@@ -67,31 +67,32 @@ export default function LoginScreen() {
         <TextInput
           secureTextEntry={true}
           placeholder='Password'
-          placeholderTextColor="#666"
-          className='bg-white p-4 rounded-lg border border-gray-300 w-full mb-3'
+          placeholderTextColor="#8E8E93"
+          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-4 text-ios-body'
           value={password}
           onChangeText={(text) => {
             setPassword(text);
-            setError(''); // Clear error when user types
+            setError('');
           }}
         />
 
-        <View className='py-2 w-full'>
+        <View className='w-full'>
           <TouchableOpacity 
-            className={`bg-red-500 px-4 py-2 rounded-lg ${isLoading ? 'opacity-50' : ''}`}
+            className={`bg-red-500 h-button rounded-xl justify-center items-center ${isLoading ? 'opacity-disabled' : ''}`}
             onPress={handleSignIn}
             disabled={isLoading}
+            activeOpacity={0.6}
           >
             {isLoading ? (
               <ActivityIndicator color="white" />
             ) : (
-              <Text className='text-white font-bold text-2xl text-center'>Sign in</Text>
+              <Text className='text-white font-semibold text-ios-body'>Sign in</Text>
             )}
           </TouchableOpacity>
 
           <Link 
             href="/(auth)/signup" 
-            className='text-center py-6'
+            className='text-center text-ios-body text-ios-blue mt-6'
           >
             Don't have an account yet? Sign up here
           </Link>

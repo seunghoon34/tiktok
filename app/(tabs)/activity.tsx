@@ -14,7 +14,7 @@ import { useRouter } from 'expo-router';
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const { user } = useAuth();
-  const [isPremium, setIsPremium] = useState(true);
+  const [isPremium, setIsPremium] = useState(false); // Set to false for free users
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
   const [userProfiles, setUserProfiles] = useState<Record<string, string | null>>({});
@@ -185,6 +185,11 @@ export default function ActivityScreen() {
   };
 
   const handleNotificationPress = async (item: any) => {
+    // Don't allow interaction with SHOT notifications if not premium
+    if (item.type === 'SHOT' && !isPremium) {
+      return; // Do nothing for free users on SHOT notifications
+    }
+
     // Mark as read first
     if (!item.read) {
       await markSingleAsRead(item.id);
@@ -221,38 +226,50 @@ export default function ActivityScreen() {
     switch (type) {
       case 'SHOT':
         return isPremium 
-        ? `${username} has shot their shot at you! 🎯`
-        : `**** has shot their shot at you! 🎯`;
+        ? `${username || 'Someone'} has shot their shot at you! 🎯`
+        : `Someone has shot their shot at you! 🎯`;
       case 'MATCH':
-        return `You matched with ${username}! 🎉`;
+        return `You matched with ${username || 'someone'}! 🎉`;
       default:
         return 'New notification';
     }
   };
 
-  const renderNotification = ({ item }: { item: any }) => (
+  const renderNotification = ({ item }: { item: any }) => {
+    // For free users, disable interaction with SHOT notifications
+    const isClickable = item.type === 'MATCH' || (item.type === 'SHOT' && isPremium);
+    
+    // Modify content based on premium status for SHOT notifications
+    let displayContent = item.content;
+    if (item.type === 'SHOT' && !isPremium) {
+      displayContent = 'Someone sent you a shot! 📸';
+    }
+    
+    return (
     <TouchableOpacity 
-      className={`p-4 border-b border-gray-100 ${!item.read ? 'bg-blue-50' : ''}`}
-      onPress={()=>handleNotificationPress(item)}
+      className={`px-4 py-3 border-b border-gray-200 ${!item.read ? 'bg-ios-blue/5' : ''}`}
+      onPress={() => handleNotificationPress(item)}
+      activeOpacity={isClickable ? 0.6 : 1}
+      disabled={!isClickable}
     >
       <View className="flex-row items-center">
-        <View className="h-12 w-12 rounded-full bg-gray-200 items-center justify-center mr-3">
-          {userProfiles[item.userId] ? (
+        <View className="h-avatar-md w-avatar-md rounded-full bg-gray-200 items-center justify-center mr-3">
+          {(isPremium || item.type === 'MATCH') && userProfiles[item.userId] ? (
             <Image 
               source={{ uri: userProfiles[item.userId]! }}
-              className="h-12 w-12 rounded-full"
+              className="h-avatar-md w-avatar-md rounded-full"
             />
           ) : (
-            <Ionicons name="person" size={24} color="#9CA3AF" />
+            <Ionicons name="person" size={24} color="#8E8E93" />
           )}
         </View>
   
         <View className="flex-1">
           <View className="flex-row justify-between items-start">
-            <Text className={`text-base flex-1 ${!item.read ? 'font-semibold' : ''}`}>
-              {item.content}
+            <Text className={`text-ios-body flex-1 ${!item.read ? 'font-semibold text-black' : 'text-gray-900'}`}>
+              {displayContent}
             </Text>
-            <Text className="text-gray-500 text-sm ml-2">
+            <Text className="text-ios-caption1 text-gray-500 ml-2">
               {item.time}
             </Text>
           </View>
@@ -261,10 +278,10 @@ export default function ActivityScreen() {
             <View className="flex-row mt-2">
               {item.type === 'shot' ? (
                 <View className="flex-row">
-                  <TouchableOpacity className="bg-green-500 rounded-full p-2 mr-2">
+                  <TouchableOpacity className="bg-ios-green rounded-full p-2 mr-2" activeOpacity={0.6}>
                     <Ionicons name="checkmark" size={16} color="white" />
                   </TouchableOpacity>
-                  <TouchableOpacity className="bg-red-500 rounded-full p-2">
+                  <TouchableOpacity className="bg-red-500 rounded-full p-2" activeOpacity={0.6}>
                     <Ionicons name="close" size={16} color="white" />
                   </TouchableOpacity>
                 </View>
@@ -274,9 +291,13 @@ export default function ActivityScreen() {
             </View>
           )}
         </View>
+        {!item.read && (
+          <View className="w-2 h-2 rounded-full bg-ios-blue ml-2" />
+        )}
       </View>
     </TouchableOpacity>
-  );
+  )};
+
 
   useEffect(() => {
     const fetchUserProfiles = async () => {
@@ -316,15 +337,15 @@ export default function ActivityScreen() {
 
   return (
     <SafeAreaView className="flex-1 bg-white">
-      <View className="px-4 py-2 border-gray-200">
+      <View className="px-4 pt-2 pb-3">
         <View className="flex-row items-center justify-between">
-          <Text className="font-bold" style={{fontSize:32}}>Activities</Text>
+          <Text className="text-ios-large-title">Activities</Text>
           {notifications.some(n => !n.read) && (
             <TouchableOpacity 
               onPress={markAllAsRead}
-              
+              activeOpacity={0.6}
             >
-              <Text className="text-red-400">Mark all as read</Text>
+              <Text className="text-red-500 text-ios-body">Mark all as read</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -333,7 +354,7 @@ export default function ActivityScreen() {
       <FlatList
         data={notifications}
         renderItem={renderNotification}
-        keyExtractor={item => item.id}
+        keyExtractor={(item, index) => `${item.id}-${index}`}
         className="flex-1"
       />
     </SafeAreaView>

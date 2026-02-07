@@ -139,16 +139,24 @@ export default function TabLayout() {
         tabBarActiveTintColor: '#000',
         headerShown: false,
         tabBarStyle: {
-          paddingTop: 10, // Added padding to the top of the tab bar
+          height: 70, // Increased height for more padding
+          paddingBottom: 20,
+          paddingTop: 8,
+          borderTopWidth: 0.5,
+          borderTopColor: '#C6C6C8',
+          backgroundColor: '#FFFFFF',
         },
       }}>
       <Tabs.Screen
         name="index"
         options={{
           title: '',
-          tabBarIcon: () => 
-            <Ionicons name="home-outline" size={30} color="black" />
-          
+          tabBarIcon: ({ focused }) => 
+            <Ionicons 
+              name={focused ? "home" : "home-outline"} 
+              size={28} 
+              color="black" 
+            />
         }}
         listeners={{
           tabPress: (e) =>{
@@ -163,10 +171,10 @@ export default function TabLayout() {
     title: '',
     tabBarIcon: ({ focused }) => (
       <View>
-        <Ionicons name={focused ? "heart" : "heart-outline"} size={30} color="black" />
+        <Ionicons name={focused ? "heart" : "heart-outline"} size={28} color="black" />
         {unreadCount > 0 && (
-          <View className="absolute -top-1 -right-2 bg-red-400 rounded-full min-w-[18px] h-[18px] items-center justify-center">
-            <Text className="text-white text-xs font-bold">
+          <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+            <Text className="text-white text-[11px] font-semibold">
               {unreadCount > 99 ? '99+' : unreadCount}
             </Text>
           </View>
@@ -180,8 +188,8 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ focused }) => (
-            <View className="items-center justify-center w-7 h-7 border-2 border-black rounded-md">
-              <Ionicons name="add" size={20} color="black" style={{ fontWeight: 'bold' }}/>
+            <View className="items-center justify-center w-[28px] h-[28px] border-[1.5px] border-black rounded-md">
+              <Ionicons name="add" size={18} color="black" />
             </View>
           )          
         }}
@@ -200,12 +208,12 @@ export default function TabLayout() {
             <View>
               <Ionicons 
                 name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} 
-                size={30} 
+                size={28} 
                 color="black" 
               />
               {unreadMessages > 0 && (
-                <View className="absolute -top-1 -right-2 bg-red-400 rounded-full min-w-[18px] h-[18px] items-center justify-center">
-                  <Text className="text-white text-xs font-bold">
+                <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
+                  <Text className="text-white text-[11px] font-semibold">
                     {unreadMessages > 99 ? '99+' : unreadMessages}
                   </Text>
                 </View>
@@ -218,7 +226,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: '',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={30} color="black" />
+          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={28} color="black" />
         }}
       />
       

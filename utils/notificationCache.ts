@@ -359,13 +359,14 @@ export class NotificationCacheService {
   }
 
   private getNotificationContent(type: string, username: string): string {
+    const displayName = username || 'Someone';
     switch (type) {
       case 'SHOT':
-        return `${username} sent you a shot! 📸`;
+        return `${displayName} sent you a shot! 📸`;
       case 'MATCH':
-        return `You matched with ${username}! 💕`;
+        return `You matched with ${displayName}! 💕`;
       default:
-        return `${username} sent you a notification`;
+        return `${displayName} sent you a notification`;
     }
   }
 

@@ -428,7 +428,7 @@ export default function Mystoryscreen() {
                 onPress={() => setShowDeleteConfirm(true)}
               >
                 <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-                  <Ionicons name="trash-outline" size={18} color="#ef4444" />
+                  <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
                 </View>
                 <Text className="text-white text-base font-medium">Delete Story</Text>
               </TouchableOpacity>

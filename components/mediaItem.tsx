@@ -522,7 +522,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             await getLikes(user?.id); // Force refresh likes after unlike
           }}
         >
-            <Ionicons name="heart" size={40} color="#ff5757"/>
+            <Ionicons name="heart" size={40} color="#FF6B6B"/>
           </TouchableOpacity> 
         ) : (
           <TouchableOpacity onPress={likeVideo}>
@@ -548,7 +548,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       opacity: heartOpacity
     }]}
   >
-    <Ionicons name="heart" size={80} color="#ff5757" />
+    <Ionicons name="heart" size={80} color="#FF6B6B" />
   </Animated.View>
 )}
       <Portal>
@@ -572,7 +572,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             onPress={() => handleAction('reportContent')}
           >
             <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-              <Ionicons name="flag-outline" size={18} color="#ef4444" />
+              <Ionicons name="flag-outline" size={18} color="#FF6B6B" />
             </View>
             <Text className="text-white text-base font-medium">Report Content</Text>
           </TouchableOpacity>
@@ -582,7 +582,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             onPress={() => handleAction('reportUser')}
           >
             <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-              <Ionicons name="person-remove-outline" size={18} color="#ef4444" />
+              <Ionicons name="person-remove-outline" size={18} color="#FF6B6B" />
             </View>
             <Text className="text-white text-base font-medium">Report User</Text>
           </TouchableOpacity>
@@ -592,7 +592,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             onPress={() => handleAction('block')}
           >
             <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-              <Ionicons name="ban-outline" size={18} color="#ef4444" />
+              <Ionicons name="ban-outline" size={18} color="#FF6B6B" />
             </View>
             <Text className="text-white text-base font-medium">Block {item.User.username}</Text>
           </TouchableOpacity>
@@ -640,7 +640,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
           </Text>
           
           <TouchableOpacity
-            className="bg-red-500 rounded-lg py-3 mb-3"
+            className="bg-red-500 rounded-xl py-3 mb-3"
             onPress={submitReport}
           >
             <Text className="text-white text-center font-semibold text-lg">Submit Report</Text>
@@ -657,7 +657,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         <View className="px-4 py-3">
           <Text className="text-white text-lg mb-4">Are you sure you want to block {item.User.username}?</Text>
           <TouchableOpacity
-            className="bg-red-500 rounded-lg py-3 mb-3"
+            className="bg-red-500 rounded-xl py-3 mb-3"
             onPress={async () => {
               try {
                 const result = await blockUser(user.id, item.User.id);

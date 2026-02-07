@@ -344,18 +344,18 @@ export default function ChatScreen() {
   {messages.map((item) => (
     <View 
       key={item.id}
-      className={`m-2 ${item.sender_id === user.id ? 'self-end flex-row-reverse' : 'self-start flex-row'}`}
+      className={`m-2 gap-3 ${item.sender_id === user.id ? 'self-end flex-row-reverse' : 'self-start flex-row'}`}
     >
       {/* Avatar for other user */}
       {item.sender_id !== user.id && (
   hasVideos ? (
-    <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)}>
-      <View className="p-0.5 rounded-full bg-red-400">
+    <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
+      <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
         <View className="p-0.5 bg-white rounded-full">
           {otherUserProfile?.profilepicture ? (
             <Image
               source={{ uri: otherUserProfile.profilepicture }}
-              className="w-10 h-10 rounded-full"
+              className="w-avatar h-avatar rounded-full"
               onLoad={() => {}}
               onError={(error) => {
                 console.error('[ChatScreen] Image component failed to load:', error.nativeEvent);
@@ -375,11 +375,11 @@ export default function ChatScreen() {
       </View>
     </TouchableOpacity>
   ) : (
-    <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+    <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
       {otherUserProfile?.profilepicture ? (
         <Image
           source={{ uri: otherUserProfile.profilepicture }}
-          className="w-10 h-10 rounded-full"
+          className="w-avatar h-avatar rounded-full"
           onLoad={() => {}}
           onError={(error) => {
             console.error('[ChatScreen] Image component failed to load (with stories):', error.nativeEvent);
@@ -400,10 +400,11 @@ export default function ChatScreen() {
 )}
 
       {/* Message bubble */}
-      <View className={`p-2 rounded-lg max-w-[80%] ${
-        item.sender_id === user.id ? 'bg-red-400 ml-2' : 'bg-gray-100 mr-2'
-      }`}>
-        <Text className={item.sender_id === user.id ? 'text-white text-lg' : 'text-black text-lg'}>
+      <View 
+        className={`px-4 py-2 rounded-2xl max-w-[80%] ${item.sender_id === user.id ? 'ml-5' : 'bg-gray-200 mr-5'}`}
+        style={item.sender_id === user.id ? { backgroundColor: '#FF6B6B' } : undefined}
+      >
+        <Text className={`text-ios-body ${item.sender_id === user.id ? 'text-white' : 'text-black'}`}>
           {item.content}
         </Text>
       </View>
@@ -421,7 +422,7 @@ export default function ChatScreen() {
   ))}
 </ScrollView>
             
-            <View className="px-4 py-2 border-t border-gray-200 flex-row items-center bg-white">
+            <View className="px-4 py-4 pb-8 border-t border-gray-200 flex-row items-center bg-white">
             <TextInput
               className="flex-1 bg-gray-100 px-4 py-3 mr-2 min-h-[44px]"
               value={newMessage}
@@ -459,7 +460,7 @@ export default function ChatScreen() {
                 onPress={sendMessage}
                 className="h-10 w-10 items-center justify-center"
               >
-                <Ionicons name="send" size={24} color="#ff5757" />
+                <Ionicons name="send" size={24} color="#FF6B6B" />
               </TouchableOpacity>
             </View>
           </View>

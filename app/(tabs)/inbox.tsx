@@ -104,20 +104,6 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
           if (publicData?.publicUrl) {
             const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
             console.log('[InboxScreen] Setting image URL:', imageUrl);
-            
-            // Test if the image actually loads (web only)
-            if (typeof window !== 'undefined' && window.Image) {
-              const testImage = new window.Image();
-              testImage.onload = () => {
-                console.log('[InboxScreen] ✅ Image loaded successfully');
-              };
-              testImage.onerror = (error: any) => {
-                console.error('[InboxScreen] ❌ Failed to load image:', error);
-                console.error('[InboxScreen] Image URL that failed:', imageUrl);
-              };
-              testImage.src = imageUrl;
-            }
-            
             setOtherUserProfile({...data, profilepicture: imageUrl});
           } else {
             console.log('[InboxScreen] No public URL returned from storage');
@@ -144,15 +130,16 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
 
  return (
    <TouchableOpacity
-     className="p-4 border-b border-gray-100"
+     className="px-4 py-3 border-b border-gray-200"
      onPress={() => router.push(`/chat/${chat.id}`)}
+     activeOpacity={0.6}
    >
      <View className="flex-row items-start justify-between">
-       <View className="flex-row">
+       <View className="flex-row flex-1">
          {otherUserProfile?.profilepicture ? (
            <Image 
              source={{ uri: otherUserProfile?.profilepicture }}
-             className="w-10 h-10 rounded-full"
+             className="w-avatar h-avatar rounded-full"
              onLoad={() => console.log('[InboxScreen] Image component loaded successfully')}
              onError={(error) => {
                console.error('[InboxScreen] Image component failed to load:', error.nativeEvent);
@@ -160,31 +147,37 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
              }}
            />
          ) : (
-           <Ionicons 
-             name="person-circle-outline" 
-             size={40} 
-             color="gray" 
-           />
-         )}
-         <View className="ml-3">
-           <View className="flex-row items-center justify-between">
-             <Text className="text-lg font-semibold">{otherUser?.username}</Text>
+           <View className="w-avatar h-avatar rounded-full bg-gray-200 items-center justify-center">
+             <Ionicons 
+               name="person" 
+               size={20} 
+               color="#8E8E93" 
+             />
            </View>
+         )}
+         <View className="ml-3 flex-1">
+           <Text className="text-ios-body font-semibold text-black mb-0.5">
+             {otherUser?.username}
+           </Text>
            {lastMessage && (
-             <Text className="text-gray-500">{truncatedMessage}</Text>
+             <Text className="text-ios-subhead text-gray-600" numberOfLines={1}>
+               {truncatedMessage}
+             </Text>
            )}
          </View>
        </View>
 
-       <View className="items-end">
+       <View className="items-end ml-2">
          {lastMessage && (
-           <Text className="text-gray-400 text-sm mb-1">
+           <Text className="text-ios-caption1 text-gray-500 mb-1">
              {formatDate(lastMessage.created_at)}
            </Text>
          )}
          {chat.unreadCount > 0 && (
-           <View className="bg-red-400 rounded-full px-2 py-0.5">
-             <Text className="text-white text-sm">{chat.unreadCount}</Text>
+           <View className="bg-red-500 rounded-full px-1.5 py-0.5 min-w-[18px] items-center">
+             <Text className="text-white text-[11px] font-semibold">
+               {chat.unreadCount}
+             </Text>
            </View>
          )}
        </View>
@@ -333,9 +326,9 @@ export default function InboxScreen() {
 
  return (
    <SafeAreaView className="flex-1 bg-white">
-     <Text style={{ fontSize: 32, fontWeight: 'bold', marginLeft: 15, marginBottom: 10 }}>
-       Messages
-     </Text>
+     <View className="px-4 pt-2 pb-3">
+       <Text className="text-ios-large-title">Messages</Text>
+     </View>
      <FlatList
        data={chats}
        renderItem={({ item: chat }) => (

@@ -27,28 +27,57 @@ export default function PreviewMedia({
   
   const [isMuted, setIsMuted] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
-  const [textOverlays, setTextOverlays] = useState<any[]>([]); // Added type
+  const [textOverlays, setTextOverlays] = useState<any[]>([]);
 
   return (
     <View style={[styles.previewContainer, { width: containerWidth, height: containerHeight }]}>
-      {/* Close button in top-left corner */}
-      <View style={styles.closeButtonContainer}>
-        <TouchableOpacity onPress={onDelete}>
-          <Ionicons name="close-circle" size={40} color="white" />
+      {/* Top Controls Bar */}
+      <View style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        right: 0,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: 20,
+        paddingTop: 24,
+        zIndex: 2
+      }}>
+        <TouchableOpacity 
+          onPress={onDelete}
+          style={{
+            width: 44,
+            height: 44,
+            borderRadius: 22,
+            backgroundColor: 'rgba(0, 0, 0, 0.4)',
+            justifyContent: 'center',
+            alignItems: 'center',
+          }}
+        >
+          <Ionicons name="close" size={28} color="white" />
         </TouchableOpacity>
-      </View>
-
-      {!cameraMode && (
-        <View style={styles.muteButtonContainer}>
-          <TouchableOpacity onPress={() => setIsMuted(!isMuted)}>
+        
+        {!cameraMode && (
+          <TouchableOpacity 
+            onPress={() => setIsMuted(!isMuted)}
+            style={{
+              width: 44,
+              height: 44,
+              borderRadius: 22,
+              backgroundColor: isMuted ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}
+          >
             <Ionicons
               name={isMuted ? "volume-mute" : "volume-high"}
-              size={40}
+              size={24}
               color="white"
             />
           </TouchableOpacity>
-        </View>
-      )}
+        )}
+      </View>
 
       {/* Media preview - uses cover within fixed 9:16 container */}
       <View style={styles.mediaContainer}>
@@ -71,30 +100,41 @@ export default function PreviewMedia({
         )}
       </View>
 
-      {/* TODO: Text overlay feature temporarily disabled */}
-      {/* <TextOverlayManager
-        onDragStateChange={setIsDraggingText}
-        onOverlaysUpdate={setTextOverlays}
-        video={!cameraMode}
-        fixedContainerWidth={containerWidth}
-        fixedContainerHeight={containerHeight}
-      /> */}
-
-      {/* Save button centered at bottom */}
-      <View style={styles.bottomContainer}>
-        <TouchableOpacity
-          onPress={() => onSave(isMuted, textOverlays)}
-          style={styles.saveButton}
-          disabled={isUploading}
-        >
-          {isUploading ? (
-            <ActivityIndicator size="large" color="white" />
-          ) : isDraggingText ? (
-            <Ionicons name="trash-outline" size={60} color="white" />
-          ) : (
-            <Ionicons name="checkmark-circle-outline" size={60} color="white" />
-          )}
-        </TouchableOpacity>
+      {/* Bottom Action Buttons */}
+      <View style={{
+        position: 'absolute',
+        bottom: 0,
+        left: 0,
+        right: 0,
+        paddingBottom: 40,
+        paddingHorizontal: 20,
+        zIndex: 2,
+      }}>
+        <View style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}>
+          <TouchableOpacity
+            onPress={() => onSave(isMuted, textOverlays)}
+            disabled={isUploading}
+            style={{
+              width: 80,
+              height: 80,
+              borderRadius: 40,
+              backgroundColor: '#FF6B6B',
+              justifyContent: 'center',
+              alignItems: 'center',
+              opacity: isUploading ? 0.6 : 1,
+            }}
+          >
+            {isUploading ? (
+              <ActivityIndicator size="large" color="white" />
+            ) : (
+              <Ionicons name="checkmark" size={48} color="white" />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -106,13 +146,7 @@ const styles = StyleSheet.create({
   previewContainer: {
     backgroundColor: 'black',
     overflow: 'hidden',
-    borderRadius: 20,
-  },
-  closeButtonContainer: {
-    position: 'absolute',
-    top: 16,
-    left: 16,
-    zIndex: 2,
+    borderRadius: 24,
   },
   mediaContainer: {
     flex: 1,
@@ -121,22 +155,5 @@ const styles = StyleSheet.create({
   preview: {
     flex: 1,
     backgroundColor: 'black',
-  },
-  bottomContainer: {
-    position: 'absolute',
-    bottom: 16,
-    width: '100%',
-    alignItems: 'center',
-    zIndex: 2,
-  },
-  saveButton: {
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  muteButtonContainer: {
-    position: 'absolute',
-    top: 16,
-    right: 16,
-    zIndex: 2,
   },
 });

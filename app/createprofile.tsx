@@ -8,6 +8,7 @@ import {
     StyleSheet,
     SafeAreaView,
     ActivityIndicator,
+    ScrollView,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -17,6 +18,16 @@ import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
+import {
+    LOOKING_FOR_OPTIONS,
+    EXERCISE_OPTIONS,
+    DRINKING_OPTIONS,
+    SMOKING_OPTIONS,
+    PETS_OPTIONS,
+    DIET_OPTIONS,
+    POPULAR_HOBBIES,
+    POPULAR_INTERESTS,
+} from '@/constants/profileOptions';
 
 const CreateProfileScreen = () => {
     const [image, setImage] = useState<string | null>(null);
@@ -38,6 +49,16 @@ const CreateProfileScreen = () => {
         name: '',
         birthdate: new Date(),
         aboutme: '',
+        hobbies: [] as string[],
+        interests: [] as string[],
+        looking_for: '',
+        exercise: '',
+        drinking: '',
+        smoking: '',
+        pets: '',
+        diet: '',
+        height: '',
+        location: '',
     });
 
     const checkUsername = async (username: string) => {
@@ -111,6 +132,24 @@ const CreateProfileScreen = () => {
 
         setErrors(newErrors);
         return !Object.values(newErrors).some(error => error !== '');
+    };
+
+    const toggleHobby = (hobby: string) => {
+        setFormData(prev => ({
+            ...prev,
+            hobbies: prev.hobbies.includes(hobby)
+                ? prev.hobbies.filter(h => h !== hobby)
+                : [...prev.hobbies, hobby]
+        }));
+    };
+
+    const toggleInterest = (interest: string) => {
+        setFormData(prev => ({
+            ...prev,
+            interests: prev.interests.includes(interest)
+                ? prev.interests.filter(i => i !== interest)
+                : [...prev.interests, interest]
+        }));
     };
 
     const handleSubmit = async () => {
@@ -213,7 +252,17 @@ const CreateProfileScreen = () => {
                 birthdate: formData.birthdate,
                 aboutme: formData.aboutme,
                 profilepicture: uploadData?.path,
-                user_id: user?.id
+                user_id: user?.id,
+                hobbies: formData.hobbies.length > 0 ? formData.hobbies : null,
+                interests: formData.interests.length > 0 ? formData.interests : null,
+                looking_for: formData.looking_for || null,
+                exercise: formData.exercise || null,
+                drinking: formData.drinking || null,
+                smoking: formData.smoking || null,
+                pets: formData.pets || null,
+                diet: formData.diet || null,
+                height: formData.height ? parseInt(formData.height) : null,
+                location: formData.location || null,
             };
             console.log('[CreateProfile] Profile data to insert:', { ...profileData, profilepicture: profileData.profilepicture ? 'exists' : 'missing' });
             
@@ -359,6 +408,245 @@ const CreateProfileScreen = () => {
                         {errors.aboutme && <Text style={styles.errorText}>{errors.aboutme}</Text>}
                     </View>
 
+                    {/* Hobbies Section */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Hobbies (Select up to 5)</Text>
+                        <View style={styles.tagsContainer}>
+                            {POPULAR_HOBBIES.map((hobby) => (
+                                <TouchableOpacity
+                                    key={hobby}
+                                    style={[
+                                        styles.tag,
+                                        formData.hobbies.includes(hobby) && styles.tagSelected
+                                    ]}
+                                    onPress={() => toggleHobby(hobby)}
+                                    disabled={formData.hobbies.length >= 5 && !formData.hobbies.includes(hobby)}
+                                >
+                                    <Text style={[
+                                        styles.tagText,
+                                        formData.hobbies.includes(hobby) && styles.tagTextSelected
+                                    ]}>
+                                        {hobby}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Interests Section */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Interests (Select up to 5)</Text>
+                        <View style={styles.tagsContainer}>
+                            {POPULAR_INTERESTS.map((interest) => (
+                                <TouchableOpacity
+                                    key={interest}
+                                    style={[
+                                        styles.tag,
+                                        formData.interests.includes(interest) && styles.tagSelected
+                                    ]}
+                                    onPress={() => toggleInterest(interest)}
+                                    disabled={formData.interests.length >= 5 && !formData.interests.includes(interest)}
+                                >
+                                    <Text style={[
+                                        styles.tagText,
+                                        formData.interests.includes(interest) && styles.tagTextSelected
+                                    ]}>
+                                        {interest}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                    </View>
+
+                    {/* Looking For */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Looking For</Text>
+                        <View style={styles.optionsContainer}>
+                            {LOOKING_FOR_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.looking_for === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, looking_for: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.looking_for === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Lifestyle Section */}
+                    <Text style={styles.sectionTitle}>Lifestyle</Text>
+
+                    {/* Exercise */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Exercise</Text>
+                        <View style={styles.optionsContainer}>
+                            {EXERCISE_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.exercise === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, exercise: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.exercise === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Drinking */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Drinking</Text>
+                        <View style={styles.optionsContainer}>
+                            {DRINKING_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.drinking === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, drinking: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.drinking === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Smoking */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Smoking</Text>
+                        <View style={styles.optionsContainer}>
+                            {SMOKING_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.smoking === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, smoking: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.smoking === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Pets */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Pets</Text>
+                        <View style={styles.optionsContainer}>
+                            {PETS_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.pets === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, pets: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.pets === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Diet */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Diet</Text>
+                        <View style={styles.optionsContainer}>
+                            {DIET_OPTIONS.map((option) => (
+                                <TouchableOpacity
+                                    key={option.value}
+                                    style={[
+                                        styles.optionButton,
+                                        formData.diet === option.value && styles.optionButtonSelected
+                                    ]}
+                                    onPress={() => setFormData(prev => ({ ...prev, diet: option.value }))}
+                                >
+                                    <Text style={[
+                                        styles.optionText,
+                                        formData.diet === option.value && styles.optionTextSelected
+                                    ]}>
+                                        {option.label}
+                                    </Text>
+                                </TouchableOpacity>
+                            ))}
+                        </View>
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Additional Info Section */}
+                    <Text style={styles.sectionTitle}>Additional Info</Text>
+
+                    {/* Height */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Height (cm)</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={formData.height}
+                            onChangeText={(text) => {
+                                // Only allow numbers
+                                if (/^\d*$/.test(text)) {
+                                    setFormData(prev => ({ ...prev, height: text }));
+                                }
+                            }}
+                            placeholder="e.g., 170"
+                            placeholderTextColor="#9CA3AF"
+                            keyboardType="numeric"
+                            maxLength={3}
+                        />
+                        <View style={styles.separator} />
+                    </View>
+
+                    {/* Location */}
+                    <View style={styles.formGroup}>
+                        <Text style={styles.label}>Location</Text>
+                        <TextInput
+                            style={styles.input}
+                            value={formData.location}
+                            onChangeText={(text) => setFormData(prev => ({ ...prev, location: text }))}
+                            placeholder="e.g., Seoul, Bangkok"
+                            placeholderTextColor="#9CA3AF"
+                        />
+                        <View style={styles.separator} />
+                    </View>
+
                     <TouchableOpacity 
                         style={[
                             styles.button,
@@ -455,7 +743,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     button: {
-        backgroundColor: '#ff5757',
+        backgroundColor: '#FF6B6B',
         padding: 16,
         borderRadius: 8,
         marginTop: 10,
@@ -495,6 +783,65 @@ const styles = StyleSheet.create({
         fontSize: 12,
         marginTop: 4,
         fontStyle: 'italic',
+    },
+    sectionTitle: {
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginTop: 20,
+        marginBottom: 15,
+        color: '#111827',
+    },
+    tagsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        marginTop: 8,
+        gap: 8,
+    },
+    tag: {
+        paddingHorizontal: 16,
+        paddingVertical: 8,
+        borderRadius: 20,
+        backgroundColor: '#F3F4F6',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    tagSelected: {
+        backgroundColor: '#FF6B6B',
+        borderColor: '#FF6B6B',
+    },
+    tagText: {
+        fontSize: 14,
+        color: '#374151',
+    },
+    tagTextSelected: {
+        color: 'white',
+        fontWeight: '500',
+    },
+    optionsContainer: {
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 8,
+        marginTop: 8,
+    },
+    optionButton: {
+        paddingHorizontal: 16,
+        paddingVertical: 10,
+        borderRadius: 8,
+        backgroundColor: '#F9FAFB',
+        borderWidth: 1,
+        borderColor: '#E5E7EB',
+    },
+    optionButtonSelected: {
+        backgroundColor: '#FEE2E2',
+        borderColor: '#FF6B6B',
+    },
+    optionText: {
+        fontSize: 14,
+        color: '#374151',
+    },
+    optionTextSelected: {
+        color: '#FF6B6B',
+        fontWeight: '500',
     },
 });
 
