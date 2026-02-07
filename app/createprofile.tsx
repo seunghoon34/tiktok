@@ -19,7 +19,8 @@ import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
 import {
-    LOOKING_FOR_OPTIONS,
+    ROLE_OPTIONS,
+    ROLE_COLORS,
     EXERCISE_OPTIONS,
     DRINKING_OPTIONS,
     SMOKING_OPTIONS,
@@ -44,6 +45,7 @@ const CreateProfileScreen = () => {
     const scrollViewRef = useRef<any>(null);
     const aboutMeRef = useRef<any>(null);
     const { user, refreshUserData } = useAuth();
+    const [hasSubmitted, setHasSubmitted] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
         name: '',
@@ -51,7 +53,7 @@ const CreateProfileScreen = () => {
         aboutme: '',
         hobbies: [] as string[],
         interests: [] as string[],
-        looking_for: '',
+        role: '',
         exercise: '',
         drinking: '',
         smoking: '',
@@ -153,10 +155,18 @@ const CreateProfileScreen = () => {
     };
 
     const handleSubmit = async () => {
+        // Prevent double submission
+        if (hasSubmitted) {
+            console.log('[CreateProfile] Already submitted, ignoring duplicate submission');
+            return;
+        }
+        
         // Clear any previous general errors to allow retry
         setErrors(prev => ({...prev, general: ''}));
         
         if (!validateForm()) {
+            // Scroll to top to show validation errors
+            scrollViewRef.current?.scrollToPosition(0, 0, true);
             return;
         }
 
@@ -164,10 +174,12 @@ const CreateProfileScreen = () => {
         const isUsernameAvailable = await checkUsername(formData.username);
         if (!isUsernameAvailable) {
             setIsSubmitting(false);
+            scrollViewRef.current?.scrollToPosition(0, 0, true);
             return;
         }
 
         setIsSubmitting(true);
+        setHasSubmitted(true);
 
         try {
             if (!image) {
@@ -207,12 +219,12 @@ const CreateProfileScreen = () => {
             if (uploadError) {
                 console.error('[CreateProfile] File upload failed:', uploadError);
                 console.error('[CreateProfile] Upload error details:', JSON.stringify(uploadError, null, 2));
-                throw new Error(`Failed to upload the profile picture: ${uploadError.message}`);
+                throw new Error('Unable to upload profile picture. Please try again.');
             }
             
             if (!uploadData || !uploadData.path) {
                 console.error('[CreateProfile] Upload succeeded but no data/path returned:', uploadData);
-                throw new Error('Upload succeeded but no file path returned');
+                throw new Error('Unable to upload profile picture. Please try again.');
             }
             
             console.log('[CreateProfile] File uploaded successfully:', uploadData.path);
@@ -255,7 +267,7 @@ const CreateProfileScreen = () => {
                 user_id: user?.id,
                 hobbies: formData.hobbies.length > 0 ? formData.hobbies : null,
                 interests: formData.interests.length > 0 ? formData.interests : null,
-                looking_for: formData.looking_for || null,
+                role: formData.role || null,
                 exercise: formData.exercise || null,
                 drinking: formData.drinking || null,
                 smoking: formData.smoking || null,
@@ -273,16 +285,17 @@ const CreateProfileScreen = () => {
             if (profileError) {
                 console.error('[CreateProfile] Failed to insert profile:', profileError);
                 console.error('[CreateProfile] Profile error details:', JSON.stringify(profileError, null, 2));
-                throw new Error(`Failed to save user profile: ${profileError.message}`);
+                throw new Error('Unable to create profile. Please try again.');
             }
             
             console.log('[CreateProfile] Profile created successfully!');
     
-            router.push('/(tabs)/profile');
+            router.replace('/(tabs)/profile');
         } catch (error: any) {
             console.error('[CreateProfile] An error occurred:', error?.message ?? String(error));
             console.error('[CreateProfile] Full error object:', error);
-            setErrors(prev => ({...prev, general: error?.message ?? 'Unknown error'}));
+            setErrors(prev => ({...prev, general: 'Unable to create profile. Please try again.'}));
+            setHasSubmitted(false); // Allow retry on error
         } finally {
             setIsSubmitting(false);
         }
@@ -458,27 +471,36 @@ const CreateProfileScreen = () => {
                         </View>
                     </View>
 
-                    {/* Looking For */}
+                    {/* Your Role */}
                     <View style={styles.formGroup}>
-                        <Text style={styles.label}>Looking For</Text>
+                        <Text style={styles.label}>Your Vibe</Text>
+                        <Text style={styles.helperText}>Pick a role that represents you</Text>
                         <View style={styles.optionsContainer}>
-                            {LOOKING_FOR_OPTIONS.map((option) => (
-                                <TouchableOpacity
-                                    key={option.value}
-                                    style={[
-                                        styles.optionButton,
-                                        formData.looking_for === option.value && styles.optionButtonSelected
-                                    ]}
-                                    onPress={() => setFormData(prev => ({ ...prev, looking_for: option.value }))}
-                                >
-                                    <Text style={[
-                                        styles.optionText,
-                                        formData.looking_for === option.value && styles.optionTextSelected
-                                    ]}>
-                                        {option.label}
-                                    </Text>
-                                </TouchableOpacity>
-                            ))}
+                            {ROLE_OPTIONS.map((option) => {
+                                const isSelected = formData.role === option.value;
+                                const colors = ROLE_COLORS[option.value];
+                                return (
+                                    <TouchableOpacity
+                                        key={option.value}
+                                        style={[
+                                            styles.optionButton,
+                                            isSelected && {
+                                                backgroundColor: colors.background,
+                                                borderColor: colors.border,
+                                                borderWidth: 2,
+                                            }
+                                        ]}
+                                        onPress={() => setFormData(prev => ({ ...prev, role: option.value }))}
+                                    >
+                                        <Text style={[
+                                            styles.optionText,
+                                            isSelected && { color: colors.text, fontWeight: '600' }
+                                        ]}>
+                                            {option.label}
+                                        </Text>
+                                    </TouchableOpacity>
+                                );
+                            })}
                         </View>
                         <View style={styles.separator} />
                     </View>
@@ -842,6 +864,11 @@ const styles = StyleSheet.create({
     optionTextSelected: {
         color: '#FF6B6B',
         fontWeight: '500',
+    },
+    helperText: {
+        fontSize: 13,
+        color: '#6B7280',
+        marginBottom: 12,
     },
 });
 

@@ -20,15 +20,18 @@ import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
 import Header from '@/components/header';
 import {
-    LOOKING_FOR_OPTIONS,
-    EXERCISE_OPTIONS,
-    DRINKING_OPTIONS,
-    SMOKING_OPTIONS,
-    PETS_OPTIONS,
-    DIET_OPTIONS,
-    POPULAR_HOBBIES,
-    POPULAR_INTERESTS,
+  ROLE_OPTIONS,
+  ROLE_COLORS,
+  EXERCISE_OPTIONS,
+  DRINKING_OPTIONS,
+  SMOKING_OPTIONS,
+  PETS_OPTIONS,
+  DIET_OPTIONS,
+  POPULAR_HOBBIES,
+  POPULAR_INTERESTS,
 } from '@/constants/profileOptions';
+import { hybridCache } from '@/utils/memoryCache';
+import { invalidateUserCache } from '@/utils/cacheInvalidation';
 
 const EditProfileScreen = () => {
   const scrollViewRef = useRef<any>(null);
@@ -48,7 +51,7 @@ const EditProfileScreen = () => {
     aboutme: '',
     hobbies: [] as string[],
     interests: [] as string[],
-    looking_for: '',
+    role: '',
     exercise: '',
     drinking: '',
     smoking: '',
@@ -63,7 +66,7 @@ const EditProfileScreen = () => {
     aboutme: '',
     hobbies: [] as string[],
     interests: [] as string[],
-    looking_for: '',
+    role: '',
     exercise: '',
     drinking: '',
     smoking: '',
@@ -75,6 +78,44 @@ const EditProfileScreen = () => {
 
   useEffect(() => {
     const getProfile = async () => {
+      // Check cache first
+      const cacheKey = `profile:${user?.id}`;
+      const cached = await hybridCache.get<any>(cacheKey);
+      
+      if (cached) {
+        console.log('[EditProfile] Using cached profile');
+        const profileData = {
+          name: cached.name || '',
+          birthdate: new Date(cached.birthdate),
+          aboutme: cached.aboutme || '',
+          hobbies: cached.hobbies || [],
+          interests: cached.interests || [],
+          role: cached.role || '',
+          exercise: cached.exercise || '',
+          drinking: cached.drinking || '',
+          smoking: cached.smoking || '',
+          pets: cached.pets || '',
+          diet: cached.diet || '',
+          height: cached.height ? String(cached.height) : '',
+          location: cached.location || '',
+        };
+        setFormData(profileData);
+        setOriginalFormData(profileData);
+        
+        // Load image if exists
+        if (cached.profilepicture) {
+          const { data: urlData } = await supabase.storage
+            .from('profile_images')
+            .createSignedUrl(cached.profilepicture, 3600);
+          
+          if (urlData) {
+            setImage(urlData.signedUrl);
+            setOriginalImage(urlData.signedUrl);
+          }
+        }
+        return;
+      }
+      
       try {
         const { data, error } = await supabase
           .from('UserProfile')
@@ -85,13 +126,16 @@ const EditProfileScreen = () => {
         if (error) throw error;
 
         if (data) {
+          // Cache the profile data
+          await hybridCache.set(cacheKey, data, 6 * 60 * 60 * 1000);
+          
           const profileData = {
             name: data.name || '',
             birthdate: new Date(data.birthdate),
             aboutme: data.aboutme || '',
             hobbies: data.hobbies || [],
             interests: data.interests || [],
-            looking_for: data.looking_for || '',
+            role: data.role || '',
             exercise: data.exercise || '',
             drinking: data.drinking || '',
             smoking: data.smoking || '',
@@ -114,24 +158,8 @@ const EditProfileScreen = () => {
             }
             
             if (urlData) {
-              console.log('[EditProfile] Signed URL created:', urlData.signedUrl);
               setImage(urlData.signedUrl);
               setOriginalImage(urlData.signedUrl);
-              
-              // Test if the image actually loads (web only)
-              if (typeof window !== 'undefined' && window.Image) {
-                const testImage = new window.Image();
-                testImage.onload = () => {
-                  console.log('[EditProfile] ✅ Existing image loaded successfully');
-                };
-                testImage.onerror = (error: any) => {
-                  console.error('[EditProfile] ❌ Failed to load existing image:', error);
-                  console.error('[EditProfile] Image URL that failed:', urlData.signedUrl);
-                };
-                testImage.src = urlData.signedUrl;
-              }
-            } else {
-              console.log('[EditProfile] No signed URL data returned');
             }
           }
         }
@@ -142,7 +170,7 @@ const EditProfileScreen = () => {
     };
 
     getProfile();
-  }, []);
+  }, [user?.id]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -209,6 +237,8 @@ const EditProfileScreen = () => {
 
   const handleSubmit = async () => {
     if (!validateForm()) {
+      // Scroll to top to show validation errors
+      scrollViewRef.current?.scrollToPosition(0, 0, true);
       return;
     }
 
@@ -254,12 +284,12 @@ const EditProfileScreen = () => {
         if (uploadError) {
           console.error('[EditProfile] File upload failed:', uploadError);
           console.error('[EditProfile] Upload error details:', JSON.stringify(uploadError, null, 2));
-          throw new Error(`Failed to upload profile picture: ${uploadError.message}`);
+          throw new Error('Unable to upload profile picture. Please try again.');
         }
         
         if (!uploadData || !uploadData.path) {
           console.error('[EditProfile] Upload succeeded but no data/path returned:', uploadData);
-          throw new Error('Upload succeeded but no file path returned');
+          throw new Error('Unable to upload profile picture. Please try again.');
         }
         
         console.log('[EditProfile] File uploaded successfully:', uploadData.path);
@@ -281,7 +311,7 @@ const EditProfileScreen = () => {
         aboutme: formData.aboutme.trim(),
         hobbies: formData.hobbies.length > 0 ? formData.hobbies : null,
         interests: formData.interests.length > 0 ? formData.interests : null,
-        looking_for: formData.looking_for || null,
+        role: formData.role || null,
         exercise: formData.exercise || null,
         drinking: formData.drinking || null,
         smoking: formData.smoking || null,
@@ -307,10 +337,13 @@ const EditProfileScreen = () => {
       if (profileError) {
         console.error('[EditProfile] Failed to update profile:', profileError);
         console.error('[EditProfile] Profile error details:', JSON.stringify(profileError, null, 2));
-        throw new Error(`Failed to update profile: ${profileError.message}`);
+        throw new Error('Unable to save changes. Please try again.');
       }
       
       console.log('[EditProfile] Profile updated successfully!');
+      
+      // Invalidate ALL user-related caches (profile, profile_pic, notifications, feed)
+      await invalidateUserCache(user?.id);
 
       router.back();
     } catch (error: any) {
@@ -318,7 +351,7 @@ const EditProfileScreen = () => {
       console.error('[EditProfile] Full error object:', error);
       setErrors(prev => ({
         ...prev,
-        general: error?.message || 'Failed to update profile. Please try again.'
+        general: 'Unable to save changes. Please try again.'
       }));
     } finally {
       setIsSubmitting(false);
@@ -336,7 +369,7 @@ const EditProfileScreen = () => {
       formData.birthdate.getTime() !== originalFormData.birthdate.getTime() ||
       hobbiesChanged ||
       interestsChanged ||
-      formData.looking_for !== originalFormData.looking_for ||
+        formData.role !== originalFormData.role ||
       formData.exercise !== originalFormData.exercise ||
       formData.drinking !== originalFormData.drinking ||
       formData.smoking !== originalFormData.smoking ||
@@ -493,27 +526,36 @@ const EditProfileScreen = () => {
             </View>
           </View>
 
-          {/* Looking For */}
+          {/* Your Role */}
           <View style={styles.formGroup}>
-            <Text style={styles.label}>Looking For</Text>
+            <Text style={styles.label}>Your Vibe</Text>
+            <Text style={styles.helperText}>Pick a role that represents you</Text>
             <View style={styles.optionsContainer}>
-              {LOOKING_FOR_OPTIONS.map((option) => (
-                <TouchableOpacity
-                  key={option.value}
-                  style={[
-                    styles.optionButton,
-                    formData.looking_for === option.value && styles.optionButtonSelected
-                  ]}
-                  onPress={() => setFormData(prev => ({ ...prev, looking_for: option.value }))}
-                >
-                  <Text style={[
-                    styles.optionText,
-                    formData.looking_for === option.value && styles.optionTextSelected
-                  ]}>
-                    {option.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+              {ROLE_OPTIONS.map((option) => {
+                const isSelected = formData.role === option.value;
+                const colors = ROLE_COLORS[option.value];
+                return (
+                  <TouchableOpacity
+                    key={option.value}
+                    style={[
+                      styles.optionButton,
+                      isSelected && {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        borderWidth: 2,
+                      }
+                    ]}
+                    onPress={() => setFormData(prev => ({ ...prev, role: option.value }))}
+                  >
+                    <Text style={[
+                      styles.optionText,
+                      isSelected && { color: colors.text, fontWeight: '600' }
+                    ]}>
+                      {option.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
             <View style={styles.separator} />
           </View>
@@ -870,6 +912,11 @@ const styles = StyleSheet.create({
   optionTextSelected: {
     color: '#FF6B6B',
     fontWeight: '500',
+  },
+  helperText: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 12,
   },
 });
 

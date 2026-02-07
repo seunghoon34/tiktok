@@ -31,6 +31,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
     const [session, setSession] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [isProcessingAuth, setIsProcessingAuth] = useState(false);
+    const [isCreatingProfile, setIsCreatingProfile] = useState(false);
 
     const getLikes = async (userId: string, immediateUpdate?: any[]) => {
         if(!user) return;
@@ -46,9 +47,9 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         setLikes((data as any[]) || []);
     }
 
-    const getUser = async (id: string) => {
+    const getUser = async (id: string, skipProfileCheck: boolean = false) => {
         try {
-            console.log('[getUser] ***** CALLED WITH ID:', id, '*****');
+            console.log('[getUser] ***** CALLED WITH ID:', id, 'skipProfileCheck:', skipProfileCheck, '*****');
             console.log('[getUser] Stack trace:', new Error().stack);
             const { data, error } = await supabase
                 .from("User")
@@ -101,6 +102,12 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                 await getLikes(data[0].id);
             }
 
+            // Skip profile check if explicitly requested (e.g., during profile creation)
+            if (skipProfileCheck) {
+                console.log('[getUser] Skipping profile check as requested');
+                return;
+            }
+
             const { data: profileData } = await supabase
                 .from('UserProfile')
                 .select('*')
@@ -110,15 +117,17 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             console.log('[getUser] Profile data:', !!profileData);
             if (!profileData) {
                 console.log('[getUser] ***** NO PROFILE FOUND, REDIRECTING TO CREATEPROFILE *****');
-                router.push('/createprofile');
+                setIsCreatingProfile(true);
+                router.replace('/createprofile');
             } else {
                 console.log('[getUser] Profile found, redirecting to profile tab');
-                router.push('/(tabs)/profile');
+                setIsCreatingProfile(false);
+                router.replace('/(tabs)/profile');
             }
         } catch (error) {
             console.error('Error in getUser:', error);
             // On technical errors, redirect to sign-in instead of createprofile
-            router.push('/(auth)');
+            router.replace('/(auth)');
         }
     };
 
@@ -243,7 +252,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
           setSession(null);
           setLikes([]);
           setCurrentChatId(null);
-          router.push('/(auth)');
+          router.replace('/(auth)');
       }
   };
 
@@ -288,7 +297,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
               // Clear states and redirect to auth
               setUser(null);
               setSession(null);
-              router.push('/(auth)');
+              router.replace('/(auth)');
           }
       } catch (error: any) {
           // Check if it's a refresh token error (expected when session expired)
@@ -301,7 +310,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
           // Handle auth errors by clearing session and redirecting
           setUser(null);
           setSession(null);
-          router.push('/(auth)');
+          router.replace('/(auth)');
       } finally {
           setLoading(false);
           try {
@@ -324,16 +333,17 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                   case 'USER_DELETED':
                       setUser(null);
                       setSession(null);
-                      router.push('/(auth)');
+                      router.replace('/(auth)');
                       break;
                       
                   case 'SIGNED_IN':
-                      if (newSession && !isProcessingAuth && !user) {
+                      // Don't process if we're already creating a profile or have a user
+                      if (newSession && !isProcessingAuth && !user && !isCreatingProfile) {
                           console.log('***** PROCESSING SIGNED_IN EVENT, CALLING GETUSER *****');
                           setSession(newSession);
                           await getUser(newSession.user.id);
                       } else {
-                          console.log('***** SKIPPING SIGNED_IN EVENT - isProcessingAuth:', isProcessingAuth, 'user exists:', !!user, '*****');
+                          console.log('***** SKIPPING SIGNED_IN EVENT - isProcessingAuth:', isProcessingAuth, 'user exists:', !!user, 'isCreatingProfile:', isCreatingProfile, '*****');
                       }
                       break;
                       
@@ -347,7 +357,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
                       if (!newSession) {
                           setUser(null);
                           setSession(null);
-                          router.push('/(auth)');
+                          router.replace('/(auth)');
                       }
                       break;
               }
@@ -362,7 +372,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
               // Handle auth errors by clearing session and redirecting
               setUser(null);
               setSession(null);
-              router.push('/(auth)');
+              router.replace('/(auth)');
           }
       };
   

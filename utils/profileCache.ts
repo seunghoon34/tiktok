@@ -8,6 +8,7 @@ export interface CachedProfile {
   birthdate: string;
   aboutme: string;
   username: string;
+  role: string | null; // User's vibe/role for colored ring
   processed_at: number; // When the profile picture URL was processed
 }
 
@@ -83,8 +84,9 @@ export class ProfileCacheService {
           .getPublicUrl(data.profilepicture);
         
         if (!storageError && publicData?.publicUrl) {
-          // Add timestamp to prevent caching issues
-          profilePictureUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+          // Use static URL for proper caching
+          // Cache invalidation is handled by invalidateProfile() when profile updates
+          profilePictureUrl = publicData.publicUrl;
         }
       }
 
@@ -95,6 +97,7 @@ export class ProfileCacheService {
         birthdate: data.birthdate,
         aboutme: data.aboutme,
         username: data.user?.username || '',
+        role: data.role || null,
         processed_at: Date.now()
       };
 

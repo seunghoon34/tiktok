@@ -14,6 +14,7 @@ import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
 import { convertOverlayPosition, getFixedContainerDimensions } from '@/utils/mediaPositioning';
 import { profileCache } from '@/utils/profileCache';
+import { ROLE_COLORS } from '@/constants/profileOptions';
 
 // Get fixed 9:16 container dimensions for consistent cross-device display
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -145,7 +146,12 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
         const cachedProfile = await profileCache.getProfile(item.User.id);
         
         if (cachedProfile) {
-          console.log('[MediaItem] Profile loaded (cached or fresh)');
+          console.log('[MediaItem] Profile loaded (cached or fresh):', {
+            userId: cachedProfile.user_id,
+            hasRole: !!cachedProfile.role,
+            role: cachedProfile.role,
+            hasProfilePic: !!cachedProfile.profilepicture
+          });
           setUserProfile(cachedProfile);
         } else {
           console.log('[MediaItem] No profile data available for user:', item.User.id);
@@ -382,6 +388,21 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     }
   };
 
+  // Get the ring color based on user's role
+  const getRingColor = () => {
+    console.log('[MediaItem] getRingColor called:', {
+      hasUserProfile: !!userProfile,
+      role: userProfile?.role,
+      hasRoleColors: !!(userProfile?.role && ROLE_COLORS[userProfile.role]),
+      color: userProfile?.role && ROLE_COLORS[userProfile.role] ? ROLE_COLORS[userProfile.role].ring : 'transparent'
+    });
+    
+    if (userProfile?.role && ROLE_COLORS[userProfile.role]) {
+      return ROLE_COLORS[userProfile.role].ring;
+    }
+    return 'transparent'; // No ring if no role set
+  };
+
   return (
     <View style={{ 
       width: SCREEN_WIDTH, 
@@ -497,18 +518,40 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       }}>
         <View style={{flexDirection: 'row'}}>
           <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>
-            {userProfile?.profilepicture ? (
-              <Image 
-                source={{ uri: userProfile.profilepicture }}
-                className="w-[50px] h-[50px] rounded-full"
-              />
-            ) : (
-              <Ionicons 
-                name="person-circle-outline" 
-                size={50} 
-                color="white" 
-              />
-            )}
+            {(() => {
+              const ringColor = getRingColor();
+              const hasRing = ringColor !== 'transparent';
+              
+              return (
+                <View style={{
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
+                  borderWidth: hasRing ? 3 : 0,
+                  borderColor: ringColor,
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: 'transparent',
+                }}>
+                  {userProfile?.profilepicture ? (
+                    <Image 
+                      source={{ uri: userProfile.profilepicture }}
+                      style={{
+                        width: hasRing ? 48 : 50,
+                        height: hasRing ? 48 : 50,
+                        borderRadius: hasRing ? 24 : 25,
+                      }}
+                    />
+                  ) : (
+                    <Ionicons 
+                      name="person-circle-outline" 
+                      size={hasRing ? 48 : 50} 
+                      color="white" 
+                    />
+                  )}
+                </View>
+              );
+            })()}
           </TouchableOpacity>
           <View className='mt-2 ml-2'>
             <TouchableOpacity onPress={() => router.push(`/user?user_id=${item.User.id}`)}>

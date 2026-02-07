@@ -1,11 +1,47 @@
 // Profile options for enhanced dating profile
 
-export const LOOKING_FOR_OPTIONS = [
-  { value: 'long_term', label: 'Long-term relationship' },
-  { value: 'short_term', label: 'Short-term dating' },
-  { value: 'friends', label: 'New friends' },
-  { value: 'figuring_out', label: 'Figuring it out' },
+// User roles/personas - fun way to represent personality
+export const ROLE_OPTIONS = [
+  { value: 'shooter', label: '🎯 Shooter', description: 'Shoots their shot, likes freely' },
+  { value: 'royalty', label: '👑 Royalty', description: 'Selective, quality over quantity' },
+  { value: 'fire_starter', label: '🔥 Fire Starter', description: 'Always making the first move' },
+  { value: 'social_butterfly', label: '🦋 Social Butterfly', description: 'Talks to everyone' },
+  { value: 'chill_vibes', label: '🧘 Chill Vibes', description: 'Laid back and easy going' },
 ];
+
+// Color mapping for roles (rings around avatars & selection buttons)
+export const ROLE_COLORS: Record<string, { ring: string; background: string; border: string; text: string }> = {
+  'shooter': { 
+    ring: '#DC2626', 
+    background: '#FEE2E2', 
+    border: '#FCA5A5',
+    text: '#991B1B'
+  }, // Red
+  'royalty': { 
+    ring: '#9333EA', 
+    background: '#F3E8FF', 
+    border: '#D8B4FE',
+    text: '#6B21A8'
+  }, // Purple
+  'fire_starter': { 
+    ring: '#EA580C', 
+    background: '#FFEDD5', 
+    border: '#FDBA74',
+    text: '#9A3412'
+  }, // Orange
+  'social_butterfly': { 
+    ring: '#0891B2', 
+    background: '#CFFAFE', 
+    border: '#67E8F9',
+    text: '#164E63'
+  }, // Cyan
+  'chill_vibes': { 
+    ring: '#16A34A', 
+    background: '#DCFCE7', 
+    border: '#86EFAC',
+    text: '#166534'
+  }, // Green
+};
 
 export const EXERCISE_OPTIONS = [
   { value: 'never', label: 'Never' },

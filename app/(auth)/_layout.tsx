@@ -10,7 +10,7 @@ export default function AuthLayout() {
   
 
   return (
-      <Stack>
+      <Stack screenOptions={{ gestureEnabled: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="signup" options={{ headerShown: false }} />
         <Stack.Screen name="+not-found" />

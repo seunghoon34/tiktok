@@ -10,6 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { notificationCache } from '@/utils/notificationCache';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useRouter } from 'expo-router';
+import { hybridCache } from '@/utils/memoryCache';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -308,6 +309,15 @@ export default function ActivityScreen() {
       const profiles: Record<string, string | null> = {};
       
       await Promise.all(uniqueUserIds.map(async (userId) => {
+        // Check cache first
+        const cacheKey = `profile_pic:${userId}`;
+        const cached = await hybridCache.get<string>(cacheKey);
+        
+        if (cached) {
+          profiles[userId] = cached;
+          return;
+        }
+        
         const { data } = await supabase
           .from('UserProfile')
           .select(`
@@ -319,11 +329,20 @@ export default function ActivityScreen() {
           .eq('user_id', userId)
           .single();
 
-        if (data) {
+        if (data && data.profilepicture) {
           const { data: publicData } = supabase.storage
             .from('profile_images')
             .getPublicUrl(data.profilepicture);
-          profiles[userId] = publicData?.publicUrl ? `${publicData.publicUrl}?t=${Date.now()}` : null;
+          
+          const imageUrl = publicData?.publicUrl || null;
+          profiles[userId] = imageUrl;
+          
+          // Cache for 6 hours
+          if (imageUrl) {
+            await hybridCache.set(cacheKey, imageUrl, 6 * 60 * 60 * 1000);
+          }
+        } else {
+          profiles[userId] = null;
         }
       }));
 

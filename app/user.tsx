@@ -11,7 +11,8 @@ import Toast from 'react-native-toast-message';
 import { ScrollView } from 'react-native-gesture-handler';
 import SkeletonLoader from '@/components/userSkeleton';
 import {
-  LOOKING_FOR_OPTIONS,
+  ROLE_OPTIONS,
+  ROLE_COLORS,
   EXERCISE_OPTIONS,
   DRINKING_OPTIONS,
   SMOKING_OPTIONS,
@@ -27,7 +28,7 @@ interface UserProfileData {
   aboutme: string | null;
   hobbies: string[] | null;
   interests: string[] | null;
-  looking_for: string | null;
+  role: string | null;
   exercise: string | null;
   drinking: string | null;
   smoking: string | null;
@@ -82,7 +83,7 @@ export default function UserScreen() {
             .getPublicUrl(data.profilepicture);
           
           if (publicData?.publicUrl) {
-            const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+            const imageUrl = publicData.publicUrl; // Remove dynamic timestamp
             console.log('[UserScreen] Setting image URL:', imageUrl);
             
             // Test if the image actually loads (web only)
@@ -127,7 +128,7 @@ export default function UserScreen() {
    return new Date().getFullYear() - new Date(birthdate).getFullYear();
  };
 
- const getLabelForValue = (value: string | null, options: Array<{value: string, label: string}>) => {
+ const getLabelForValue = (value: string | null, options: Array<{value: string, label: string, description?: string}>) => {
    if (!value) return null;
    const option = options.find(opt => opt.value === value);
    return option?.label || value;
@@ -202,20 +203,31 @@ export default function UserScreen() {
           </Text>
         </View>
 
-        {/* Looking For - Prominent Badge */}
-        {profile.looking_for && (
-          <View style={styles.lookingForBanner}>
-            <View style={styles.lookingForIcon}>
-              <Ionicons name="heart" size={24} color="#FF6B6B" />
+        {/* Role Badge - Prominent */}
+        {profile.role && ROLE_COLORS[profile.role] && (() => {
+          const roleColors = ROLE_COLORS[profile.role];
+          return (
+            <View style={[styles.roleBanner, { 
+              backgroundColor: roleColors.background,
+              borderColor: roleColors.border 
+            }]}>
+              <View style={styles.roleIcon}>
+                <Ionicons name="star" size={24} color={roleColors.ring} />
+              </View>
+              <View style={styles.roleContent}>
+                <Text style={[styles.roleLabel, { color: roleColors.text }]}>Vibe</Text>
+                <Text style={[styles.roleValue, { color: roleColors.ring }]}>
+                  {getLabelForValue(profile.role, ROLE_OPTIONS)}
+                </Text>
+                {ROLE_OPTIONS.find(r => r.value === profile.role)?.description && (
+                  <Text style={[styles.roleDescription, { color: roleColors.text }]}>
+                    {ROLE_OPTIONS.find(r => r.value === profile.role)?.description}
+                  </Text>
+                )}
+              </View>
             </View>
-            <View style={styles.lookingForContent}>
-              <Text style={styles.lookingForLabel}>Looking for</Text>
-              <Text style={styles.lookingForValue}>
-                {getLabelForValue(profile.looking_for, LOOKING_FOR_OPTIONS)}
-              </Text>
-            </View>
-          </View>
-        )}
+          );
+        })()}
 
         {/* Hobbies */}
         {profile.hobbies && profile.hobbies.length > 0 && (
@@ -646,17 +658,16 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     color: '#4B5563',
   },
-  lookingForBanner: {
-    backgroundColor: '#FEE2E2',
+  roleBanner: {
+    // backgroundColor and borderColor will be set dynamically
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#FEE2E2',
   },
-  lookingForIcon: {
+  roleIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
@@ -665,21 +676,27 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginRight: 14,
   },
-  lookingForContent: {
+  roleContent: {
     flex: 1,
   },
-  lookingForLabel: {
+  roleLabel: {
+    // color will be set dynamically
     fontSize: 13,
-    color: '#991B1B',
     fontWeight: '600',
     marginBottom: 2,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
-  lookingForValue: {
+  roleValue: {
+    // color will be set dynamically
     fontSize: 18,
-    color: '#DC2626',
     fontWeight: '700',
+    marginBottom: 4,
+  },
+  roleDescription: {
+    // color will be set dynamically
+    fontSize: 13,
+    fontStyle: 'italic',
   },
   tagsContainer: {
     flexDirection: 'row',

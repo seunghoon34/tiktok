@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/utils/supabase';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
+import { hybridCache } from '@/utils/memoryCache';
 
 type ModalView = 'menu' | 'confirmDelete';
 
@@ -33,6 +34,16 @@ export default function ProfileScreen() {
 
 
  const getProfile = async () => {
+  // Check cache first
+  const cacheKey = `profile:${user?.id}`;
+      const cached = await hybridCache.get<UserProfile>(cacheKey);
+  
+  if (cached) {
+    console.log('[ProfileScreen] Using cached profile');
+    setProfile(cached);
+    return;
+  }
+  
   try {
     console.log('[ProfileScreen] Fetching profile for user:', user?.id);
     const { data, error } = await supabase
@@ -48,6 +59,9 @@ export default function ProfileScreen() {
     
     if (data) {
       console.log('[ProfileScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
+      
+      // Cache for 6 hours
+      await hybridCache.set(cacheKey, data, 6 * 60 * 60 * 1000);
       setProfile(data);
     } else {
       console.log('[ProfileScreen] No profile data returned');
@@ -85,7 +99,7 @@ useFocusEffect(
           .getPublicUrl(profile.profilepicture);
         
         if (data?.publicUrl) {
-          const imageUrl = `${data.publicUrl}?t=${Date.now()}`;
+          const imageUrl = data.publicUrl; // Remove dynamic timestamp
           console.log('[ProfileScreen] Setting image URL:', imageUrl);
           setImageUrl(imageUrl);
         } else {
@@ -100,7 +114,7 @@ useFocusEffect(
     }
   };
   getAvatarUrl();
-}, [profile]);
+}, [profile?.profilepicture]);
 
  useFocusEffect(
   useCallback(() => {

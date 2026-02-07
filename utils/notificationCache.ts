@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
-import { cache, CacheService } from './cache';
+import { hybridCache } from './memoryCache';
+import { CacheService } from './cache';
 import { feedCache } from './feedCache'; // Reuse blocked users logic
 
 export interface CachedNotification {
@@ -63,7 +64,7 @@ export class NotificationCacheService {
       const excludeUserIds = await feedCache.getBlockedUsers(userId);
       
       // Try to get cached notifications first
-      const cachedData = await cache.get<CachedNotificationData>(cacheKey);
+      const cachedData = await hybridCache.get<CachedNotificationData>(cacheKey);
       
       if (cachedData) {
         // Check if blocked users list has changed
@@ -98,7 +99,7 @@ export class NotificationCacheService {
           }
         } else {
           console.log('[NotificationCache] Blocked users changed, invalidating cache');
-          await cache.delete(cacheKey);
+          await hybridCache.delete(cacheKey);
         }
       }
 
@@ -224,7 +225,7 @@ export class NotificationCacheService {
       };
 
       // Cache notifications with 1 hour TTL
-      await cache.set(cacheKey, cachedData, CacheService.TTL.NOTIFICATIONS);
+      await hybridCache.set(cacheKey, cachedData, CacheService.TTL.NOTIFICATIONS);
       console.log(`[NotificationCache] Cached ${notifications.length} notifications`);
     } catch (error) {
       console.error('[NotificationCache] Error caching notifications:', error);
@@ -246,7 +247,7 @@ export class NotificationCacheService {
 
       // Update in cache
       const cacheKey = this.getNotificationKey(userId);
-      const cachedData = await cache.get<CachedNotificationData>(cacheKey);
+      const cachedData = await hybridCache.get<CachedNotificationData>(cacheKey);
       
       if (cachedData) {
         const updatedNotifications = cachedData.notifications.map(notification =>
@@ -256,7 +257,7 @@ export class NotificationCacheService {
         );
         
         const updatedData = { ...cachedData, notifications: updatedNotifications };
-        await cache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
+        await hybridCache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
         console.log(`[NotificationCache] Updated notification ${notificationId} as read in cache`);
       }
     } catch (error) {
@@ -280,7 +281,7 @@ export class NotificationCacheService {
 
       // Update in cache
       const cacheKey = this.getNotificationKey(userId);
-      const cachedData = await cache.get<CachedNotificationData>(cacheKey);
+      const cachedData = await hybridCache.get<CachedNotificationData>(cacheKey);
       
       if (cachedData) {
         const updatedNotifications = cachedData.notifications.map(notification => ({
@@ -289,7 +290,7 @@ export class NotificationCacheService {
         }));
         
         const updatedData = { ...cachedData, notifications: updatedNotifications };
-        await cache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
+        await hybridCache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
         console.log(`[NotificationCache] Marked all notifications as read in cache`);
       }
     } catch (error) {
@@ -303,7 +304,7 @@ export class NotificationCacheService {
   async invalidateNotifications(userId: string): Promise<void> {
     try {
       const cacheKey = this.getNotificationKey(userId);
-      await cache.delete(cacheKey);
+      await hybridCache.delete(cacheKey);
       console.log(`[NotificationCache] Invalidated notifications cache for user: ${userId}`);
     } catch (error) {
       console.error('[NotificationCache] Error invalidating notifications:', error);
@@ -316,7 +317,7 @@ export class NotificationCacheService {
   async addNotificationToCache(userId: string, notification: any): Promise<void> {
     try {
       const cacheKey = this.getNotificationKey(userId);
-      const cachedData = await cache.get<CachedNotificationData>(cacheKey);
+      const cachedData = await hybridCache.get<CachedNotificationData>(cacheKey);
       
       if (cachedData) {
         const processedNotification = this.processNotificationData([notification])[0];
@@ -328,7 +329,7 @@ export class NotificationCacheService {
           last_notification_timestamp: processedNotification.created_at
         };
         
-        await cache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
+        await hybridCache.set(cacheKey, updatedData, CacheService.TTL.NOTIFICATIONS);
         console.log(`[NotificationCache] Added new notification to cache`);
       }
     } catch (error) {
@@ -378,10 +379,10 @@ export class NotificationCacheService {
     cacheSize: number;
   }> {
     try {
-      const allStats = await cache.getStats();
+      const hybridStats = hybridCache.getStats();
       return {
-        cachedNotifications: allStats.entriesByType.notifications || 0,
-        cacheSize: allStats.totalSize
+        cachedNotifications: hybridStats.memoryEntries,
+        cacheSize: parseInt(hybridStats.memorySize) || 0
       };
     } catch (error) {
       console.error('[NotificationCache] Error getting stats:', error);

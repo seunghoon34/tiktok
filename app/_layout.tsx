@@ -229,13 +229,13 @@
           <AuthProvider>
               <NotificationProvider>
                 <Stack screenOptions={{ gestureEnabled: false}}>
-                  <Stack.Screen name="(auth)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(auth)" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="feed" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
-                  <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+                  <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
                   <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
                   <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
-                  <Stack.Screen name="createprofile" options={{ headerShown: true }} />
+                  <Stack.Screen name="createprofile" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="stories" options={{ headerShown: false }} />
                   <Stack.Screen name="userstories" options={{ headerShown: false }} />
 

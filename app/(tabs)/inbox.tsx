@@ -1,12 +1,13 @@
 import { View, Text, FlatList, TouchableOpacity, SafeAreaView, Image } from 'react-native';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, memo, useMemo } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
+import { hybridCache } from '@/utils/memoryCache';
 
-const formatDate = (dateString) => {
+const formatDate = (dateString: string) => {
  if (!dateString) return '';
 
  try {
@@ -59,17 +60,39 @@ const formatDate = (dateString) => {
  }
 };
 
-const ChatItem = ({ chat, user }) => {
-const [otherUserProfile, setOtherUserProfile] = useState(null);
+interface ChatItemProps {
+  chat: any;
+  user: any;
+}
+
+const ChatItem = memo(({ chat, user }: ChatItemProps) => {
+const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+const [isLoadingProfile, setIsLoadingProfile] = useState(false);
  const router = useRouter();
- const otherUser = user && chat.user1 && chat.user2 
- ? chat.user1.id === user.id ? chat.user2 : chat.user1
- : null;
+ 
+ const otherUser = useMemo(() => {
+   return user && chat.user1 && chat.user2 
+     ? chat.user1.id === user.id ? chat.user2 : chat.user1
+     : null;
+ }, [user?.id, chat.user1?.id, chat.user2?.id]);
+ 
   const lastMessage = chat.lastMessage;
 
  useEffect(() => {
-  if (!otherUser) return;
+  if (!otherUser?.id) return;
+  
   const getOtherUserProfile = async () => {
+    // Check cache first
+    const cacheKey = `profile:${otherUser.id}`;
+    const cached = await hybridCache.get(cacheKey);
+    
+    if (cached) {
+      console.log('[InboxScreen] Using cached profile for:', otherUser.id);
+      setOtherUserProfile(cached);
+      return;
+    }
+    
+    setIsLoadingProfile(true);
     try {
       console.log('[InboxScreen] Fetching profile for other user:', otherUser.id);
       const { data, error } = await supabase
@@ -91,6 +114,8 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
       if (data) {
         console.log('[InboxScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
         
+        let profileData = data;
+        
         if (data.profilepicture) {
           console.log('[InboxScreen] Getting public URL for:', data.profilepicture);
           const { data: publicData, error: storageError } = supabase.storage
@@ -102,26 +127,33 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
           }
           
           if (publicData?.publicUrl) {
-            const imageUrl = `${publicData.publicUrl}?t=${Date.now()}`;
+            // Remove dynamic timestamp - use static URL for better caching
+            const imageUrl = publicData.publicUrl;
             console.log('[InboxScreen] Setting image URL:', imageUrl);
-            setOtherUserProfile({...data, profilepicture: imageUrl});
+            profileData = {...data, profilepicture: imageUrl};
           } else {
             console.log('[InboxScreen] No public URL returned from storage');
-            setOtherUserProfile({...data, profilepicture: null});
+            profileData = {...data, profilepicture: null};
           }
         } else {
           console.log('[InboxScreen] No profile picture path in data');
-          setOtherUserProfile({...data, profilepicture: null});
+          profileData = {...data, profilepicture: null};
         }
+        
+        // Cache for 6 hours
+        await hybridCache.set(cacheKey, profileData, 6 * 60 * 60 * 1000);
+        setOtherUserProfile(profileData);
       } else {
         console.log('[InboxScreen] No profile data returned');
       }
     } catch (error) {
       console.error('[InboxScreen] Exception in getOtherUserProfile:', error);
+    } finally {
+      setIsLoadingProfile(false);
     }
   };
   getOtherUserProfile();
-}, [otherUser]);
+}, [otherUser?.id]); // Only re-fetch if user ID changes
 
  const maxLength = 50;
  const truncatedMessage = lastMessage && lastMessage.content.length > maxLength
@@ -184,7 +216,15 @@ const [otherUserProfile, setOtherUserProfile] = useState(null);
      </View>
    </TouchableOpacity>
  );
-};
+}, (prevProps: ChatItemProps, nextProps: ChatItemProps) => {
+  // Custom comparison for memo - only re-render if these change
+  return (
+    prevProps.chat.id === nextProps.chat.id &&
+    prevProps.chat.lastMessage?.content === nextProps.chat.lastMessage?.content &&
+    prevProps.chat.lastMessage?.created_at === nextProps.chat.lastMessage?.created_at &&
+    prevProps.user?.id === nextProps.user?.id
+  );
+});
 
 export default function InboxScreen() {
  const [chats, setChats] = useState<any[]>([]);
