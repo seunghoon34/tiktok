@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import Header from "@/components/header";
+import { invalidateBlockedUsersCache } from "@/utils/cacheInvalidation";
 
 const BlockedUserItem = ({ blockedUser, onUnblock }) => {
   const [userProfile, setUserProfile] = useState(null);
@@ -92,6 +93,10 @@ export default function BlockedScreen() {
         });
 
       if (error) throw error;
+
+      // Invalidate blocked users cache to reflect the change
+      await invalidateBlockedUsersCache(user.id);
+      console.log('[BlockedScreen] Cache invalidated after unblock');
 
       // Update the local state to remove the unblocked user
       setBlockedUsers(current => 

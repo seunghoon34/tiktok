@@ -58,6 +58,38 @@ export async function invalidateNotificationCache(userId: string): Promise<void>
 }
 
 /**
+ * Invalidate blocked users cache
+ * Call this after blocking or unblocking a user
+ */
+export async function invalidateBlockedUsersCache(userId: string): Promise<void> {
+  console.log(`[CacheInvalidation] Invalidating blocked users cache for: ${userId}`);
+  await cache.delete(`cache:user_metadata:blocked:${userId}`);
+  
+  // Also clear feed cache since blocked users affect feed content
+  await cache.delete(`feed:${userId}`);
+  console.log('[CacheInvalidation] Blocked users and feed cache invalidated');
+}
+
+/**
+ * Invalidate feed cache for a user
+ * Call this when new posts are created or feed should be refreshed
+ */
+export async function invalidateFeedCache(userId: string): Promise<void> {
+  console.log(`[CacheInvalidation] Invalidating feed cache for: ${userId}`);
+  await cache.delete(`feed:${userId}`);
+}
+
+/**
+ * Invalidate location cache
+ * Call this to force fresh location fetch
+ */
+export async function invalidateLocationCache(): Promise<void> {
+  console.log(`[CacheInvalidation] Invalidating location cache`);
+  const { clearLocationCache } = await import('./location');
+  await clearLocationCache();
+}
+
+/**
  * Clear all user caches (use on logout)
  */
 export async function clearAllUserCaches(): Promise<void> {

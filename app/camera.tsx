@@ -3,6 +3,7 @@ import RecordingProgress from '@/components/recordingProgress';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { feedCache } from '@/utils/feedCache';
+import { getCurrentLocation, LOCATION_RADIUS_KM } from '@/utils/location';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { useRouter } from 'expo-router';
@@ -138,6 +139,16 @@ export default function CameraScreen() {
       
       if(error) throw error;
   
+      // Get current location
+      console.log('[Camera] Getting location for post...');
+      const location = await getCurrentLocation(false);
+      
+      if (!location) {
+        throw new Error('Location is required to post. Please enable location services.');
+      }
+      
+      console.log(`[Camera] Location captured: ${location.latitude}, ${location.longitude}`);
+  
       // Insert media record and get its ID
       const { data: videoData, error: videoError } = await supabase
         .from('Video')
@@ -146,6 +157,8 @@ export default function CameraScreen() {
           uri: data?.path,
           user_id: user?.id,
           is_muted: isVideo ? isMuted : false, // Images don't have mute state
+          latitude: location.latitude,
+          longitude: location.longitude,
         })
         .select()
         .single();

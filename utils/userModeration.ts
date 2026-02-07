@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { invalidateBlockedUsersCache } from './cacheInvalidation';
 
 export async function blockUser(blockerId: string, blockedId: string) {
     try {
@@ -33,6 +34,10 @@ export async function blockUser(blockerId: string, blockedId: string) {
             .or(`user1_id.eq.${blockerId},user2_id.eq.${blockerId}`)
             .or(`user1_id.eq.${blockedId},user2_id.eq.${blockedId}`);
 
+        // Invalidate blocked users cache
+        await invalidateBlockedUsersCache(blockerId);
+        console.log('[UserModeration] Cache invalidated after blocking user');
+
         return { status: 'success', data };
     } catch (error) {
         console.error('Error blocking user:', error);
@@ -49,6 +54,10 @@ export async function unblockUser(blockerId: string, blockedId: string) {
             .eq('blocked_id', blockedId);
 
         if (error) throw error;
+
+        // Invalidate blocked users cache
+        await invalidateBlockedUsersCache(blockerId);
+        console.log('[UserModeration] Cache invalidated after unblocking user');
 
         return { status: 'success', data };
     } catch (error) {

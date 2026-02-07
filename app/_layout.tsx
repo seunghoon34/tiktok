@@ -234,6 +234,7 @@
                   <Stack.Screen name="(tabs)" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="user" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right'}}/>
                   <Stack.Screen name="camera" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
+                  <Stack.Screen name="locationpermission" options={{ headerShown: false, gestureEnabled: false, presentation: 'modal' }} />
                   <Stack.Screen name="chat/[id]" options={{ headerShown: false, gestureEnabled: true, animation: 'slide_from_right' }} />
                   <Stack.Screen name="createprofile" options={{ headerShown: false, gestureEnabled: false }} />
                   <Stack.Screen name="stories" options={{ headerShown: false }} />

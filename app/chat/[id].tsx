@@ -23,6 +23,8 @@ export default function ChatScreen() {
   const [inputHeight, setInputHeight] = useState(44); // Track input height
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
   const [hasVideos, setHasVideos] = useState<boolean>(false);
+  const [isChatExpired, setIsChatExpired] = useState<boolean>(false);
+  const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
 
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -103,7 +105,8 @@ export default function ChatScreen() {
         .from('Chat')
         .select(`
           user1:user1_id (id, username),
-          user2:user2_id (id, username)
+          user2:user2_id (id, username),
+          created_at
         `)
         .eq('id', id)
         .single();
@@ -111,7 +114,30 @@ export default function ChatScreen() {
       if (chatData) {
         const user1 = Array.isArray(chatData.user1) ? chatData.user1[0] : chatData.user1;
         const user2 = Array.isArray(chatData.user2) ? chatData.user2[0] : chatData.user2;
-        setOtherUser(user1?.id === user.id ? user2 : user1);
+        const other = user1?.id === user.id ? user2 : user1;
+        setOtherUser(other);
+        
+        // Check if there's a match and if it's expired
+        if (other?.id) {
+          const { data: matchData } = await supabase
+            .from('Match')
+            .select('created_at')
+            .or(`and(user1_id.eq.${user.id},user2_id.eq.${other.id}),and(user1_id.eq.${other.id},user2_id.eq.${user.id})`)
+            .single();
+          
+          if (matchData?.created_at) {
+            setMatchCreatedAt(matchData.created_at);
+            
+            // Check if 24 hours have passed
+            const matchTime = new Date(matchData.created_at).getTime();
+            const now = Date.now();
+            const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
+            const expired = hoursPassed >= 24;
+            
+            setIsChatExpired(expired);
+            console.log(`[Chat] Match age: ${hoursPassed.toFixed(1)}h, expired: ${expired}`);
+          }
+        }
       }
 
       // Use enhanced chat service for smart loading
@@ -211,6 +237,12 @@ export default function ChatScreen() {
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
+    
+    // Check if chat has expired
+    if (isChatExpired) {
+      console.log('[Chat] Cannot send message - chat has expired');
+      return;
+    }
 
     const { error } = await supabase
       .from('Message')
@@ -423,45 +455,49 @@ export default function ChatScreen() {
 </ScrollView>
             
             <View className="px-4 py-4 pb-8 border-t border-gray-200 flex-row items-center bg-white">
-            <TextInput
-              className="flex-1 bg-gray-100 px-4 py-3 mr-2 min-h-[44px]"
-              value={newMessage}
-              onChangeText={setNewMessage}
-              placeholder="Type a message..."
-              multiline={true}
-              style={{ 
-                maxHeight: 120, // Allow more height for expansion
-                borderRadius: 20,
-                textAlignVertical: 'top', // Align text to top for multiline
-                fontSize: 16,
-                lineHeight: 20, // Better line spacing
-              }}
-              onContentSizeChange={(event) => {
-                const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24)); // 24 for padding
-                const previousHeight = inputHeight;
-                setInputHeight(newHeight);
-                
-                // Force scroll when input height changes (expanding or shrinking)
-                if (newHeight !== previousHeight) {
-                  console.log(`[Chat] Input height changed: ${previousHeight} → ${newHeight}, scrolling to end`);
-                  setTimeout(() => {
-                    scrollViewRef.current?.scrollToEnd({ animated: true });
-                  }, 50);
-                }
-              }}
-              onFocus={() => {
-                // Delay scroll to ensure keyboard is showing
-                setTimeout(() => {
-                  scrollViewRef.current?.scrollToEnd({ animated: true });
-                }, 300);
-              }}
-            />
-              <TouchableOpacity
-                onPress={sendMessage}
-                className="h-10 w-10 items-center justify-center"
-              >
-                <Ionicons name="send" size={24} color="#FF6B6B" />
-              </TouchableOpacity>
+            {isChatExpired ? (
+              <View className="flex-1 bg-gray-200 px-4 py-3 rounded-[20px] items-center justify-center">
+                <Text className="text-gray-500 font-medium">
+                  💬 This chat has expired (24h)
+                </Text>
+              </View>
+            ) : (
+              <>
+                <TextInput
+                  className="flex-1 bg-gray-100 px-4 py-3 mr-2 min-h-[44px]"
+                  value={newMessage}
+                  onChangeText={setNewMessage}
+                  placeholder="Type a message..."
+                  multiline={true}
+                  style={{ 
+                    maxHeight: 120, // Allow more height for expansion
+                    borderRadius: 20,
+                    textAlignVertical: 'top', // Align text to top for multiline
+                    fontSize: 16,
+                    lineHeight: 20, // Better line spacing
+                  }}
+                  onContentSizeChange={(event) => {
+                    const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24)); // 24 for padding
+                    const previousHeight = inputHeight;
+                    setInputHeight(newHeight);
+                    
+                    // Force scroll when input height changes (expanding or shrinking)
+                    if (newHeight !== previousHeight) {
+                      console.log(`[Chat] Input height changed: ${previousHeight} → ${newHeight}, scrolling to end`);
+                      setTimeout(() => {
+                        scrollViewRef.current?.scrollToEnd({ animated: true });
+                      }, 50);
+                    }
+                  }}
+                />
+                <TouchableOpacity 
+                  onPress={sendMessage}
+                  className="bg-[#FF6B6B] rounded-full p-3"
+                >
+                  <Ionicons name="send" size={20} color="white" />
+                </TouchableOpacity>
+              </>
+            )}
             </View>
           </View>
         </KeyboardAvoidingView>

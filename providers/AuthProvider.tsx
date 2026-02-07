@@ -6,6 +6,7 @@ import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState } from 'react-native';
+import { requestLocationPermission } from '@/utils/location';
 
 export const AuthContext = createContext({
     user: null as any,
@@ -122,6 +123,15 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             } else {
                 console.log('[getUser] Profile found, redirecting to profile tab');
                 setIsCreatingProfile(false);
+                
+                // Request location permission after successful login
+                console.log('[getUser] Requesting location permission...');
+                const locationGranted = await requestLocationPermission();
+                if (!locationGranted) {
+                    console.log('[getUser] Location permission denied');
+                    // User will see location permission screen in feed
+                }
+                
                 router.replace('/(tabs)/profile');
             }
         } catch (error) {

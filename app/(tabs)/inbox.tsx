@@ -68,6 +68,7 @@ interface ChatItemProps {
 const ChatItem = memo(({ chat, user }: ChatItemProps) => {
 const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
 const [isLoadingProfile, setIsLoadingProfile] = useState(false);
+const [isExpired, setIsExpired] = useState(false);
  const router = useRouter();
  
  const otherUser = useMemo(() => {
@@ -79,9 +80,29 @@ const [isLoadingProfile, setIsLoadingProfile] = useState(false);
   const lastMessage = chat.lastMessage;
 
  useEffect(() => {
-  if (!otherUser?.id) return;
+  if (!otherUser?.id || !user?.id) return;
   
-  const getOtherUserProfile = async () => {
+  const fetchData = async () => {
+    // Check match expiration
+    try {
+      const { data: matchData } = await supabase
+        .from('Match')
+        .select('created_at')
+        .or(`and(user1_id.eq.${user.id},user2_id.eq.${otherUser.id}),and(user1_id.eq.${otherUser.id},user2_id.eq.${user.id})`)
+        .single();
+      
+      if (matchData?.created_at) {
+        const matchTime = new Date(matchData.created_at).getTime();
+        const now = Date.now();
+        const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
+        setIsExpired(hoursPassed >= 24);
+      }
+    } catch (error) {
+      console.error('[InboxScreen] Error checking match expiration:', error);
+    }
+    
+    // Get profile
+    const getOtherUserProfile = async () => {
     // Check cache first
     const cacheKey = `profile:${otherUser.id}`;
     const cached = await hybridCache.get(cacheKey);
@@ -118,13 +139,9 @@ const [isLoadingProfile, setIsLoadingProfile] = useState(false);
         
         if (data.profilepicture) {
           console.log('[InboxScreen] Getting public URL for:', data.profilepicture);
-          const { data: publicData, error: storageError } = supabase.storage
+          const { data: publicData } = supabase.storage
             .from('profile_images')
             .getPublicUrl(data.profilepicture);
-          
-          if (storageError) {
-            console.error('[InboxScreen] Error getting public URL:', storageError);
-          }
           
           if (publicData?.publicUrl) {
             // Remove dynamic timestamp - use static URL for better caching
@@ -152,8 +169,12 @@ const [isLoadingProfile, setIsLoadingProfile] = useState(false);
       setIsLoadingProfile(false);
     }
   };
+  
   getOtherUserProfile();
-}, [otherUser?.id]); // Only re-fetch if user ID changes
+  };
+  
+  fetchData();
+}, [otherUser?.id, user?.id]); // Re-fetch if user IDs change
 
  const maxLength = 50;
  const truncatedMessage = lastMessage && lastMessage.content.length > maxLength
@@ -188,9 +209,16 @@ const [isLoadingProfile, setIsLoadingProfile] = useState(false);
            </View>
          )}
          <View className="ml-3 flex-1">
-           <Text className="text-ios-body font-semibold text-black mb-0.5">
-             {otherUser?.username}
-           </Text>
+           <View className="flex-row items-center justify-between mb-0.5">
+             <Text className="text-ios-body font-semibold text-black">
+               {otherUser?.username}
+             </Text>
+             {isExpired && (
+               <View className="bg-red-100 px-2 py-0.5 rounded-full ml-2">
+                 <Text className="text-red-600 text-xs font-semibold">Expired</Text>
+               </View>
+             )}
+           </View>
            {lastMessage && (
              <Text className="text-ios-subhead text-gray-600" numberOfLines={1}>
                {truncatedMessage}

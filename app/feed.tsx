@@ -10,6 +10,7 @@ import Header from '@/components/header';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { mediaCache } from '@/utils/mediaCache';
 import { feedCache, CachedFeedItem } from '@/utils/feedCache';
+import { hasLocationPermission } from '@/utils/location';
 
 interface MediaItem {
   uri: string;
@@ -164,24 +165,38 @@ export default function HomeScreen() {
       created_at: media[index].created_at ?? '',
     })) as MediaItem[];
     
-    setVideos(prev => [...prev, ...mediaUrls]);
-    console.log(`[Feed] Updated videos length: ${videos.length + mediaUrls.length}`);
+    // If loadMore, append; otherwise replace to avoid duplicates
+    if (loadMore) {
+      setVideos(prev => [...prev, ...mediaUrls]);
+      console.log(`[Feed] Appended videos, new length: ${videos.length + mediaUrls.length}`);
+    } else {
+      setVideos(mediaUrls);
+      console.log(`[Feed] Replaced videos, new length: ${mediaUrls.length}`);
+    }
   };  
 
   const getVideos = async (loadMore = false) => {
     try {
+      // Check location permission first
+      const hasPermission = await hasLocationPermission();
+      if (!hasPermission) {
+        console.log('[Feed] Location permission denied, redirecting to permission screen');
+        router.push('/locationpermission');
+        return;
+      }
+      
       if (!loadMore) {
         setIsLoading(true);
       } else {
         setLoadingMore(true);
       }
 
-      // Use feed cache for smart loading
-      const feedResult = await feedCache.getFeedWithSync(user.id, loadMore);
+      // Use location-based feed (no loadMore support for now - always fresh)
+      const feedResult = await feedCache.getFeedWithLocation(user.id);
       
-      console.log(`[Feed] Loaded ${feedResult.items.length} items from ${feedResult.source}`);
-      if (feedResult.hasNewItems) {
-        console.log(`[Feed] Found ${feedResult.newItemCount} new items`);
+      console.log(`[Feed] Loaded ${feedResult.items.length} nearby items`);
+      if (feedResult.items.length === 0) {
+        console.log('[Feed] No nearby posts found within radius');
       }
 
       // Process with media cache for signed URLs

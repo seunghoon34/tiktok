@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { cache, CacheService } from './cache';
+import { getCurrentLocation, LOCATION_RADIUS_KM } from './location';
 
 export interface CachedFeedItem {
   id: string;
@@ -97,14 +98,117 @@ export class FeedCacheService {
       // Add current user to exclude list
       excludeUserIds.push(userId);
 
-      // Cache blocked users list for 1 hour
-      await cache.set(cacheKey, excludeUserIds, 60 * 60 * 1000);
-      console.log(`[FeedCache] Cached blocked users list (${excludeUserIds.length} users)`);
+      // Cache blocked users list for 5 minutes (shorter to reduce stale data issues)
+      await cache.set(cacheKey, excludeUserIds, 5 * 60 * 1000);
+      console.log(`[FeedCache] Cached blocked users list (${excludeUserIds.length} users) for 5 minutes`);
       
       return excludeUserIds;
     } catch (error) {
       console.error('[FeedCache] Error getting blocked users:', error);
       return [userId]; // At minimum, exclude self
+    }
+  }
+
+  /**
+   * Get feed items with location filtering
+   */
+  async getFeedWithLocation(userId: string): Promise<FeedSyncResult> {
+    try {
+      // Get user's current location
+      console.log('[FeedCache] Getting user location for feed...');
+      const location = await getCurrentLocation(false);
+      
+      if (!location) {
+        console.error('[FeedCache] Could not get location, returning empty feed');
+        return {
+          items: [],
+          hasNewItems: false,
+          newItemCount: 0,
+          source: 'fresh'
+        };
+      }
+      
+      console.log(`[FeedCache] User location: ${location.latitude}, ${location.longitude}`);
+      console.log(`[FeedCache] Fetching posts within ${LOCATION_RADIUS_KM}km radius`);
+      
+      // Get blocked users
+      const excludeUserIds = await this.getBlockedUsers(userId);
+      
+      // Use RPC function to get nearby videos
+      const { data, error } = await supabase.rpc('get_nearby_videos', {
+        user_lat: location.latitude,
+        user_lon: location.longitude,
+        radius_km: LOCATION_RADIUS_KM,
+        requesting_user_id: userId
+      });
+      
+      if (error) {
+        console.error('[FeedCache] Error fetching nearby videos:', error);
+        throw error;
+      }
+      
+      // Filter out blocked users
+      let items = (data || []).filter((item: any) => 
+        !excludeUserIds.includes(item.user_id)
+      );
+      
+      // Fetch additional data (User, TextOverlay) for each video
+      const enrichedItems = await Promise.all(
+        items.map(async (item: any) => {
+          const { data: fullData, error: fetchError } = await supabase
+            .from('Video')
+            .select(`
+              *,
+              User(username, id),
+              TextOverlay(
+                text,
+                position_x,
+                position_y,
+                scale,
+                rotation,
+                font_size,
+                media_width,
+                media_height,
+                screen_width,
+                screen_height
+              )
+            `)
+            .eq('id', item.id)
+            .single();
+          
+          if (fetchError || !fullData) {
+            console.error(`[FeedCache] Error fetching full data for video ${item.id}:`, fetchError);
+            return null;
+          }
+          
+          return {
+            ...fullData,
+            type: fullData.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
+            distance_km: item.distance_km
+          };
+        })
+      );
+      
+      // Filter out null items
+      const validItems = enrichedItems.filter(item => item !== null) as CachedFeedItem[];
+      
+      console.log(`[FeedCache] Found ${validItems.length} nearby posts`);
+      
+      return {
+        items: validItems,
+        hasNewItems: true,
+        newItemCount: validItems.length,
+        source: 'fresh'
+      };
+      
+    } catch (error) {
+      console.error('[FeedCache] Error in getFeedWithLocation:', error);
+      return {
+        items: [],
+        hasNewItems: false,
+        newItemCount: 0,
+        source: 'fresh'
+      };
     }
   }
 
