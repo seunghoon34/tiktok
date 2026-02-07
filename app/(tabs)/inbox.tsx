@@ -6,6 +6,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { hybridCache } from '@/utils/memoryCache';
+import { profileCache } from '@/utils/profileCache';
 
 const formatDate = (dateString: string) => {
  if (!dateString) return '';
@@ -103,68 +104,23 @@ const [isExpired, setIsExpired] = useState(false);
     
     // Get profile
     const getOtherUserProfile = async () => {
-    // Check cache first
-    const cacheKey = `profile:${otherUser.id}`;
-    const cached = await hybridCache.get(cacheKey);
-    
-    if (cached) {
-      console.log('[InboxScreen] Using cached profile for:', otherUser.id);
-      setOtherUserProfile(cached);
-      return;
-    }
-    
-    setIsLoadingProfile(true);
     try {
       console.log('[InboxScreen] Fetching profile for other user:', otherUser.id);
-      const { data, error } = await supabase
-        .from('UserProfile')
-        .select(`
-          *,
-          user:User (
-            username
-          )
-        `)
-        .eq('user_id', otherUser.id)
-        .single();
-
-      if (error) {
-        console.error('[InboxScreen] Error fetching profile:', error);
-        return;
-      }
-
-      if (data) {
-        console.log('[InboxScreen] Profile data received:', { ...data, profilepicture: data.profilepicture ? 'exists' : 'null' });
-        
-        let profileData = data;
-        
-        if (data.profilepicture) {
-          console.log('[InboxScreen] Getting public URL for:', data.profilepicture);
-          const { data: publicData } = supabase.storage
-            .from('profile_images')
-            .getPublicUrl(data.profilepicture);
-          
-          if (publicData?.publicUrl) {
-            // Remove dynamic timestamp - use static URL for better caching
-            const imageUrl = publicData.publicUrl;
-            console.log('[InboxScreen] Setting image URL:', imageUrl);
-            profileData = {...data, profilepicture: imageUrl};
-          } else {
-            console.log('[InboxScreen] No public URL returned from storage');
-            profileData = {...data, profilepicture: null};
-          }
-        } else {
-          console.log('[InboxScreen] No profile picture path in data');
-          profileData = {...data, profilepicture: null};
-        }
-        
-        // Cache for 6 hours
-        await hybridCache.set(cacheKey, profileData, 6 * 60 * 60 * 1000);
-        setOtherUserProfile(profileData);
+      
+      // Use profileCache instead of manual fetching - it handles URLs correctly
+      const profile = await profileCache.getProfile(otherUser.id);
+      
+      if (profile) {
+        console.log('[InboxScreen] Profile loaded:', { userId: profile.user_id, hasPicture: !!profile.profilepicture });
+        setOtherUserProfile({
+          ...profile,
+          user: { username: profile.username }
+        });
       } else {
-        console.log('[InboxScreen] No profile data returned');
+        console.log('[InboxScreen] No profile found for user:', otherUser.id);
       }
     } catch (error) {
-      console.error('[InboxScreen] Exception in getOtherUserProfile:', error);
+      console.error('[InboxScreen] Error loading profile:', error);
     } finally {
       setIsLoadingProfile(false);
     }
@@ -397,13 +353,32 @@ export default function InboxScreen() {
      <View className="px-4 pt-2 pb-3">
        <Text className="text-ios-large-title">Messages</Text>
      </View>
-     <FlatList
-       data={chats}
-       renderItem={({ item: chat }) => (
-         <ChatItem chat={chat} user={user} />
-       )}
-       keyExtractor={(item) => item.id}
-     />
+     {chats.length === 0 ? (
+       <View className="flex-1 items-center justify-center px-8">
+         <View className="items-center">
+           <Ionicons name="chatbubbles-outline" size={80} color="#E5E7EB" />
+           <Text className="text-2xl font-bold text-gray-800 mt-6 text-center">
+             No Messages Yet
+           </Text>
+           <Text className="text-base text-gray-500 mt-3 text-center leading-6">
+             When you match with someone, you'll be able to chat with them here
+           </Text>
+           <View className="mt-8 bg-gray-50 px-6 py-4 rounded-2xl">
+             <Text className="text-sm text-gray-600 text-center">
+               💡 Start liking posts in your feed to get matches!
+             </Text>
+           </View>
+         </View>
+       </View>
+     ) : (
+       <FlatList
+         data={chats}
+         renderItem={({ item: chat }) => (
+           <ChatItem chat={chat} user={user} />
+         )}
+         keyExtractor={(item) => item.id}
+       />
+     )}
    </SafeAreaView>
  );
 }

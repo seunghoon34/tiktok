@@ -277,14 +277,26 @@ export default function HomeScreen() {
           </SafeAreaView>
         ) :
       videos.length === 0? (
-        
-        <SafeAreaView className="flex-1">
-  <Header title="" color="white" goBack={true}/>
-  <View className="flex-1 items-center justify-center">
-    <Text className='text-white'>No shots at the moment</Text>
-  </View>
-</SafeAreaView>
-) : (
+        <SafeAreaView className="flex-1 bg-black">
+          <Header title="" color="white" goBack={true}/>
+          <View className="flex-1 items-center justify-center px-8">
+            <View className="items-center">
+              <Text className="text-6xl mb-6">📍</Text>
+              <Text className="text-2xl font-bold text-white text-center mb-3">
+                No Posts Nearby
+              </Text>
+              <Text className="text-base text-gray-400 text-center leading-6 mb-6">
+                There are no posts within your area right now
+              </Text>
+              <View className="bg-gray-800 px-6 py-4 rounded-2xl">
+                <Text className="text-sm text-gray-300 text-center">
+                  💡 Try posting your own shot or check back later!
+                </Text>
+              </View>
+            </View>
+          </View>
+        </SafeAreaView>
+      ) : (
         <FlatList
           ref={flatListRef}
           data={videos}

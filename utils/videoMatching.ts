@@ -1,5 +1,6 @@
 import { supabase } from '@/utils/supabase';
-import { sendMatchNotification, sendMatchNotifications } from './notifications';
+import { sendMatchNotifications } from './notifications';
+import { invalidateNotificationCache } from './cacheInvalidation';
 
 export const handleVideoLike = async (
   userId: string,
@@ -133,8 +134,19 @@ if (usersError) throw usersError;
 
 
 
-const currentUser = users.find(u => u.id === userId);
-const videoOwner = users.find(u => u.id === videoUserId);
+const currentUser = users?.find(u => u.id === userId);
+const videoOwner = users?.find(u => u.id === videoUserId);
+
+if (!currentUser || !videoOwner) {
+  console.error('[VideoMatching] Could not find user data for match notification');
+  return {
+    status: 'matched',
+    message: "It's a match!",
+    like: newLike,
+    match,
+    users: [user1_id, user2_id]
+  };
+}
 
 console.log(currentUser)
 console.log(videoOwner)
@@ -153,6 +165,11 @@ try {
 } catch (notificationError) {
   console.error("Error sending match notification:", notificationError);
 }
+
+        // Invalidate notification caches for both users after match
+        await invalidateNotificationCache(userId);
+        await invalidateNotificationCache(videoUserId);
+        console.log('[VideoMatching] Invalidated notification caches for both users after match');
         
         return {
           status: 'matched',
@@ -164,6 +181,10 @@ try {
         };
       }
     }
+
+    // For non-match likes, still invalidate the video owner's notification cache
+    await invalidateNotificationCache(videoUserId);
+    console.log('[VideoMatching] Invalidated notification cache after like');
 
     return {
       status: 'liked',

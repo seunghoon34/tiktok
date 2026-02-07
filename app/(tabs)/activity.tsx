@@ -40,82 +40,30 @@ export default function ActivityScreen() {
 
   const markAllAsRead = async () => {
     try {
-      console.log('Starting markAllAsRead for user:', user.id);
+      console.log('[Activity] Marking all notifications as read for user:', user.id);
       
-      // First let's see what notifications exist for this user
-      const { data: allNotifications } = await supabase
-        .from('Notification')
-        .select('id, to_user, read, type, created_at')
-        .eq('to_user', user.id);
-      
-      console.log('All notifications for user:', allNotifications);
-      
-      // First check how many unread notifications exist
-      const { count: beforeCount } = await supabase
-        .from('Notification')
-        .select('*', { count: 'exact' })
-        .eq('to_user', user.id)
-        .eq('read', false);
-      
-      console.log('Unread notifications before update:', beforeCount);
-
-      // Let's also check what notifications would match our update criteria
-      const { data: matchingNotifications } = await supabase
-        .from('Notification')
-        .select('id, to_user, read, type')
-        .eq('to_user', user.id)
-        .eq('read', false);
-      
-      console.log('Notifications that should be updated:', matchingNotifications);
-
-      // Test if we can update a single notification first
-      if (matchingNotifications && matchingNotifications.length > 0) {
-        const { data: singleUpdateResult, error: singleError } = await supabase
-          .from('Notification')
-          .update({ read: true })
-          .eq('id', matchingNotifications[0].id)
-          .select();
-        
-        console.log('Single notification update test:', singleUpdateResult, singleError);
-      }
-
-      const { data, error } = await supabase
+      // Update in database - only update currently unread notifications
+      const { error } = await supabase
         .from('Notification')
         .update({ read: true })
         .eq('to_user', user.id)
-        .eq('read', false)
-        .select();
-
-      if (error) {
-        console.error('Database error:', error);
-        throw error;
-      }
-
-      console.log('Database update completed. Rows affected:', data?.length || 0);
-
-      // Verify the update worked
-      const { count: afterCount } = await supabase
-        .from('Notification')
-        .select('*', { count: 'exact' })
-        .eq('to_user', user.id)
         .eq('read', false);
-      
-      console.log('Unread notifications after update:', afterCount);
+
+      if (error) throw error;
 
       // Update local state
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notif => ({ ...notif, read: true }))
+      setNotifications(prev => 
+        prev.map(n => ({ ...n, read: true }))
       );
+
+      // Invalidate and refetch to ensure cache is correct
+      await notificationCache.markAllNotificationsAsRead(user.id);
+      console.log('[Activity] All notifications marked as read');
       
-      // Manually update the unread count after a small delay to ensure DB changes propagate
-      setTimeout(() => {
-        setUnreadCount(0);
-      }, 50);
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error('[Activity] Error marking all as read:', error);
     }
   };
- 
 
   useEffect(() => {
     if (!user) return;
@@ -208,6 +156,9 @@ export default function ActivityScreen() {
   };
   const fetchNotifications = async () => {
     try {
+      // Invalidate old cached data so it re-processes with fixed logic
+      await notificationCache.invalidateNotifications(user.id);
+      
       // Use notification cache for efficient loading
       console.log(`[Activity] Loading notifications for user: ${user.id}`);
       const result = await notificationCache.getNotificationsWithSync(user.id);
@@ -236,22 +187,48 @@ export default function ActivityScreen() {
     }
   };
 
+  const formatTimeAgo = (dateString: string): string => {
+    const now = new Date();
+    // Supabase stores timestamps in UTC without timezone suffix
+    // Append 'Z' to ensure JavaScript parses it as UTC
+    const utcDateString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+    const date = new Date(utcDateString);
+    const diffInMs = now.getTime() - date.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    const diffInDays = Math.floor(diffInHours / 24);
+
+    if (diffInMinutes < 1) return 'just now';
+    if (diffInMinutes < 60) return `${diffInMinutes}m ago`;
+    if (diffInHours < 24) return `${diffInHours}h ago`;
+    return `${diffInDays}d ago`;
+  };
+
   const renderNotification = ({ item }: { item: any }) => {
-    // For free users, disable interaction with SHOT notifications
-    const isClickable = item.type === 'MATCH' || (item.type === 'SHOT' && isPremium);
+    // All notifications are clickable (removed disabled state for matches)
+    const isClickable = true;
     
-    // Modify content based on premium status for SHOT notifications
-    let displayContent = item.content;
-    if (item.type === 'SHOT' && !isPremium) {
-      displayContent = 'Someone sent you a shot! 📸';
+    // Get the username - handle sender being array or object
+    const sender = Array.isArray(item.sender) ? item.sender[0] : item.sender;
+    const username = item.username || sender?.username || 'Someone';
+    
+    // Build display content based on type
+    let displayContent = '';
+    if (item.type === 'SHOT') {
+      displayContent = isPremium 
+        ? `${username} sent you a shot! 📸`
+        : `Someone sent you a shot! 📸`;
+    } else if (item.type === 'MATCH') {
+      displayContent = `You matched with ${username}! 💕`;
+    } else {
+      displayContent = item.content || `${username} sent you a notification`;
     }
     
     return (
     <TouchableOpacity 
       className={`px-4 py-3 border-b border-gray-200 ${!item.read ? 'bg-ios-blue/5' : ''}`}
       onPress={() => handleNotificationPress(item)}
-      activeOpacity={isClickable ? 0.6 : 1}
-      disabled={!isClickable}
+      activeOpacity={0.6}
     >
       <View className="flex-row items-center">
         <View className="h-avatar-md w-avatar-md rounded-full bg-gray-200 items-center justify-center mr-3">
@@ -271,26 +248,9 @@ export default function ActivityScreen() {
               {displayContent}
             </Text>
             <Text className="text-ios-caption1 text-gray-500 ml-2">
-              {item.time}
+              {formatTimeAgo(item.created_at)}
             </Text>
           </View>
-  
-          {item.actionable && (
-            <View className="flex-row mt-2">
-              {item.type === 'shot' ? (
-                <View className="flex-row">
-                  <TouchableOpacity className="bg-ios-green rounded-full p-2 mr-2" activeOpacity={0.6}>
-                    <Ionicons name="checkmark" size={16} color="white" />
-                  </TouchableOpacity>
-                  <TouchableOpacity className="bg-red-500 rounded-full p-2" activeOpacity={0.6}>
-                    <Ionicons name="close" size={16} color="white" />
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <></>
-              )}
-            </View>
-          )}
         </View>
         {!item.read && (
           <View className="w-2 h-2 rounded-full bg-ios-blue ml-2" />
@@ -370,12 +330,40 @@ export default function ActivityScreen() {
         </View>
       </View>
 
-      <FlatList
-        data={notifications}
-        renderItem={renderNotification}
-        keyExtractor={(item, index) => `${item.id}-${index}`}
-        className="flex-1"
-      />
+      {notifications.length === 0 ? (
+        <View className="flex-1 items-center justify-center px-8">
+          <View className="items-center">
+            <Ionicons name="heart-outline" size={80} color="#E5E7EB" />
+            <Text className="text-2xl font-bold text-gray-800 mt-6 text-center">
+              No Activity Yet
+            </Text>
+            <Text className="text-base text-gray-500 mt-3 text-center leading-6">
+              When someone likes your posts or you get a match, you'll see it here
+            </Text>
+            <View className="mt-8 space-y-3">
+              <View className="bg-red-50 px-6 py-3 rounded-xl flex-row items-center">
+                <Text className="text-2xl mr-3">💖</Text>
+                <Text className="text-sm text-gray-700 flex-1">
+                  <Text className="font-semibold">Likes</Text> - Someone shot their shot!
+                </Text>
+              </View>
+              <View className="bg-purple-50 px-6 py-3 rounded-xl flex-row items-center">
+                <Text className="text-2xl mr-3">✨</Text>
+                <Text className="text-sm text-gray-700 flex-1">
+                  <Text className="font-semibold">Matches</Text> - It's a match!
+                </Text>
+              </View>
+            </View>
+          </View>
+        </View>
+      ) : (
+        <FlatList
+          data={notifications}
+          renderItem={renderNotification}
+          keyExtractor={(item, index) => `${item.id}-${index}`}
+          className="flex-1"
+        />
+      )}
     </SafeAreaView>
   );
 }

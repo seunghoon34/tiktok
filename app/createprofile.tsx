@@ -18,6 +18,7 @@ import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
+import { invalidateUserCache } from '@/utils/cacheInvalidation';
 import {
     ROLE_OPTIONS,
     ROLE_COLORS,
@@ -289,6 +290,10 @@ const CreateProfileScreen = () => {
             }
             
             console.log('[CreateProfile] Profile created successfully!');
+    
+            // Invalidate user cache to ensure fresh data
+            await invalidateUserCache(user?.id);
+            console.log('[CreateProfile] User cache invalidated');
     
             router.replace('/(tabs)/profile');
         } catch (error: any) {

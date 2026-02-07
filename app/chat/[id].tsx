@@ -12,6 +12,16 @@ import { chatCache, CachedMessage } from '@/utils/chatCache';
 import { profileCache } from '@/utils/profileCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
 
+// Helper function to format time
+const formatTime = (dateString: string) => {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('en-US', { 
+    hour: 'numeric', 
+    minute: '2-digit',
+    hour12: true 
+  });
+};
+
 export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -432,23 +442,25 @@ export default function ChatScreen() {
 )}
 
       {/* Message bubble */}
-      <View 
-        className={`px-4 py-2 rounded-2xl max-w-[80%] ${item.sender_id === user.id ? 'ml-5' : 'bg-gray-200 mr-5'}`}
-        style={item.sender_id === user.id ? { backgroundColor: '#FF6B6B' } : undefined}
-      >
-        <Text className={`text-ios-body ${item.sender_id === user.id ? 'text-white' : 'text-black'}`}>
-          {item.content}
-        </Text>
-      </View>
-
-      {/* Time and Read status */}
-      <View className='mt-2'>
-        <Text className="text-gray-500 text-xs text-right h-4" >
-          {item.sender_id === user.id && item.read ? 'Read' : ' '}
-        </Text>
-        <Text className="text-gray-500 text-xs">
-          {formatMessageTime(item.created_at + 'Z')}
-        </Text>
+      <View className="flex-1">
+        <View 
+          className={`px-3 py-2 rounded-2xl ${item.sender_id === user.id ? 'self-end' : 'self-start'}`}
+          style={[
+            { maxWidth: '75%' },
+            item.sender_id === user.id ? { backgroundColor: '#FF6B6B' } : { backgroundColor: '#F3F4F6' }
+          ]}
+        >
+          <Text className={`text-base ${item.sender_id === user.id ? 'text-white' : 'text-black'}`}>
+            {item.content}
+          </Text>
+        </View>
+        
+        {/* Time and Read status - directly under bubble */}
+        <View className={`mt-0.5 ${item.sender_id === user.id ? 'items-end' : 'items-start'}`}>
+          <Text className="text-gray-500 text-xs">
+            {item.sender_id === user.id && item.read ? 'Read · ' : ''}{formatTime(item.created_at)}
+          </Text>
+        </View>
       </View>
     </View>
   ))}

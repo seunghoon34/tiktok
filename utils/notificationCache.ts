@@ -198,15 +198,24 @@ export class NotificationCacheService {
    * Process raw notification data into cached format
    */
   private processNotificationData(rawData: any[]): CachedNotification[] {
-    return rawData.map(notification => ({
-      ...notification,
-      // UI-ready fields
-      username: notification.sender?.username,
-      userId: notification.sender?.id,
-      time: this.formatDate(notification.created_at),
-      actionable: notification.type === 'SHOT' || notification.type === 'MATCH',
-      content: this.getNotificationContent(notification.type, notification.sender?.username)
-    }));
+    return rawData.map(notification => {
+      // Supabase foreign key joins can return arrays or objects
+      const sender = Array.isArray(notification.sender) 
+        ? notification.sender[0] 
+        : notification.sender;
+      const username = sender?.username || 'Someone';
+      const userId = sender?.id || notification.from_user;
+      
+      return {
+        ...notification,
+        // UI-ready fields
+        username,
+        userId,
+        time: this.formatDate(notification.created_at),
+        actionable: notification.type === 'SHOT' || notification.type === 'MATCH',
+        content: this.getNotificationContent(notification.type, username)
+      };
+    });
   }
 
   /**
@@ -345,9 +354,11 @@ export class NotificationCacheService {
   }
 
   private formatDate(dateString: string): string {
-    // Reuse the same logic from activity.tsx
     const now = new Date();
-    const date = new Date(dateString);
+    // Supabase stores timestamps in UTC without timezone suffix
+    // Append 'Z' to ensure JavaScript parses it as UTC
+    const utcDateString = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+    const date = new Date(utcDateString);
     const diffInMs = now.getTime() - date.getTime();
     const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
     const diffInHours = Math.floor(diffInMinutes / 60);
