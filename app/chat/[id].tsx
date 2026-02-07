@@ -7,7 +7,6 @@ import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
-import { sendMessageNotification } from '@/utils/notifications';
 import { chatCache, CachedMessage } from '@/utils/chatCache';
 import { profileCache } from '@/utils/profileCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
@@ -267,28 +266,12 @@ export default function ChatScreen() {
       return;
     }
 
-    
-
+    // Notification is handled automatically by AuthProvider's real-time subscription
+    // No need to send it here to avoid duplicates
 
     setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: true });
     }, 0);
-
-    const { data: otherUserData } = await supabase
-      .from('User')
-      .select('app_state')
-      .eq('id', otherUser.id)
-      .single();
-
-    // Only send notification if other user is in background
-    if (otherUserData?.app_state === 'background') {
-      await sendMessageNotification(
-        user.id,
-        user.username,
-        otherUser?.id,
-        Array.isArray(id) ? id[0] : id
-      );
-    }
 
     setNewMessage('');
   };

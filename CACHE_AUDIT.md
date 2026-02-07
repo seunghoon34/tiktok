@@ -37,10 +37,24 @@
 
 ### 3. **Send Message** (`chat/[id].tsx`)
 - **Action**: Insert Message
-- **Cache Invalidation**: ❌ **MISSING**
+- **Cache Invalidation**: ✅ Handled by `chatCache.addMessage()`
 - **Impact**: LOW (real-time updates via subscription handle this)
-- **Fix Needed**: None (handled by real-time subscription)
+- **Fix Needed**: None
 - **Priority**: NONE
+
+### 4. **Chat Messages** (`chat/[id].tsx`)
+- **Action**: Load messages
+- **Cache Strategy**: ✅ Smart caching with `EnhancedChatService`
+- **What it does**: Loads cached messages instantly, then syncs with new ones
+- **TTL**: Never expires (chat history persists)
+- **Priority**: IMPLEMENTED ✅
+
+### 5. **Inbox/Chat List** (`inbox.tsx`)
+- **Action**: Load list of chats with last messages
+- **Cache Invalidation**: ⚠️ **OPTIONAL** (not implemented yet)
+- **Impact**: LOW for 20 users, MEDIUM for 100+ users
+- **Fix Available**: `inboxCache.ts` created but not integrated
+- **Priority**: LOW for beta, MEDIUM for scale
 
 ### 4. **Profile Picture Upload** (`editprofile.tsx`)
 - **Action**: Upload to Supabase Storage
@@ -89,11 +103,13 @@
 4. ✅ **NEW:** Likes/matches invalidate notification caches
 5. ✅ Feed uses location-based queries (always fresh)
 6. ✅ Real-time subscriptions handle chat messages
-7. ✅ Shorter TTL on blocked users (5 min)
+7. ✅ **NEW:** Chat messages use smart caching (instant load + sync)
+8. ✅ Shorter TTL on blocked users (5 min)
 
 ### What Could Be Better (Low Priority):
 1. ⚠️ No TTL fallback for profile/feed caches (not critical)
 2. ⚠️ Media URLs might be over-cached (not critical)
+3. ⚠️ Inbox list not cached (LOW priority for 20 users, add for 100+)
 
 ### Overall Rating: **9/10** 🌟🌟
 - ✅ All critical cache invalidation implemented
