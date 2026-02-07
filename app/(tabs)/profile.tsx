@@ -88,19 +88,6 @@ useFocusEffect(
           const imageUrl = `${data.publicUrl}?t=${Date.now()}`;
           console.log('[ProfileScreen] Setting image URL:', imageUrl);
           setImageUrl(imageUrl);
-          
-          // Test if the image actually loads (web only)
-          if (typeof window !== 'undefined' && window.Image) {
-            const testImage = new window.Image();
-            testImage.onload = () => {
-              console.log('[ProfileScreen] ✅ Image loaded successfully');
-            };
-            testImage.onerror = (error: any) => {
-              console.error('[ProfileScreen] ❌ Failed to load image:', error);
-              console.error('[ProfileScreen] Image URL that failed:', imageUrl);
-            };
-            testImage.src = imageUrl;
-          }
         } else {
           console.log('[ProfileScreen] No public URL returned from storage');
         }
@@ -113,7 +100,7 @@ useFocusEffect(
     }
   };
   getAvatarUrl();
- }, [profile]);
+}, [profile]);
 
  useFocusEffect(
   useCallback(() => {
