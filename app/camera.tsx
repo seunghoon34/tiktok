@@ -153,7 +153,8 @@ export default function CameraScreen() {
       if(videoError) throw videoError;
   
       // Save text overlays
-      
+      // TODO: Text overlay feature temporarily disabled
+      /*
       if (textOverlays.length > 0) {
         const { error: textError } = await supabase
           .from('TextOverlay')
@@ -174,6 +175,7 @@ export default function CameraScreen() {
           );
         if(textError) throw textError;
       }
+      */
 
       // Invalidate user's story cache since we created a new story
       if (user?.id) {

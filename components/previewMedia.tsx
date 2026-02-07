@@ -71,13 +71,14 @@ export default function PreviewMedia({
         )}
       </View>
 
-      <TextOverlayManager
+      {/* TODO: Text overlay feature temporarily disabled */}
+      {/* <TextOverlayManager
         onDragStateChange={setIsDraggingText}
         onOverlaysUpdate={setTextOverlays}
         video={!cameraMode}
         fixedContainerWidth={containerWidth}
         fixedContainerHeight={containerHeight}
-      />
+      /> */}
 
       {/* Save button centered at bottom */}
       <View style={styles.bottomContainer}>
