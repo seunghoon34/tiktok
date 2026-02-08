@@ -1,5 +1,5 @@
 import { supabase } from '@/utils/supabase';
-import { sendMatchNotifications } from './notifications';
+import { sendMatchNotifications, sendShotNotification } from './notifications';
 import { invalidateNotificationCache } from './cacheInvalidation';
 
 export const handleVideoLike = async (
@@ -37,6 +37,13 @@ export const handleVideoLike = async (
       console.error('User trying to insert:', userId);
       console.error('Authenticated user:', currentUser?.id);
       // Don't throw error - continue with like flow even if notification fails
+    }
+
+    // Send push notification for the shot
+    try {
+      await sendShotNotification(videoUserId);
+    } catch (e) {
+      console.error('Error sending shot push notification:', e);
     }
 
     // 2. Check if the other user has liked any of current user's videos

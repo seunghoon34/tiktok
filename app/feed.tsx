@@ -27,18 +27,6 @@ interface MediaItem {
   expired_at: string;
   created_at: string;
   user_id?: string;
-  TextOverlay?: Array<{
-    text: string;
-    position_x: number;
-    position_y: number;
-    scale: number;
-    rotation: number;
-    font_size: number;
-    media_width?: number;
-    media_height?: number;
-    screen_width?: number;
-    screen_height?: number;
-  }>;
 }
 
 export default function HomeScreen() {

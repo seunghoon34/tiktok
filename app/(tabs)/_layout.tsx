@@ -75,7 +75,6 @@ export default function TabLayout() {
       return 0;
     }
 
-    console.log('getTotalUnreadNotifications returning count:', count);
     return count || 0;
   };
 

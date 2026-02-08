@@ -120,6 +120,52 @@ export async function registerForPushNotifications(userId: string) {
     }
   }
 
+  export async function sendShotNotification(receiverId: string) {
+    try {
+      const { data: userData, error: userError } = await supabase
+        .from('User')
+        .select('expo_push_token')
+        .eq('id', receiverId)
+        .single();
+
+      if (userError || !userData?.expo_push_token) {
+        console.warn(`No push token found for userId ${receiverId}`);
+        return;
+      }
+
+      const message = {
+        to: userData.expo_push_token,
+        sound: 'default',
+        title: "A shot was fired your way! 💘",
+        body: 'Open the app to find out who!',
+        data: { type: 'shot' },
+        priority: 'high',
+        channelId: 'default',
+        _displayInForeground: true,
+        badge: 1,
+      };
+
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          Accept: 'application/json',
+          'Accept-encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(message),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Shot notification error:', result);
+      } else {
+        console.log(`Shot notification sent to userId: ${receiverId}`);
+      }
+    } catch (error) {
+      console.error('Error sending shot notification:', error);
+    }
+  }
+
   export async function sendMessageNotification(
     senderId: string,
     senderUsername: string,

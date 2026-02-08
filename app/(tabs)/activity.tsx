@@ -124,33 +124,32 @@ export default function ActivityScreen() {
     }, [user]);
 
   const findChatId = async (userId1: string, userId2: string) => {
-    // First check if either user has blocked the other
-    const { data: blockData } = await supabase
-      .from('UserBlock')
-      .select('id')
-      .or(`and(blocker_id.eq.${userId1},blocked_id.eq.${userId2}),and(blocker_id.eq.${userId2},blocked_id.eq.${userId1})`);
-    
+    // Parallelize block check and chat find
+    const [blockResult, chatResult] = await Promise.all([
+      supabase
+        .from('UserBlock')
+        .select('id')
+        .or(`and(blocker_id.eq.${userId1},blocked_id.eq.${userId2}),and(blocker_id.eq.${userId2},blocked_id.eq.${userId1})`),
+      supabase
+        .from('Chat')
+        .select('id')
+        .or(`and(user1_id.eq.${userId1},user2_id.eq.${userId2}),and(user1_id.eq.${userId2},user2_id.eq.${userId1})`)
+    ]);
+
+    const { data: blockData } = blockResult;
+    const { data: chatData, error: chatError } = chatResult;
+
     // If there's a block, don't return chat ID
     if (blockData && blockData.length > 0) {
       console.log('[Activity] Cannot access chat - user is blocked');
       return null;
     }
 
-    const { data, error } = await supabase
-      .from('Chat')
-      .select('id')
-      .or(`and(user1_id.eq.${userId1},user2_id.eq.${userId2}),and(user1_id.eq.${userId2},user2_id.eq.${userId1})`);
-    
-    if (error || !data?.length) return null;
-    return data[0].id;
+    if (chatError || !chatData?.length) return null;
+    return chatData[0].id;
   };
 
   const handleNotificationPress = async (item: any) => {
-    // Don't allow interaction with SHOT notifications if not premium
-    if (item.type === 'SHOT' && !isPremium) {
-      return; // Do nothing for free users on SHOT notifications
-    }
-
     // Mark as read first
     if (!item.read) {
       await markSingleAsRead(item.id);
@@ -158,7 +157,7 @@ export default function ActivityScreen() {
 
     // Then navigate based on type
     if (item.type === 'SHOT') {
-      router.push(`/user?user_id=${item.userId}`);
+      router.push('/feed');
     } else if (item.type === 'MATCH') {
       const chatId = await findChatId(user.id, item.userId);
       if (chatId) {
@@ -170,22 +169,24 @@ export default function ActivityScreen() {
     try {
       // Invalidate old cached data so it re-processes with fixed logic
       await notificationCache.invalidateNotifications(user.id);
-      
-      // Use notification cache for efficient loading
+
+      // Parallelize notifications and blocked users fetch
       console.log(`[Activity] Loading notifications for user: ${user.id}`);
-      const result = await notificationCache.getNotificationsWithSync(user.id);
-      
+      const [result, blockedResult] = await Promise.all([
+        notificationCache.getNotificationsWithSync(user.id),
+        supabase
+          .from('UserBlock')
+          .select('blocker_id, blocked_id')
+          .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`)
+      ]);
+
       console.log(`[Activity] Loaded ${result.notifications.length} notifications from ${result.source}`);
       if (result.hasNewNotifications) {
         console.log(`[Activity] Found ${result.newNotificationCount} new notifications`);
       }
 
       // Filter out notifications from blocked users
-      const { data: blockedUsers } = await supabase
-        .from('UserBlock')
-        .select('blocker_id, blocked_id')
-        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
-
+      const { data: blockedUsers } = blockedResult;
       const blockedUserIds = new Set(
         blockedUsers?.reduce((acc: string[], block) => {
           if (block.blocker_id === user.id) acc.push(block.blocked_id);
@@ -199,6 +200,18 @@ export default function ActivityScreen() {
       );
 
       console.log(`[Activity] Filtered out ${result.notifications.length - filteredNotifications.length} notifications from blocked users`);
+
+      // Parallelize profile fetching for filtered notifications
+      const userIds = filteredNotifications.map(notification => notification.userId);
+      const uniqueUserIds = [...new Set(userIds)];
+
+      const profiles: Record<string, string | null> = {};
+      await Promise.all(uniqueUserIds.map(async (userId) => {
+        const profile = await profileCache.getProfile(userId);
+        profiles[userId] = profile?.profilepicture || null;
+      }));
+
+      setUserProfiles(profiles);
       setNotifications(filteredNotifications);
     } catch (error) {
       console.error('[Activity] Error fetching notifications:', error);
@@ -208,9 +221,9 @@ export default function ActivityScreen() {
   const getNotificationContent = (type: any, username: any) => {
     switch (type) {
       case 'SHOT':
-        return isPremium 
-        ? `${username || 'Someone'} has shot their shot at you! 🎯`
-        : `Someone has shot their shot at you! 🎯`;
+        return isPremium
+        ? `${username || 'Someone'} fired a shot your way! 💘`
+        : `A shot was fired your way! 💘`;
       case 'MATCH':
         return `You matched with ${username || 'someone'}! 🎉`;
       default:
@@ -246,9 +259,9 @@ export default function ActivityScreen() {
     // Build display content based on type
     let displayContent = '';
     if (item.type === 'SHOT') {
-      displayContent = isPremium 
-        ? `${username} sent you a shot! 📸`
-        : `Someone sent you a shot! 📸`;
+      displayContent = isPremium
+        ? `${username} fired a shot your way! 💘`
+        : `A shot was fired your way! 💘`;
     } else if (item.type === 'MATCH') {
       displayContent = `You matched with ${username}! 💕`;
     } else {
@@ -291,27 +304,6 @@ export default function ActivityScreen() {
   )};
 
 
-  useEffect(() => {
-    const fetchUserProfiles = async () => {
-      const userIds = notifications.map(notification => notification.userId);
-      // Remove duplicates
-      const uniqueUserIds = [...new Set(userIds)];
-      
-      const profiles: Record<string, string | null> = {};
-      
-      // Use profileCache for consistent caching and cache-busting
-      await Promise.all(uniqueUserIds.map(async (userId) => {
-        const profile = await profileCache.getProfile(userId);
-        profiles[userId] = profile?.profilepicture || null;
-      }));
-
-      setUserProfiles(profiles);
-    };
-
-    if (notifications.length > 0) {
-      fetchUserProfiles();
-    }
-  }, [notifications]);
 
   return (
     <SafeAreaView className="flex-1 bg-white">

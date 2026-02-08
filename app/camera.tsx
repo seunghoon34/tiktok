@@ -449,15 +449,15 @@ const deleteUri = () =>{
 
         {/* Flash Overlay for Front Camera */}
         {facing === 'front' && flashMode == "on" && isRecording && (
-          <View 
+          <View
             style={{
               position: 'absolute',
               top: 0,
               left: 0,
               right: 0,
               bottom: 0,
-              backgroundColor: '#E8F0FF',
-              opacity: 0.5,
+              backgroundColor: '#FFFFFF',
+              opacity: 0.85,
               zIndex: 999
             }}
             pointerEvents="none"

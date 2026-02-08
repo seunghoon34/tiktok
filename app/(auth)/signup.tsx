@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import "../../global.css";
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -11,7 +11,8 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { signUp } = useAuth();
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const { signUp, signInWithGoogle } = useAuth();
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -22,10 +23,24 @@ export default function SignupScreen() {
     return password.length >= 6; // Minimum 6 characters
   };
 
+  const handleGoogleSignIn = async () => {
+    setError('');
+    setIsGoogleLoading(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (error: any) {
+      setError('Google sign in failed. Please try again.');
+      console.error('Google sign in error:', error);
+    } finally {
+      setIsGoogleLoading(false);
+    }
+  };
+
   const handleSignUp = async () => {
     try {
       setError('');
-      
+
       // Validate inputs
       if (!email || !password) {
         setError('Please fill in all fields');
@@ -59,18 +74,41 @@ export default function SignupScreen() {
   };
 
   return (
-    <View className="flex-1 items-center justify-center bg-white px-6">
-      <View className='w-full items-center'>
-        <Image
-          source={require('../../assets/images/s2icon.png')}
-          style={{ width: 100, height: 100, marginBottom: 32 }}
-        />
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <View className="flex-1 items-center justify-center bg-white px-6">
+        <View className='w-full items-center'>
+          <Image
+            source={require('../../assets/images/s2icon.png')}
+            style={{ width: 100, height: 100, marginBottom: 32 }}
+          />
 
         {error ? (
           <View className="w-full mb-4 p-3 bg-red-500/10 rounded-xl">
             <Text className="text-red-500 text-ios-body text-center">{error}</Text>
           </View>
         ) : null}
+
+        <TouchableOpacity
+          className={`w-full bg-white border-2 border-gray-300 h-button rounded-xl flex-row justify-center items-center mb-4 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
+          onPress={handleGoogleSignIn}
+          disabled={isGoogleLoading || isLoading}
+          activeOpacity={0.6}
+        >
+          {isGoogleLoading ? (
+            <ActivityIndicator color="#EA4335" />
+          ) : (
+            <>
+              <Text className="text-2xl mr-2">G</Text>
+              <Text className="text-gray-700 font-semibold text-ios-body">Continue with Google</Text>
+            </>
+          )}
+        </TouchableOpacity>
+
+        <View className="w-full flex-row items-center mb-4">
+          <View className="flex-1 h-px bg-gray-300" />
+          <Text className="mx-4 text-gray-500 text-ios-body">or</Text>
+          <View className="flex-1 h-px bg-gray-300" />
+        </View>
 
         <TextInput
           placeholder='Email'
@@ -115,8 +153,8 @@ export default function SignupScreen() {
             )}
           </TouchableOpacity>
 
-          <Link 
-            href="/(auth)" 
+          <Link
+            href="/(auth)"
             className='text-center text-ios-body text-ios-blue mt-6'
           >
             Already have an account? Log in here
@@ -124,5 +162,6 @@ export default function SignupScreen() {
         </View>
       </View>
     </View>
+    </TouchableWithoutFeedback>
   );
 }

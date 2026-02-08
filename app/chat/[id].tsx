@@ -27,7 +27,6 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
   const [otherUser, setOtherUser] = useState<any>(null);
-  const flatListRef = useRef<any>(null);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44); // Track input height
   const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
@@ -38,32 +37,33 @@ export default function ChatScreen() {
 
 
   const scrollViewRef = useRef<ScrollView>(null);
-
-  
-
-  
-
-  useEffect(() => {
-    // Use a small timeout to ensure the new content is rendered
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: false });
-    }, 0);
-  }, [messages]);
+  const isInitialMount = useRef(true);
 
   const formatMessageTime = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
-  
+
+  // Consolidated scroll effect - no timeouts needed
+  useEffect(() => {
+    if (messages.length > 0) {
+      // Instant scroll on initial load, animated for subsequent updates
+      const animated = !isInitialMount.current;
+      scrollViewRef.current?.scrollToEnd({ animated });
+      if (isInitialMount.current) {
+        isInitialMount.current = false;
+      }
+    }
+  }, [messages]);
 
   useEffect(() => {
     if (!id || !user) return;
-  
+
     // Mark messages as read when entering chat
     const markMessagesAsRead = async () => {
       await EnhancedChatService.markMessagesAsRead(id as string, user.id);
     };
-  
+
     markMessagesAsRead();
   }, [id, user]);
 
@@ -73,24 +73,11 @@ export default function ChatScreen() {
   }, [id]);
 
   useEffect(() => {
-    if (messages.length > 0) {
-      // Small delay to ensure render is complete
-      setTimeout(() => {
-        flatListRef.current?.scrollToEnd({ animated: false });
-      }, 300);
-    }
-  }, [messages]); // This will trigger whenever messages update
-
-  useEffect(() => {
     const keyboardWillShow = Keyboard.addListener(
       Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
       (e) => {
         setKeyboardHeight(e.endCoordinates.height);
-        // Fix: Use scrollViewRef instead of flatListRef
-        console.log(`[Chat] Keyboard shown, height: ${e.endCoordinates.height}, scrolling to end`);
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 100);
+        scrollViewRef.current?.scrollToEnd({ animated: true });
       }
     );
 
@@ -111,67 +98,78 @@ export default function ChatScreen() {
     if (!id || !user) return;
 
     const fetchMessages = async () => {
-      const { data: chatData } = await supabase
-        .from('Chat')
-        .select(`
-          user1:user1_id (id, username),
-          user2:user2_id (id, username),
-          created_at
-        `)
-        .eq('id', id)
-        .single();
+      // Parallelize all initial queries for faster loading
+      const [chatResult, messagesResult] = await Promise.all([
+        supabase
+          .from('Chat')
+          .select(`
+            user1:user1_id (id, username),
+            user2:user2_id (id, username),
+            created_at
+          `)
+          .eq('id', id)
+          .single(),
+        EnhancedChatService.loadMessagesWithSync(id as string, user.id)
+      ]);
+
+      const { data: chatData } = chatResult;
 
       if (chatData) {
         const user1 = Array.isArray(chatData.user1) ? chatData.user1[0] : chatData.user1;
         const user2 = Array.isArray(chatData.user2) ? chatData.user2[0] : chatData.user2;
         const other = user1?.id === user.id ? user2 : user1;
         setOtherUser(other);
-        
-        // Check if either user has blocked the other
+
+        // Parallelize block check, match check, and profile fetch
         if (other?.id) {
-          const { data: blockData } = await supabase
-            .from('UserBlock')
-            .select('id')
-            .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${other.id}),and(blocker_id.eq.${other.id},blocked_id.eq.${user.id})`);
-          
+          const [blockResult, matchResult, profileResult] = await Promise.all([
+            supabase
+              .from('UserBlock')
+              .select('id')
+              .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${other.id}),and(blocker_id.eq.${other.id},blocked_id.eq.${user.id})`),
+            supabase
+              .from('Match')
+              .select('created_at')
+              .or(`and(user1_id.eq.${user.id},user2_id.eq.${other.id}),and(user1_id.eq.${other.id},user2_id.eq.${user.id})`)
+              .single(),
+            profileCache.getProfile(other.id)
+          ]);
+
+          const { data: blockData } = blockResult;
           if (blockData && blockData.length > 0) {
             setIsBlocked(true);
             console.log('[Chat] User is blocked - messaging disabled');
           }
-        }
-        
-        // Check if there's a match and if it's expired
-        if (other?.id) {
-          const { data: matchData } = await supabase
-            .from('Match')
-            .select('created_at')
-            .or(`and(user1_id.eq.${user.id},user2_id.eq.${other.id}),and(user1_id.eq.${other.id},user2_id.eq.${user.id})`)
-            .single();
-          
+
+          const { data: matchData } = matchResult;
           if (matchData?.created_at) {
             setMatchCreatedAt(matchData.created_at);
-            
+
             // Check if 24 hours have passed
             const matchTime = new Date(matchData.created_at).getTime();
             const now = Date.now();
             const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
             const expired = hoursPassed >= 24;
-            
+
             setIsChatExpired(expired);
             console.log(`[Chat] Match age: ${hoursPassed.toFixed(1)}h, expired: ${expired}`);
+          }
+
+          // Set profile immediately (no extra render cycle)
+          if (profileResult) {
+            setOtherUserProfile(profileResult);
+            console.log('[Chat] Profile loaded in parallel');
           }
         }
       }
 
-      // Use enhanced chat service for smart loading
-      const result = await EnhancedChatService.loadMessagesWithSync(id as string, user.id);
-      
-      setMessages(result.messages);
-      
-      if (result.hasNewMessages) {
-        console.log(`[Chat] Loaded ${result.messages.length} total messages (${result.newMessageCount} new)`);
+      // Set messages from parallel load
+      setMessages(messagesResult.messages);
+
+      if (messagesResult.hasNewMessages) {
+        console.log(`[Chat] Loaded ${messagesResult.messages.length} total messages (${messagesResult.newMessageCount} new)`);
       } else {
-        console.log(`[Chat] Loaded ${result.messages.length} messages from cache (no new messages)`);
+        console.log(`[Chat] Loaded ${messagesResult.messages.length} messages from cache (no new messages)`);
       }
     };
 
@@ -199,23 +197,18 @@ export default function ChatScreen() {
         // Optimize: Use payload data directly instead of fetching again
         const newMessage = {
           ...payload.new,
-          sender: payload.new.sender_id === user.id ? 
-            { id: user.id, username: user.username } : 
+          sender: payload.new.sender_id === user.id ?
+            { id: user.id, username: user.username } :
             otherUser,
           read: payload.new.read,
           created_at: payload.new.created_at
         };
 
         setMessages(current => [...current, newMessage]);
-        
+
         // Update cache with new message
         await chatCache.addMessage(id as string, newMessage as CachedMessage);
-        
-        // Ensure scroll happens after message is rendered
-        setTimeout(() => {
-          scrollViewRef.current?.scrollToEnd({ animated: true });
-        }, 150);
-        
+
         console.log(`[Chat] Real-time message added and cached`);
       }
     )
@@ -227,28 +220,15 @@ export default function ChatScreen() {
         table: 'Message',
         filter: `chat_id=eq.${id}`
       },
-      async (payload) => {
-        // Fetch the complete updated message data
-        const { data: messageData } = await supabase
-          .from('Message')
-          .select(`
-            *,
-            sender:sender_id (id, username),
-            read,
-            created_at
-          `)
-          .eq('id', payload.new.id)
-          .single();
-    
-        if (messageData) {
-          setMessages(current => 
-            current.map(msg => 
-              msg.id === messageData.id 
-                ? messageData  // Replace with complete updated message
-                : msg
-            )
-          );
-        }
+      (payload) => {
+        // Use payload data directly - no database fetch needed
+        setMessages(current =>
+          current.map(msg =>
+            msg.id === payload.new.id
+              ? { ...msg, ...payload.new }  // Merge update into existing message
+              : msg
+          )
+        );
       }
     )
     .subscribe();
@@ -260,13 +240,13 @@ export default function ChatScreen() {
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
-    
+
     // Check if user is blocked
     if (isBlocked) {
       console.log('[Chat] Cannot send message - user is blocked');
       return;
     }
-    
+
     // Check if chat has expired
     if (isChatExpired) {
       console.log('[Chat] Cannot send message - chat has expired');
@@ -289,35 +269,8 @@ export default function ChatScreen() {
     // Notification is handled automatically by AuthProvider's real-time subscription
     // No need to send it here to avoid duplicates
 
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
-    }, 0);
-
     setNewMessage('');
   };
-
-  
-
-  useEffect(() => {
-    if (!otherUser) return;
-
-    const getOtherUserProfile = async () => {
-      try {
-        console.log('[ChatScreen] Loading profile for other user:', otherUser.id);
-        const cachedProfile = await profileCache.getProfile(otherUser.id);
-        
-        if (cachedProfile) {
-          console.log('[ChatScreen] Profile loaded (cached or fresh)');
-          setOtherUserProfile(cachedProfile);
-        } else {
-          console.log('[ChatScreen] No profile data available for user:', otherUser.id);
-        }
-      } catch (error) {
-        console.error('[ChatScreen] Exception in getOtherUserProfile:', error);
-      }
-    };
-    getOtherUserProfile();
-  }, [otherUser]);
 
   const checkUserVideos = async () => {
     if (!otherUser?.id) return; // Add this check
@@ -386,67 +339,77 @@ export default function ChatScreen() {
   className="flex-1"
   contentContainerStyle={{ paddingBottom: 20 }}
 >
-  {messages.map((item) => (
-    <View 
+  {messages.map((item, index) => {
+    // Only show avatar if it's the first message or if the previous message was from a different sender
+    const showAvatar = item.sender_id !== user.id &&
+      (index === 0 || messages[index - 1].sender_id !== item.sender_id);
+
+    return (
+    <View
       key={item.id}
       className={`m-2 gap-3 ${item.sender_id === user.id ? 'self-end flex-row-reverse' : 'self-start flex-row'}`}
     >
       {/* Avatar for other user */}
       {item.sender_id !== user.id && (
-  hasVideos ? (
-    <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
-      <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
-        <View className="p-0.5 bg-white rounded-full">
-          {otherUserProfile?.profilepicture ? (
-            <Image
-              source={{ uri: otherUserProfile.profilepicture }}
-              className="w-avatar h-avatar rounded-full"
-              onLoad={() => {}}
-              onError={(error) => {
-                console.error('[ChatScreen] Image component failed to load:', error.nativeEvent);
-                console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
-              }}
-            />
-          ) : (
-            <View className="mr-2">
-              <Ionicons
-                name="person-circle-outline"
-                size={40}
-                color="gray"
+  showAvatar ? (
+    hasVideos ? (
+      <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
+        <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
+          <View className="p-0.5 bg-white rounded-full">
+            {otherUserProfile?.profilepicture ? (
+              <Image
+                source={{ uri: otherUserProfile.profilepicture }}
+                className="w-avatar h-avatar rounded-full"
+                onLoad={() => {}}
+                onError={(error) => {
+                  console.error('[ChatScreen] Image component failed to load:', error.nativeEvent);
+                  console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
+                }}
               />
-            </View>
-          )}
+            ) : (
+              <View className="mr-2">
+                <Ionicons
+                  name="person-circle-outline"
+                  size={40}
+                  color="gray"
+                />
+              </View>
+            )}
+          </View>
         </View>
-      </View>
-    </TouchableOpacity>
-  ) : (
-    <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
-      {otherUserProfile?.profilepicture ? (
-        <Image
-          source={{ uri: otherUserProfile.profilepicture }}
-          className="w-avatar h-avatar rounded-full"
-          onLoad={() => {}}
-          onError={(error) => {
-            console.error('[ChatScreen] Image component failed to load (with stories):', error.nativeEvent);
-            console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
-          }}
-        />
-      ) : (
-        <View className="mr-2">
-          <Ionicons
-            name="person-circle-outline"
-            size={40}
-            color="gray"
+      </TouchableOpacity>
+    ) : (
+      <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
+        {otherUserProfile?.profilepicture ? (
+          <Image
+            source={{ uri: otherUserProfile.profilepicture }}
+            className="w-avatar h-avatar rounded-full"
+            onLoad={() => {}}
+            onError={(error) => {
+              console.error('[ChatScreen] Image component failed to load (with stories):', error.nativeEvent);
+              console.error('[ChatScreen] Failed image URL:', otherUserProfile.profilepicture);
+            }}
           />
-        </View>
-      )}
-    </TouchableOpacity>
+        ) : (
+          <View className="mr-2">
+            <Ionicons
+              name="person-circle-outline"
+              size={40}
+              color="gray"
+            />
+          </View>
+        )}
+      </TouchableOpacity>
+    )
+  ) : (
+    // Empty spacer to maintain alignment for consecutive messages
+    <View className="w-avatar" />
   )
 )}
 
       {/* Message bubble */}
       <View className="flex-1">
-        <View 
+        <View
           className={`px-3 py-2 rounded-2xl ${item.sender_id === user.id ? 'self-end' : 'self-start'}`}
           style={[
             { maxWidth: '75%' },
@@ -457,7 +420,7 @@ export default function ChatScreen() {
             {item.content}
           </Text>
         </View>
-        
+
         {/* Time and Read status - directly under bubble */}
         <View className={`mt-0.5 ${item.sender_id === user.id ? 'items-end' : 'items-start'}`}>
           <Text className="text-gray-500 text-xs">
@@ -466,7 +429,8 @@ export default function ChatScreen() {
         </View>
       </View>
     </View>
-  ))}
+    );
+  })}
 </ScrollView>
             
             <View className="px-4 py-4 pb-8 border-t border-gray-200 flex-row items-center bg-white">
@@ -501,13 +465,10 @@ export default function ChatScreen() {
                     const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24)); // 24 for padding
                     const previousHeight = inputHeight;
                     setInputHeight(newHeight);
-                    
+
                     // Force scroll when input height changes (expanding or shrinking)
                     if (newHeight !== previousHeight) {
-                      console.log(`[Chat] Input height changed: ${previousHeight} → ${newHeight}, scrolling to end`);
-                      setTimeout(() => {
-                        scrollViewRef.current?.scrollToEnd({ animated: true });
-                      }, 50);
+                      scrollViewRef.current?.scrollToEnd({ animated: true });
                     }
                   }}
                 />

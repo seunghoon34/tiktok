@@ -15,18 +15,6 @@ export interface CachedFeedItem {
     username: string;
     id: string;
   };
-  TextOverlay?: Array<{
-    text: string;
-    position_x: number;
-    position_y: number;
-    scale: number;
-    rotation: number;
-    font_size: number;
-    media_width?: number;
-    media_height?: number;
-    screen_width?: number;
-    screen_height?: number;
-  }>;
 }
 
 export interface CachedFeed {
@@ -148,49 +136,39 @@ export class FeedCacheService {
       }
       
       // Filter out blocked users
-      let items = (data || []).filter((item: any) => 
+      let items = (data || []).filter((item: any) =>
         !excludeUserIds.includes(item.user_id)
       );
-      
-      // Fetch additional data (User, TextOverlay) for each video
-      const enrichedItems = await Promise.all(
-        items.map(async (item: any) => {
-          const { data: fullData, error: fetchError } = await supabase
-            .from('Video')
-            .select(`
-              *,
-              User(username, id),
-              TextOverlay(
-                text,
-                position_x,
-                position_y,
-                scale,
-                rotation,
-                font_size,
-                media_width,
-                media_height,
-                screen_width,
-                screen_height
-              )
-            `)
-            .eq('id', item.id)
-            .single();
-          
-          if (fetchError || !fullData) {
-            console.error(`[FeedCache] Error fetching full data for video ${item.id}:`, fetchError);
-            return null;
-          }
-          
-          return {
-            ...fullData,
-            type: fullData.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
-            distance_km: item.distance_km
-          };
-        })
-      );
-      
-      // Filter out null items
-      const validItems = enrichedItems.filter(item => item !== null) as CachedFeedItem[];
+
+      if (items.length === 0) {
+        return {
+          items: [],
+          hasNewItems: false,
+          newItemCount: 0,
+          source: 'fresh'
+        };
+      }
+
+      // Fetch all video data in a single query instead of N+1
+      const videoIds = items.map((item: any) => item.id);
+      const distanceMap = new Map(items.map((item: any) => [item.id, item.distance_km]));
+
+      const { data: fullData, error: fetchError } = await supabase
+        .from('Video')
+        .select('*, User(username, id)')
+        .in('id', videoIds);
+
+      if (fetchError) {
+        console.error('[FeedCache] Error fetching full video data:', fetchError);
+        throw fetchError;
+      }
+
+      // Sort by distance (matching original RPC order)
+      const validItems = (fullData || []).map(item => ({
+        ...item,
+        type: item.uri.toLowerCase().endsWith('.mov') ? 'video' : 'picture',
+        distance_km: distanceMap.get(item.id)
+      })).sort((a, b) => (a.distance_km || 0) - (b.distance_km || 0)) as CachedFeedItem[];
       
       console.log(`[FeedCache] Found ${validItems.length} nearby posts`);
       
@@ -299,22 +277,7 @@ export class FeedCacheService {
     try {
       const { data, error } = await supabase
         .from('Video')
-        .select(`
-          *,
-          User(username, id),
-          TextOverlay(
-            text,
-            position_x,
-            position_y,
-            scale,
-            rotation,
-            font_size,
-            media_width,
-            media_height,
-            screen_width,
-            screen_height
-          )
-        `)
+        .select('*, User(username, id)')
         .not(excludeUserIds.length > 0 ? 'user_id' : 'id',
              excludeUserIds.length > 0 ? 'in' : 'eq',
              excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : userId)
@@ -339,22 +302,7 @@ export class FeedCacheService {
     try {
       const { data, error } = await supabase
         .from('Video')
-        .select(`
-          *,
-          User(username, id),
-          TextOverlay(
-            text,
-            position_x,
-            position_y,
-            scale,
-            rotation,
-            font_size,
-            media_width,
-            media_height,
-            screen_width,
-            screen_height
-          )
-        `)
+        .select('*, User(username, id)')
         .not(excludeUserIds.length > 0 ? 'user_id' : 'id',
              excludeUserIds.length > 0 ? 'in' : 'eq',
              excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : userId)
@@ -489,22 +437,7 @@ export class FeedCacheService {
     try {
       const { data, error } = await supabase
         .from('Video')
-        .select(`
-          *,
-          User(username, id),
-          TextOverlay(
-            text,
-            position_x,
-            position_y,
-            scale,
-            rotation,
-            font_size,
-            media_width,
-            media_height,
-            screen_width,
-            screen_height
-          )
-        `)
+        .select('*, User(username, id)')
         .eq('user_id', targetUserId)
         .gt('expired_at', new Date().toISOString())
         .order('created_at', { ascending: false });

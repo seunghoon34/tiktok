@@ -17,8 +17,10 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.seunghoon34.shoot",
       "infoPlist": {
-    "UIBackgroundModes": ["remote-notification"]
-  }
+        "UIBackgroundModes": [
+          "remote-notification"
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -53,10 +55,8 @@
           "icon": "./assets/images/s2icon.png",
           "color": "#ffffff",
           "enableBackgroundRemoteNotifications": true
-         
         }
       ],
-      
       [
         "expo-splash-screen",
         {
@@ -71,10 +71,9 @@
         {
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
-      ]
-
+      ],
+      "expo-web-browser"
     ],
-    
     "experiments": {
       "typedRoutes": true
     },

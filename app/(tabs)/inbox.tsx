@@ -82,34 +82,29 @@ const [isExpired, setIsExpired] = useState(false);
 
  useEffect(() => {
   if (!otherUser?.id || !user?.id) return;
-  
+
   const fetchData = async () => {
-    // Check match expiration
     try {
-      const { data: matchData } = await supabase
-        .from('Match')
-        .select('created_at')
-        .or(`and(user1_id.eq.${user.id},user2_id.eq.${otherUser.id}),and(user1_id.eq.${otherUser.id},user2_id.eq.${user.id})`)
-        .single();
-      
+      // Parallelize match check and profile fetch
+      const [matchResult, profile] = await Promise.all([
+        supabase
+          .from('Match')
+          .select('created_at')
+          .or(`and(user1_id.eq.${user.id},user2_id.eq.${otherUser.id}),and(user1_id.eq.${otherUser.id},user2_id.eq.${user.id})`)
+          .single(),
+        profileCache.getProfile(otherUser.id)
+      ]);
+
+      // Handle match expiration
+      const { data: matchData } = matchResult;
       if (matchData?.created_at) {
         const matchTime = new Date(matchData.created_at).getTime();
         const now = Date.now();
         const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
         setIsExpired(hoursPassed >= 24);
       }
-    } catch (error) {
-      console.error('[InboxScreen] Error checking match expiration:', error);
-    }
-    
-    // Get profile
-    const getOtherUserProfile = async () => {
-    try {
-      console.log('[InboxScreen] Fetching profile for other user:', otherUser.id);
-      
-      // Use profileCache instead of manual fetching - it handles URLs correctly
-      const profile = await profileCache.getProfile(otherUser.id);
-      
+
+      // Handle profile
       if (profile) {
         console.log('[InboxScreen] Profile loaded:', { userId: profile.user_id, hasPicture: !!profile.profilepicture });
         setOtherUserProfile({
@@ -120,15 +115,12 @@ const [isExpired, setIsExpired] = useState(false);
         console.log('[InboxScreen] No profile found for user:', otherUser.id);
       }
     } catch (error) {
-      console.error('[InboxScreen] Error loading profile:', error);
+      console.error('[InboxScreen] Error fetching data:', error);
     } finally {
       setIsLoadingProfile(false);
     }
   };
-  
-  getOtherUserProfile();
-  };
-  
+
   fetchData();
 }, [otherUser?.id, user?.id]); // Re-fetch if user IDs change
 
@@ -216,48 +208,53 @@ export default function InboxScreen() {
 
  const fetchChats = async () => {
    try {
-     // First, get list of blocked users
-     const { data: blockedUsers, error: blockError } = await supabase
-       .from('UserBlock')
-       .select('blocker_id, blocked_id')
-       .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
-
-     if (blockError) throw blockError;
-
-     // Create array of user IDs to exclude
-     const excludeUserIds = blockedUsers?.reduce((acc: string[], block) => {
-       if (block.blocker_id === user.id) acc.push(block.blocked_id);
-       if (block.blocked_id === user.id) acc.push(block.blocker_id);
-       return acc;
-     }, []);
-
-     // Get chats excluding blocked users
-     const { data, error } = await supabase
-       .from('Chat')
-       .select(`
-         id, 
-         created_at,
-         user1:user1_id (
-           id, 
-           username,
-           UserProfile (profilepicture)
-         ),
-         user2:user2_id (
+     // Parallelize blocked users and chats fetch
+     const [blockedResult, chatsResult] = await Promise.all([
+       supabase
+         .from('UserBlock')
+         .select('blocker_id, blocked_id')
+         .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`),
+       supabase
+         .from('Chat')
+         .select(`
            id,
-           username,
-           UserProfile (profilepicture)
-         )
-       `)
-       .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
-       .not(excludeUserIds.length > 0 ? 'user1_id' : 'id', 
-            excludeUserIds.length > 0 ? 'in' : 'eq', 
-            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
-       .not(excludeUserIds.length > 0 ? 'user2_id' : 'id', 
-            excludeUserIds.length > 0 ? 'in' : 'eq', 
-            excludeUserIds.length > 0 ? `(${excludeUserIds.join(',')})` : user.id)
-       .limit(10);
+           created_at,
+           user1:user1_id (
+             id,
+             username,
+             UserProfile (profilepicture)
+           ),
+           user2:user2_id (
+             id,
+             username,
+             UserProfile (profilepicture)
+           )
+         `)
+         .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`)
+         .limit(10)
+     ]);
 
-     if (error) throw error;
+     if (blockedResult.error) throw blockedResult.error;
+     if (chatsResult.error) throw chatsResult.error;
+
+     const blockedUsers = blockedResult.data;
+     const allChats = chatsResult.data;
+
+     // Create set of blocked user IDs for efficient filtering
+     const excludeUserIds = new Set(
+       blockedUsers?.reduce((acc: string[], block) => {
+         if (block.blocker_id === user.id) acc.push(block.blocked_id);
+         if (block.blocked_id === user.id) acc.push(block.blocker_id);
+         return acc;
+       }, []) || []
+     );
+
+     // Filter out chats with blocked users
+     const data = allChats?.filter(chat => {
+       const user1 = Array.isArray(chat.user1) ? chat.user1[0] : chat.user1;
+       const user2 = Array.isArray(chat.user2) ? chat.user2[0] : chat.user2;
+       return !excludeUserIds.has(user1?.id) && !excludeUserIds.has(user2?.id);
+     });
 
      // Optimized: Get all last messages and unread counts in 2 queries instead of N+1
      const chatIds = data.map(chat => chat.id);

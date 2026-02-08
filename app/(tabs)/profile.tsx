@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Image } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,6 +27,8 @@ export default function ProfileScreen() {
  const [hasVideos, setHasVideos] = useState(false);
  const modalRef = useRef<Modalize>(null);
  const [modalView, setModalView] = useState<ModalView>('menu');
+ const [imageLoadFailed, setImageLoadFailed] = useState(false);
+ const imageErrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
 
 
@@ -97,7 +99,7 @@ useFocusEffect(
         const { data } = supabase.storage
           .from('profile_images')
           .getPublicUrl(profile.profilepicture);
-        
+
         if (data?.publicUrl) {
           const imageUrl = data.publicUrl; // Remove dynamic timestamp
           console.log('[ProfileScreen] Setting image URL:', imageUrl);
@@ -114,6 +116,13 @@ useFocusEffect(
     }
   };
   getAvatarUrl();
+
+  // Cleanup timeout on unmount
+  return () => {
+    if (imageErrorTimeoutRef.current) {
+      clearTimeout(imageErrorTimeoutRef.current);
+    }
+  };
 }, [profile?.profilepicture]);
 
  useFocusEffect(
@@ -150,7 +159,10 @@ useFocusEffect(
           <Text className="text-ios-title2">Profile</Text>
           <TouchableOpacity 
             className="w-10 items-end" 
-            onPress={signOut}
+            onPress={() => Alert.alert('Log Out', 'Are you sure you want to log out?', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Log Out', style: 'destructive', onPress: signOut },
+            ])}
             activeOpacity={0.6}
           >
             <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
@@ -165,17 +177,26 @@ useFocusEffect(
   <TouchableOpacity onPress={() => router.push('/stories')} activeOpacity={0.6}>
       <View className="p-0.5 rounded-full bg-red-500">
       <View className="p-0.5 bg-white rounded-full">
-        <Image 
+        <Image
           source={{ uri: imageUrl ?? undefined }}
           className="h-avatar-xl w-avatar-xl rounded-full"
-          onLoad={() => console.log('[ProfileScreen] Image component loaded successfully')}
-          onError={(error) => {
-            // Suppress errors for null/undefined URLs since we handle them with fallback UI
-            if (!imageUrl) return;
-            if (__DEV__) {
-              console.error('[ProfileScreen] Image component failed to load:', error.nativeEvent);
-              console.error('[ProfileScreen] Failed image URL:', imageUrl);
+          onLoad={() => {
+            setImageLoadFailed(false);
+            if (imageErrorTimeoutRef.current) {
+              clearTimeout(imageErrorTimeoutRef.current);
+              imageErrorTimeoutRef.current = null;
             }
+          }}
+          onError={(error) => {
+            if (!imageUrl) return;
+            setImageLoadFailed(true);
+            // Only log if image is still failed after 3 seconds (meaning it didn't auto-retry successfully)
+            imageErrorTimeoutRef.current = setTimeout(() => {
+              if (__DEV__) {
+                console.error('[ProfileScreen] Image permanently failed to load:', error.nativeEvent);
+                console.error('[ProfileScreen] Failed image URL:', imageUrl);
+              }
+            }, 3000);
           }}
         />
       </View>
@@ -184,17 +205,26 @@ useFocusEffect(
 ) : (
   <View>
     {profile?.profilepicture ? (
-               <Image 
+               <Image
           source={{ uri: imageUrl ?? undefined }}
           className="h-avatar-xl w-avatar-xl rounded-full"
-          onLoad={() => console.log('[ProfileScreen] Image component loaded successfully (with stories)')}
-          onError={(error) => {
-            // Suppress errors for null/undefined URLs since we handle them with fallback UI
-            if (!imageUrl) return;
-            if (__DEV__) {
-              console.error('[ProfileScreen] Image component failed to load (with stories):', error.nativeEvent);
-              console.error('[ProfileScreen] Failed image URL:', imageUrl);
+          onLoad={() => {
+            setImageLoadFailed(false);
+            if (imageErrorTimeoutRef.current) {
+              clearTimeout(imageErrorTimeoutRef.current);
+              imageErrorTimeoutRef.current = null;
             }
+          }}
+          onError={(error) => {
+            if (!imageUrl) return;
+            setImageLoadFailed(true);
+            // Only log if image is still failed after 3 seconds (meaning it didn't auto-retry successfully)
+            imageErrorTimeoutRef.current = setTimeout(() => {
+              if (__DEV__) {
+                console.error('[ProfileScreen] Image permanently failed to load:', error.nativeEvent);
+                console.error('[ProfileScreen] Failed image URL:', imageUrl);
+              }
+            }, 3000);
           }}
         />
     ) : (
