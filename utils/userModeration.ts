@@ -34,6 +34,14 @@ export async function blockUser(blockerId: string, blockedId: string) {
             .or(`user1_id.eq.${blockerId},user2_id.eq.${blockerId}`)
             .or(`user1_id.eq.${blockedId},user2_id.eq.${blockedId}`);
 
+        // Delete any existing chats between these users
+        await supabase
+            .from('Chat')
+            .delete()
+            .or(`and(user1_id.eq.${blockerId},user2_id.eq.${blockedId}),and(user1_id.eq.${blockedId},user2_id.eq.${blockerId})`);
+
+        console.log('[UserModeration] Deleted matches and chats after blocking');
+
         // Invalidate blocked users cache
         await invalidateBlockedUsersCache(blockerId);
         console.log('[UserModeration] Cache invalidated after blocking user');

@@ -34,6 +34,7 @@ export default function ChatScreen() {
   const [hasVideos, setHasVideos] = useState<boolean>(false);
   const [isChatExpired, setIsChatExpired] = useState<boolean>(false);
   const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
+  const [isBlocked, setIsBlocked] = useState<boolean>(false);
 
 
   const scrollViewRef = useRef<ScrollView>(null);
@@ -125,6 +126,19 @@ export default function ChatScreen() {
         const user2 = Array.isArray(chatData.user2) ? chatData.user2[0] : chatData.user2;
         const other = user1?.id === user.id ? user2 : user1;
         setOtherUser(other);
+        
+        // Check if either user has blocked the other
+        if (other?.id) {
+          const { data: blockData } = await supabase
+            .from('UserBlock')
+            .select('id')
+            .or(`and(blocker_id.eq.${user.id},blocked_id.eq.${other.id}),and(blocker_id.eq.${other.id},blocked_id.eq.${user.id})`);
+          
+          if (blockData && blockData.length > 0) {
+            setIsBlocked(true);
+            console.log('[Chat] User is blocked - messaging disabled');
+          }
+        }
         
         // Check if there's a match and if it's expired
         if (other?.id) {
@@ -246,6 +260,12 @@ export default function ChatScreen() {
 
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
+    
+    // Check if user is blocked
+    if (isBlocked) {
+      console.log('[Chat] Cannot send message - user is blocked');
+      return;
+    }
     
     // Check if chat has expired
     if (isChatExpired) {
@@ -450,7 +470,13 @@ export default function ChatScreen() {
 </ScrollView>
             
             <View className="px-4 py-4 pb-8 border-t border-gray-200 flex-row items-center bg-white">
-            {isChatExpired ? (
+            {isBlocked ? (
+              <View className="flex-1 bg-gray-200 px-4 py-3 rounded-[20px] items-center justify-center">
+                <Text className="text-gray-500 font-medium">
+                  🚫 This user is blocked
+                </Text>
+              </View>
+            ) : isChatExpired ? (
               <View className="flex-1 bg-gray-200 px-4 py-3 rounded-[20px] items-center justify-center">
                 <Text className="text-gray-500 font-medium">
                   💬 This chat has expired (24h)

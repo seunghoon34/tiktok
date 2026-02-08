@@ -84,9 +84,10 @@ export class ProfileCacheService {
           .getPublicUrl(data.profilepicture);
         
         if (!storageError && publicData?.publicUrl) {
-          // Use static URL for proper caching
-          // Cache invalidation is handled by invalidateProfile() when profile updates
-          profilePictureUrl = publicData.publicUrl;
+          // Add cache-busting timestamp to force image reload when profile picture changes
+          // This ensures browsers don't serve stale cached images
+          const cacheBuster = `?t=${Date.now()}`;
+          profilePictureUrl = publicData.publicUrl + cacheBuster;
         }
       }
 

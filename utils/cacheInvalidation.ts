@@ -24,10 +24,13 @@ export async function invalidateUserCache(userId: string): Promise<void> {
   // Invalidate from hybrid cache (memory + disk)
   await Promise.all(keysToInvalidate.map(key => hybridCache.delete(key)));
   
-  // Invalidate from profileCache (used by mediaItem)
+  // Invalidate from profileCache (used by mediaItem, inbox, chat, etc.)
   await profileCache.invalidateProfile(userId);
   
-  console.log(`[CacheInvalidation] Invalidated ${keysToInvalidate.length} cache keys + profileCache`);
+  // Force clear the cache entry from the underlying cache service too
+  await cache.delete(`cache:profiles:${userId}`);
+  
+  console.log(`[CacheInvalidation] Invalidated ${keysToInvalidate.length} cache keys + profileCache + underlying cache`);
 }
 
 /**
@@ -42,11 +45,14 @@ export async function invalidateProfilePictureCache(userId: string): Promise<voi
   await hybridCache.delete(`profile_pic:${userId}`);
   await profileCache.invalidateProfile(userId);
   
+  // Force clear from underlying cache service
+  await cache.delete(`cache:profiles:${userId}`);
+  
   // Also clear any feed cache that might contain this user's posts
   const feedKeys = ['cache:feed_data', 'feed_cache'];
   await Promise.all(feedKeys.map(key => cache.delete(key)));
   
-  console.log('[CacheInvalidation] Profile picture cache invalidated');
+  console.log('[CacheInvalidation] Profile picture cache invalidated completely');
 }
 
 /**

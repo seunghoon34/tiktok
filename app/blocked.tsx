@@ -6,29 +6,37 @@ import { Ionicons } from '@expo/vector-icons';
 import Toast from 'react-native-toast-message';
 import Header from "@/components/header";
 import { invalidateBlockedUsersCache } from "@/utils/cacheInvalidation";
+import { profileCache, CachedProfile } from "@/utils/profileCache";
 
-const BlockedUserItem = ({ blockedUser, onUnblock }) => {
-  const [userProfile, setUserProfile] = useState(null);
+interface BlockedUser {
+  id: string;
+  blocker_id: string;
+  blocked_id: string;
+  created_at: string;
+}
+
+interface BlockedUserItemProps {
+  blockedUser: BlockedUser;
+  onUnblock: (user: BlockedUser) => void;
+}
+
+const BlockedUserItem = ({ blockedUser, onUnblock }: BlockedUserItemProps) => {
+  const [userProfile, setUserProfile] = useState<CachedProfile | null>(null);
 
   useEffect(() => {
     const getUserProfile = async () => {
-      const { data, error } = await supabase
-        .from('UserProfile')
-        .select(`
-          *,
-          user:User (
-            username
-          )
-        `)
-        .eq('user_id', blockedUser.blocked_id)
-        .single();
-
-      if (data) {
-        const publicUrl = supabase.storage
-          .from('avatars')
-          .getPublicUrl(data.profilepicture).data.publicUrl;
+      try {
+        console.log('[BlockedScreen] Loading profile for blocked user:', blockedUser.blocked_id);
+        const profile = await profileCache.getProfile(blockedUser.blocked_id);
         
-        setUserProfile({...data, profilepicture: publicUrl});
+        if (profile) {
+          console.log('[BlockedScreen] Profile loaded:', { userId: profile.user_id, hasPicture: !!profile.profilepicture });
+          setUserProfile(profile);
+        } else {
+          console.log('[BlockedScreen] No profile found for user:', blockedUser.blocked_id);
+        }
+      } catch (error) {
+        console.error('[BlockedScreen] Error loading profile:', error);
       }
     };
     getUserProfile();
@@ -41,6 +49,11 @@ const BlockedUserItem = ({ blockedUser, onUnblock }) => {
           <Image 
             source={{ uri: userProfile.profilepicture }}
             className="w-10 h-10 rounded-full"
+            onLoad={() => console.log('[BlockedScreen] Image loaded successfully')}
+            onError={(error) => {
+              console.error('[BlockedScreen] Image failed to load:', error.nativeEvent);
+              console.error('[BlockedScreen] Failed image URL:', userProfile.profilepicture);
+            }}
           />
         ) : (
           <Ionicons 
@@ -50,7 +63,7 @@ const BlockedUserItem = ({ blockedUser, onUnblock }) => {
           />
         )}
         <Text className="text-lg font-semibold ml-3">
-          {userProfile?.user?.username}
+          {userProfile?.username}
         </Text>
       </View>
       
@@ -66,7 +79,7 @@ const BlockedUserItem = ({ blockedUser, onUnblock }) => {
 
 export default function BlockedScreen() {
   const { user } = useAuth();
-  const [blockedUsers, setBlockedUsers] = useState([]);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
 
   const fetchBlockedUsers = async () => {
     try {
@@ -76,13 +89,13 @@ export default function BlockedScreen() {
         .eq('blocker_id', user.id);
 
       if (error) throw error;
-      setBlockedUsers(data);
+      setBlockedUsers(data || []);
     } catch (error) {
       console.error('Error fetching blocked users:', error);
     }
   };
 
-  const handleUnblock = async (blockedUser) => {
+  const handleUnblock = async (blockedUser: BlockedUser) => {
     try {
       const { error } = await supabase
         .from('UserBlock')

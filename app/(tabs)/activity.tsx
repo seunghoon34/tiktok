@@ -10,7 +10,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { notificationCache } from '@/utils/notificationCache';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useRouter } from 'expo-router';
-import { hybridCache } from '@/utils/memoryCache';
+import { profileCache } from '@/utils/profileCache';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -124,6 +124,18 @@ export default function ActivityScreen() {
     }, [user]);
 
   const findChatId = async (userId1: string, userId2: string) => {
+    // First check if either user has blocked the other
+    const { data: blockData } = await supabase
+      .from('UserBlock')
+      .select('id')
+      .or(`and(blocker_id.eq.${userId1},blocked_id.eq.${userId2}),and(blocker_id.eq.${userId2},blocked_id.eq.${userId1})`);
+    
+    // If there's a block, don't return chat ID
+    if (blockData && blockData.length > 0) {
+      console.log('[Activity] Cannot access chat - user is blocked');
+      return null;
+    }
+
     const { data, error } = await supabase
       .from('Chat')
       .select('id')
@@ -168,7 +180,26 @@ export default function ActivityScreen() {
         console.log(`[Activity] Found ${result.newNotificationCount} new notifications`);
       }
 
-      setNotifications(result.notifications);
+      // Filter out notifications from blocked users
+      const { data: blockedUsers } = await supabase
+        .from('UserBlock')
+        .select('blocker_id, blocked_id')
+        .or(`blocker_id.eq.${user.id},blocked_id.eq.${user.id}`);
+
+      const blockedUserIds = new Set(
+        blockedUsers?.reduce((acc: string[], block) => {
+          if (block.blocker_id === user.id) acc.push(block.blocked_id);
+          if (block.blocked_id === user.id) acc.push(block.blocker_id);
+          return acc;
+        }, []) || []
+      );
+
+      const filteredNotifications = result.notifications.filter(
+        notif => !blockedUserIds.has(notif.userId)
+      );
+
+      console.log(`[Activity] Filtered out ${result.notifications.length - filteredNotifications.length} notifications from blocked users`);
+      setNotifications(filteredNotifications);
     } catch (error) {
       console.error('[Activity] Error fetching notifications:', error);
     }
@@ -268,42 +299,10 @@ export default function ActivityScreen() {
       
       const profiles: Record<string, string | null> = {};
       
+      // Use profileCache for consistent caching and cache-busting
       await Promise.all(uniqueUserIds.map(async (userId) => {
-        // Check cache first
-        const cacheKey = `profile_pic:${userId}`;
-        const cached = await hybridCache.get<string>(cacheKey);
-        
-        if (cached) {
-          profiles[userId] = cached;
-          return;
-        }
-        
-        const { data } = await supabase
-          .from('UserProfile')
-          .select(`
-            *,
-            user:User (
-              username
-            )
-          `)
-          .eq('user_id', userId)
-          .single();
-
-        if (data && data.profilepicture) {
-          const { data: publicData } = supabase.storage
-            .from('profile_images')
-            .getPublicUrl(data.profilepicture);
-          
-          const imageUrl = publicData?.publicUrl || null;
-          profiles[userId] = imageUrl;
-          
-          // Cache for 6 hours
-          if (imageUrl) {
-            await hybridCache.set(cacheKey, imageUrl, 6 * 60 * 60 * 1000);
-          }
-        } else {
-          profiles[userId] = null;
-        }
+        const profile = await profileCache.getProfile(userId);
+        profiles[userId] = profile?.profilepicture || null;
       }));
 
       setUserProfiles(profiles);
