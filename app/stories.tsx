@@ -117,8 +117,8 @@ export default function Mystoryscreen() {
     const fileExt = stories[currentIndex]?.uri.split('.').pop()?.toLowerCase();
     setMediaType(fileExt === 'mov' ? 'video' : 'image');
     
-    // Set text loading to false once we have the data
-    if (stories[currentIndex]?.TextOverlay !== undefined) {
+    // Text overlay data comes with story data, so it's ready once the story exists
+    if (stories[currentIndex]) {
       setIsTextLoading(false);
     }
   }, [currentIndex, stories]);
