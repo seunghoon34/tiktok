@@ -10,6 +10,7 @@ import {
     ActivityIndicator,
     ScrollView,
 } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
@@ -35,6 +36,7 @@ const CreateProfileScreen = () => {
     const [image, setImage] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isCheckingUsername, setIsCheckingUsername] = useState(false);
+    const [tosConfirmed, setTosConfirmed] = useState(false);
     const [errors, setErrors] = useState({
         image: '',
         username: '',
@@ -321,7 +323,7 @@ const CreateProfileScreen = () => {
     };
 
     const hasValidationErrors = !!(errors.image || errors.username || errors.name || errors.aboutme || errors.birthdate);
-    const isButtonDisabled = isSubmitting || hasValidationErrors || isCheckingUsername;
+    const isButtonDisabled = isSubmitting || hasValidationErrors || isCheckingUsername || !tosConfirmed;
 
     return (
         <SafeAreaView style={{ flex: 1, minHeight: '100%', backgroundColor: 'white'}}>
@@ -689,7 +691,30 @@ const CreateProfileScreen = () => {
                         <View style={styles.separator} />
                     </View>
 
-                    <TouchableOpacity 
+                    <TouchableOpacity
+                        style={{ flexDirection: 'row', alignItems: 'flex-start', marginBottom: 16 }}
+                        onPress={() => setTosConfirmed(!tosConfirmed)}
+                        activeOpacity={0.6}
+                    >
+                        <Ionicons
+                            name={tosConfirmed ? 'checkbox' : 'square-outline'}
+                            size={22}
+                            color={tosConfirmed ? '#FF6B6B' : '#9CA3AF'}
+                            style={{ marginTop: 1 }}
+                        />
+                        <Text style={{ marginLeft: 8, color: '#4B5563', fontSize: 13, flex: 1, lineHeight: 20 }}>
+                            I confirm I am 18 years or older and agree to the{' '}
+                            <Text style={{ color: '#3B82F6' }} onPress={() => WebBrowser.openBrowserAsync('https://s2-delta-tan.vercel.app/terms', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                                Terms of Service
+                            </Text>{' '}
+                            and{' '}
+                            <Text style={{ color: '#3B82F6' }} onPress={() => WebBrowser.openBrowserAsync('https://s2-delta-tan.vercel.app/privacy', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                                Privacy Policy
+                            </Text>
+                        </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
                         style={[
                             styles.button,
                             isButtonDisabled && styles.buttonDisabled

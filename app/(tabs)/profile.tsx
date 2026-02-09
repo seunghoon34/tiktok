@@ -147,7 +147,7 @@ useFocusEffect(
   {
     icon: "mail-outline" as const,
     title: "Contact Support",
-    onPress: () => Linking.openURL('mailto:shootyourshot@gmail.com'),
+    onPress: () => Linking.openURL('mailto:s2.shootyourshot@gmail.com'),
   },
   {
     icon: "trash-outline" as const,

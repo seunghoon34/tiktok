@@ -170,11 +170,11 @@ export default function SignupScreen() {
               />
               <Text className="ml-2 text-gray-600 text-sm flex-1 leading-5">
                 I confirm I am 18 years or older and agree to the{' '}
-                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://google.com', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://s2-delta-tan.vercel.app/terms', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
                   Terms of Service
                 </Text>{' '}
                 and{' '}
-                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://google.com', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://s2-delta-tan.vercel.app/privacy', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
                   Privacy Policy
                 </Text>
               </Text>
