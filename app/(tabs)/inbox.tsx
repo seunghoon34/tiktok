@@ -1,5 +1,5 @@
 import { View, Text, FlatList, TouchableOpacity, SafeAreaView, Image } from 'react-native';
-import { useCallback, useEffect, useState, memo, useMemo } from 'react';
+import { useCallback, useEffect, useState, useRef, memo, useMemo } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useRouter } from 'expo-router';
@@ -206,6 +206,7 @@ const [isExpired, setIsExpired] = useState(false);
 export default function InboxScreen() {
  const [chats, setChats] = useState<any[]>([]);
  const { user } = useAuth();
+ const chatIdsRef = useRef<string[]>([]);
 
  const fetchChats = async () => {
    try {
@@ -309,6 +310,7 @@ export default function InboxScreen() {
        return bTime - aTime;
      });
 
+     chatIdsRef.current = sortedChats.map((c: any) => c.id);
      setChats(sortedChats);
    } catch (error) {
      console.error('Error fetching chats:', error);
@@ -318,25 +320,27 @@ export default function InboxScreen() {
  useEffect(() => {
   if (!user) return;
 
-  // Set up realtime subscription
+  // Subscribe to all message changes for this user's chats
+  // Uses a broad filter and checks chatIdsRef in the handler
+  // so the subscription doesn't recreate on every chat update
   const subscription = supabase
     .channel('inbox_changes')
     .on('postgres_changes', {
-      event: '*',
+      event: 'INSERT',
       schema: 'public',
       table: 'Message',
-      filter: `chat_id=in.(${chats.map(chat => chat.id).join(',')})`,
-    }, () => {
-      // Refetch chats when a new message arrives
-      fetchChats();
+    }, (payload) => {
+      // Only refetch if the message belongs to one of our chats
+      if (chatIdsRef.current.includes(payload.new.chat_id)) {
+        fetchChats();
+      }
     })
     .subscribe();
 
   return () => {
-    // Cleanup subscription when component unmounts
     subscription.unsubscribe();
   };
-}, [chats, user]);
+}, [user]);
 
  useFocusEffect(
    useCallback(() => {

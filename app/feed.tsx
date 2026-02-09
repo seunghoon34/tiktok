@@ -58,7 +58,8 @@ export default function HomeScreen() {
           console.log('UserBlock change detected (as blocker):', payload)
           await feedCache.invalidateFeed(user.id);
           setIsLoading(true)
-          onRefresh()
+          setVideos([]);
+          await getVideos(false);
           setIsLoading(false)
       })
       .subscribe();
@@ -73,7 +74,8 @@ export default function HomeScreen() {
           console.log('UserBlock change detected (as blocked):', payload)
           await feedCache.invalidateFeed(user.id);
           setIsLoading(true)
-          onRefresh()
+          setVideos([]);
+          await getVideos(false);
           setIsLoading(false)
       })
       .subscribe();

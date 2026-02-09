@@ -1,5 +1,5 @@
 import { hybridCache } from './memoryCache';
-import { cache } from './cache';
+import { cache, CacheService } from './cache';
 import { profileCache } from './profileCache';
 
 /**
@@ -39,19 +39,18 @@ export async function invalidateUserCache(userId: string): Promise<void> {
  */
 export async function invalidateProfilePictureCache(userId: string): Promise<void> {
   console.log(`[CacheInvalidation] Invalidating profile picture cache for: ${userId}`);
-  
+
   // Invalidate profile data caches
   await hybridCache.delete(`profile:${userId}`);
   await hybridCache.delete(`profile_pic:${userId}`);
   await profileCache.invalidateProfile(userId);
-  
+
   // Force clear from underlying cache service
   await cache.delete(`cache:profiles:${userId}`);
-  
-  // Also clear any feed cache that might contain this user's posts
-  const feedKeys = ['cache:feed_data', 'feed_cache'];
-  await Promise.all(feedKeys.map(key => cache.delete(key)));
-  
+
+  // Also clear feed cache for this user
+  await cache.delete(`${CacheService.KEYS.FEED_DATA}:${userId}`);
+
   console.log('[CacheInvalidation] Profile picture cache invalidated completely');
 }
 
@@ -69,10 +68,10 @@ export async function invalidateNotificationCache(userId: string): Promise<void>
  */
 export async function invalidateBlockedUsersCache(userId: string): Promise<void> {
   console.log(`[CacheInvalidation] Invalidating blocked users cache for: ${userId}`);
-  await cache.delete(`cache:user_metadata:blocked:${userId}`);
-  
+  await cache.delete(`${CacheService.KEYS.USER_METADATA}:blocked:${userId}`);
+
   // Also clear feed cache since blocked users affect feed content
-  await cache.delete(`feed:${userId}`);
+  await cache.delete(`${CacheService.KEYS.FEED_DATA}:${userId}`);
   console.log('[CacheInvalidation] Blocked users and feed cache invalidated');
 }
 
@@ -82,7 +81,7 @@ export async function invalidateBlockedUsersCache(userId: string): Promise<void>
  */
 export async function invalidateFeedCache(userId: string): Promise<void> {
   console.log(`[CacheInvalidation] Invalidating feed cache for: ${userId}`);
-  await cache.delete(`feed:${userId}`);
+  await cache.delete(`${CacheService.KEYS.FEED_DATA}:${userId}`);
 }
 
 /**

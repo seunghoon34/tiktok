@@ -86,6 +86,29 @@ export class CacheService {
   }
 
   /**
+   * Get data from cache with metadata (TTL, timestamp)
+   */
+  async getWithMeta<T>(key: string): Promise<CacheItem<T> | null> {
+    try {
+      const cached = await AsyncStorage.getItem(key);
+      if (!cached) return null;
+
+      const cacheItem: CacheItem<T> = JSON.parse(cached);
+      const now = Date.now();
+
+      if (cacheItem.ttl > 0 && (now - cacheItem.timestamp) > cacheItem.ttl) {
+        await this.delete(key);
+        return null;
+      }
+
+      return cacheItem;
+    } catch (error) {
+      console.error(`[Cache] Error reading meta ${key}:`, error);
+      return null;
+    }
+  }
+
+  /**
    * Delete specific cache entry
    */
   async delete(key: string): Promise<void> {

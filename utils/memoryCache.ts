@@ -83,21 +83,21 @@ export class HybridCacheService {
       return memEntry.data as T;
     }
     
-    // Fallback to disk cache
+    // Fallback to disk cache (with metadata to preserve original TTL)
     console.log(`[HybridCache] Memory miss, checking disk: ${key}`);
-    const diskData = await cache.get<T>(key);
-    
-    if (diskData) {
-      // Populate memory cache from disk
+    const diskItem = await cache.getWithMeta<T>(key);
+
+    if (diskItem) {
+      // Populate memory cache from disk using original TTL and timestamp
       this.memoryCache.set(key, {
-        data: diskData,
-        timestamp: now,
-        ttl: 3600000, // Default 1 hour for disk-loaded items
+        data: diskItem.data,
+        timestamp: diskItem.timestamp,
+        ttl: diskItem.ttl,
         accessCount: 1,
         lastAccessed: now
       });
-      console.log(`[HybridCache] Loaded from disk to memory: ${key}`);
-      return diskData;
+      console.log(`[HybridCache] Loaded from disk to memory: ${key} (ttl: ${Math.round(diskItem.ttl / 60000)}min)`);
+      return diskItem.data;
     }
     
     console.log(`[HybridCache] Complete miss: ${key}`);
