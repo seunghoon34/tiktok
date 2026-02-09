@@ -195,12 +195,11 @@ export default function ChatScreen() {
         }
 
         // Optimize: Use payload data directly instead of fetching again
+        const isIncoming = payload.new.sender_id !== user.id;
         const newMessage = {
           ...payload.new,
-          sender: payload.new.sender_id === user.id ?
-            { id: user.id, username: user.username } :
-            otherUser,
-          read: payload.new.read,
+          sender: isIncoming ? otherUser : { id: user.id, username: user.username },
+          read: isIncoming ? true : payload.new.read,
           created_at: payload.new.created_at
         };
 
@@ -220,7 +219,7 @@ export default function ChatScreen() {
         table: 'Message',
         filter: `chat_id=eq.${id}`
       },
-      (payload) => {
+      async (payload) => {
         // Use payload data directly - no database fetch needed
         setMessages(current =>
           current.map(msg =>
@@ -229,6 +228,11 @@ export default function ChatScreen() {
               : msg
           )
         );
+
+        // Sync read status update to cache
+        if (payload.new.read !== payload.old?.read) {
+          await chatCache.updateMessage(id as string, payload.new.id, { read: payload.new.read });
+        }
       }
     )
     .subscribe();

@@ -33,26 +33,51 @@ export class EnhancedChatService {
       console.log(`[ChatSync] Fetching messages newer than: ${lastCachedTimestamp}`);
     }
 
-    const { data: newMessages } = await freshQuery;
+    // Also check for read status updates on sent messages still marked unread in cache
+    const unreadSentIds = cachedMessages
+      .filter(m => m.sender_id === userId && !m.read)
+      .map(m => m.id);
+
+    const [{ data: newMessages }, readStatusResult] = await Promise.all([
+      freshQuery,
+      unreadSentIds.length > 0
+        ? supabase
+            .from('Message')
+            .select('id')
+            .in('id', unreadSentIds)
+            .eq('read', true)
+        : Promise.resolve({ data: null })
+    ]);
+
+    // Update read status on cached messages
+    const readIds = new Set(readStatusResult?.data?.map((m: any) => m.id) || []);
+    const updatedCachedMessages = readIds.size > 0
+      ? cachedMessages.map(msg => readIds.has(msg.id) ? { ...msg, read: true } : msg)
+      : cachedMessages;
 
     if (newMessages && newMessages.length > 0) {
       console.log(`[ChatSync] Found ${newMessages.length} new messages`);
-      
+
       // 3. Merge cached + new messages
-      const allMessages = [...cachedMessages, ...newMessages.reverse()];
-      
+      const allMessages = [...updatedCachedMessages, ...newMessages.reverse()];
+
       // 4. Update cache with complete message set
       await chatCache.setChatMessages(chatId, allMessages as CachedMessage[]);
-      
+
       return {
         messages: allMessages,
         hasNewMessages: true,
         newMessageCount: newMessages.length
       };
     } else {
+      // Update cache if read statuses changed
+      if (readIds.size > 0) {
+        await chatCache.setChatMessages(chatId, updatedCachedMessages);
+        console.log(`[ChatSync] Updated ${readIds.size} read receipts from cache`);
+      }
       console.log('[ChatSync] No new messages found');
       return {
-        messages: cachedMessages,
+        messages: updatedCachedMessages,
         hasNewMessages: false,
         newMessageCount: 0
       };

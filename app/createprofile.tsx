@@ -40,6 +40,7 @@ const CreateProfileScreen = () => {
         username: '',
         name: '',
         aboutme: '',
+        birthdate: '',
         general: '',
     });
 
@@ -124,12 +125,24 @@ const CreateProfileScreen = () => {
         }
     };
 
+    const getAge = (birthdate: Date) => {
+        const today = new Date();
+        let age = today.getFullYear() - birthdate.getFullYear();
+        const monthDiff = today.getMonth() - birthdate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthdate.getDate())) {
+            age--;
+        }
+        return age;
+    };
+
     const validateForm = () => {
+        const age = getAge(formData.birthdate);
         const newErrors = {
             image: !image ? 'Profile picture is required' : '',
             username: !formData.username.trim() ? 'Username is required' : '',
             name: !formData.name.trim() ? 'Name is required' : '',
             aboutme: !formData.aboutme.trim() ? 'About me is required' : '',
+            birthdate: age < 18 ? 'You must be at least 18 years old to create a profile' : '',
             general: '',
         };
 
@@ -306,7 +319,7 @@ const CreateProfileScreen = () => {
         }
     };
 
-    const hasValidationErrors = !!(errors.image || errors.username || errors.name || errors.aboutme);
+    const hasValidationErrors = !!(errors.image || errors.username || errors.name || errors.aboutme || errors.birthdate);
     const isButtonDisabled = isSubmitting || hasValidationErrors || isCheckingUsername;
 
     return (
@@ -393,6 +406,7 @@ const CreateProfileScreen = () => {
                             themeVariant="light"
                             style={{backgroundColor: 'white', marginLeft: -20}}
                         />
+                        {errors.birthdate && <Text style={styles.errorText}>{errors.birthdate}</Text>}
                         <View style={styles.separator} />
                     </View>
 

@@ -198,6 +198,7 @@ const [isExpired, setIsExpired] = useState(false);
     prevProps.chat.id === nextProps.chat.id &&
     prevProps.chat.lastMessage?.content === nextProps.chat.lastMessage?.content &&
     prevProps.chat.lastMessage?.created_at === nextProps.chat.lastMessage?.created_at &&
+    prevProps.chat.unreadCount === nextProps.chat.unreadCount &&
     prevProps.user?.id === nextProps.user?.id
   );
 });
