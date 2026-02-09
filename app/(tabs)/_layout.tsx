@@ -5,6 +5,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
+import * as Notifications from 'expo-notifications';
 
 export default function TabLayout() {
   const [iconColor, setIconColor] = useState<'black' | 'white'>('black');
@@ -78,55 +79,29 @@ export default function TabLayout() {
     return count || 0;
   };
 
-  // Set up subscription and initial fetch
+  // Initial fetch on mount
+  useEffect(() => {
+    if (!user) return;
+    getTotalUnreadMessages().then(setUnreadMessages);
+    getTotalUnreadNotifications().then(setUnreadCount);
+  }, [user]);
+
+  // Listen for incoming push notifications to update badge counts
   useEffect(() => {
     if (!user) return;
 
-    // Initial fetch for both messages and notifications
-    getTotalUnreadMessages().then(setUnreadMessages);
-    getTotalUnreadNotifications().then(setUnreadCount);
+    const subscription = Notifications.addNotificationReceivedListener(async (notification) => {
+      const data = notification.request.content.data;
+      if (data?.type === 'message') {
+        const newCount = await getTotalUnreadMessages();
+        setUnreadMessages(newCount);
+      } else if (data?.type === 'shot' || data?.type === 'match') {
+        const newCount = await getTotalUnreadNotifications();
+        setUnreadCount(newCount);
+      }
+    });
 
-    // Subscribe to all message changes
-    const messageSubscription = supabase
-      .channel('any_messages')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to inserts and updates
-          schema: 'public',
-          table: 'Message',
-        },
-        async () => {
-          const newCount = await getTotalUnreadMessages();
-          setUnreadMessages(newCount);
-        }
-      )
-      .subscribe();
-
-    // Subscribe to notification changes
-    const notificationSubscription = supabase
-      .channel('any_notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen to inserts, updates, and deletes
-          schema: 'public',
-          table: 'Notification',
-        },
-        async () => {
-          // Add small delay to ensure database changes have propagated
-          setTimeout(async () => {
-            const newCount = await getTotalUnreadNotifications();
-            setUnreadCount(newCount);
-          }, 100);
-        }
-      )
-      .subscribe();
-
-    return () => {
-      messageSubscription.unsubscribe();
-      notificationSubscription.unsubscribe();
-    };
+    return () => subscription.remove();
   }, [user]);
   
 

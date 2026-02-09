@@ -24,12 +24,16 @@ const formatTime = (dateString: string) => {
 export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const { id } = useLocalSearchParams();
+  const { id, username: paramUsername, profilePicture: paramProfilePicture } = useLocalSearchParams();
   const { user, setActiveChatId } = useAuth();
-  const [otherUser, setOtherUser] = useState<any>(null);
+  const [otherUser, setOtherUser] = useState<any>(
+    paramUsername ? { username: paramUsername } : null
+  );
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44); // Track input height
-  const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
+  const [otherUserProfile, setOtherUserProfile] = useState<any>(
+    paramProfilePicture ? { profilepicture: paramProfilePicture as string } : null
+  );
   const [hasVideos, setHasVideos] = useState<boolean>(false);
   const [isChatExpired, setIsChatExpired] = useState<boolean>(false);
   const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
@@ -176,7 +180,7 @@ export default function ChatScreen() {
     fetchMessages();
 
     const subscription = supabase
-    .channel(`chat:${id}`)
+    .channel(`chat:${id}:${user.id}`)
     .on(
       'postgres_changes',
       {
@@ -262,6 +266,7 @@ export default function ChatScreen() {
       .insert({
         chat_id: id,
         sender_id: user.id,
+        receiver_id: otherUser?.id,
         content: newMessage.trim()
       });
 

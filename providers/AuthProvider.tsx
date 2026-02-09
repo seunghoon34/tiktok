@@ -1,4 +1,4 @@
-import { registerForPushNotifications, sendMatchNotifications, sendMessageNotification } from '@/utils/notifications';
+import { registerForPushNotifications, sendMatchNotifications } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState, useRef} from 'react'
@@ -569,81 +569,8 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         }
     }, [user]);
 
-    useEffect(() => {
-      if (!user) return;
-
-      let becameActiveTime: string | null = null;
-
-    const handleAppStateChange = (nextAppState: string) => {
-        if (nextAppState === 'active') {
-            becameActiveTime = new Date().toISOString();
-        }
-    };
-
-
-    // Set initial active time
-    becameActiveTime = new Date().toISOString();
-
-    const appStateSubscription = AppState.addEventListener('change', handleAppStateChange);
-
-
-  
-      const subscription = supabase
-          .channel('global_messages')
-          .on(
-              'postgres_changes',
-              {
-                  event: 'INSERT',
-                  schema: 'public',
-                  table: 'Message'
-              },
-              async (payload) => {
-
-                if (becameActiveTime && payload.new.created_at <= becameActiveTime) {
-                  return; // Skip old messages
-              }
-                  // First check if the message is for the current user and they're not the sender
-                  if (payload.new.sender_id === user.id) {
-                      return; // Don't notify for messages the user sent
-                  }
-  
-                  // Check if user is currently in the chat
-                  if (payload.new.chat_id === currentChatId) {
-                      return; // Don't notify if user is in the chat
-                  }
-  
-                  const { data: chat } = await supabase
-                      .from('Chat')
-                      .select('user1_id, user2_id')
-                      .eq('id', payload.new.chat_id)
-                      .single();
-  
-                  // Check if user is part of this chat
-                  if (!chat || (chat.user1_id !== user.id && chat.user2_id !== user.id)) {
-                      return; // Don't notify if user is not part of the chat
-                  }
-  
-                   const { data: senderData } = await supabase
-                      .from('User')
-                      .select('username')
-                      .eq('id', payload.new.sender_id)
-                      .single();
-  
-                  await sendMessageNotification(
-                      payload.new.sender_id,
-                       senderData?.username ?? '',
-                       user.id,
-                      payload.new.chat_id
-                  );
-              }
-          )
-          .subscribe();
-  
-      return () => {
-          subscription.unsubscribe();
-          appStateSubscription.remove();
-      };
-  }, [user, currentChatId]);
+    // Push notifications are now handled by database triggers
+    // No need for a global message subscription
     // Notification tap handler
     useEffect(() => {
         if (!user) return;

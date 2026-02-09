@@ -1,7 +1,7 @@
-import { View, Text, FlatList, TouchableOpacity, Image, AppState } from 'react-native';
+import { View, Text, FlatList, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import "../../global.css";
 import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
@@ -66,63 +66,13 @@ export default function ActivityScreen() {
     }
   };
 
-  useEffect(() => {
-    if (!user) return;
-  
-    fetchNotifications(); // Initial fetch
-  
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('notifications')
-      .on(
-        'postgres_changes',
-        {
-          event: '*', // Listen for all events (insert, update, delete)
-          schema: 'public',
-          table: 'Notification',
-          filter: `to_user=eq.${user.id}` // Only listen for notifications to this user
-        },
-        (payload) => {
-          // Handle different events
-          switch (payload.eventType) {
-            case 'INSERT':
-              // Add new notification to cache and refresh
-              notificationCache.addNotificationToCache(user.id, payload.new);
-              fetchNotifications(); // Refresh to get the formatted notification
-              break;
-            case 'UPDATE':
-              // Update the specific notification in state
-              setNotifications(prev => prev.map(notif => 
-                notif.id === payload.new.id ? {
-                  ...notif,
-                  read: payload.new.read
-                } : notif
-              ));
-              break;
-            case 'DELETE':
-              // Remove the notification from state and invalidate cache
-              setNotifications(prev => 
-                prev.filter(notif => notif.id !== payload.old.id)
-              );
-              notificationCache.invalidateNotifications(user.id);
-              break;
-          }
-        }
-      )
-      .subscribe();
-
-      const appStateSubscription = AppState.addEventListener('change', nextAppState => {
-        if (nextAppState === 'active') {
-          fetchNotifications();
-        }
-      });
-    
-      // Cleanup
-      return () => {
-        subscription.unsubscribe();
-        appStateSubscription.remove();
-      };
-    }, [user]);
+  useFocusEffect(
+    useCallback(() => {
+      if (user) {
+        fetchNotifications();
+      }
+    }, [user])
+  );
 
   const findChatId = async (userId1: string, userId2: string) => {
     // Parallelize block check and chat find
@@ -162,7 +112,15 @@ export default function ActivityScreen() {
     } else if (item.type === 'MATCH') {
       const chatId = await findChatId(user.id, item.userId);
       if (chatId) {
-        router.push(`/chat/${chatId}`);
+        const sender = Array.isArray(item.sender) ? item.sender[0] : item.sender;
+        router.push({
+          pathname: '/chat/[id]',
+          params: {
+            id: chatId,
+            username: item.username || sender?.username || '',
+            profilePicture: userProfiles[item.userId] || '',
+          }
+        });
       }
     }
   };

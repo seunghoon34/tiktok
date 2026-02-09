@@ -132,7 +132,14 @@ const [isExpired, setIsExpired] = useState(false);
  return (
    <TouchableOpacity
      className="px-4 py-3 border-b border-gray-200"
-     onPress={() => router.push(`/chat/${chat.id}`)}
+     onPress={() => router.push({
+       pathname: '/chat/[id]',
+       params: {
+         id: chat.id,
+         username: otherUser?.username || '',
+         profilePicture: otherUserProfile?.profilepicture || '',
+       }
+     })}
      activeOpacity={0.6}
    >
      <View className="flex-row items-start justify-between">
@@ -319,31 +326,6 @@ export default function InboxScreen() {
      setIsLoading(false);
    }
  };
-
- useEffect(() => {
-  if (!user) return;
-
-  // Subscribe to all message changes for this user's chats
-  // Uses a broad filter and checks chatIdsRef in the handler
-  // so the subscription doesn't recreate on every chat update
-  const subscription = supabase
-    .channel('inbox_changes')
-    .on('postgres_changes', {
-      event: 'INSERT',
-      schema: 'public',
-      table: 'Message',
-    }, (payload) => {
-      // Only refetch if the message belongs to one of our chats
-      if (chatIdsRef.current.includes(payload.new.chat_id)) {
-        fetchChats();
-      }
-    })
-    .subscribe();
-
-  return () => {
-    subscription.unsubscribe();
-  };
-}, [user]);
 
  useFocusEffect(
    useCallback(() => {
