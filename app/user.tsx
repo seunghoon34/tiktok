@@ -562,6 +562,7 @@ const styles = StyleSheet.create({
   imageWrapper: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    alignItems: 'center',
   },
   imageContainer: {
     width: '100%',

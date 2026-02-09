@@ -204,7 +204,7 @@ export default function UserStoryScreen() {
     const diffInMinutes = Math.floor((now.getTime() - created.getTime()) / (1000 * 60));
     const diffInHours = Math.floor(diffInMinutes / 60);
 
-    if (diffInHours >= 3) return '3h';
+    if (diffInHours >= 24) return '24h';
     if (diffInHours >= 1) return `${diffInHours}h`;
     return `${diffInMinutes}m`;
   };

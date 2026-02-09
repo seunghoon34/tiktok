@@ -122,6 +122,7 @@ const CreateProfileScreen = () => {
     const onDateChange = (event: any, selectedDate?: Date) => {
         if (selectedDate) {
             setFormData(prev => ({ ...prev, birthdate: selectedDate }));
+            setErrors(prev => ({ ...prev, birthdate: '' }));
         }
     };
 

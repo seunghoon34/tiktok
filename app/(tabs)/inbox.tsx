@@ -205,6 +205,7 @@ const [isExpired, setIsExpired] = useState(false);
 
 export default function InboxScreen() {
  const [chats, setChats] = useState<any[]>([]);
+ const [isLoading, setIsLoading] = useState(true);
  const { user } = useAuth();
  const chatIdsRef = useRef<string[]>([]);
 
@@ -314,6 +315,8 @@ export default function InboxScreen() {
      setChats(sortedChats);
    } catch (error) {
      console.error('Error fetching chats:', error);
+   } finally {
+     setIsLoading(false);
    }
  };
 
@@ -355,7 +358,7 @@ export default function InboxScreen() {
      <View className="px-4 pt-2 pb-3">
        <Text className="text-ios-large-title">Messages</Text>
      </View>
-     {chats.length === 0 ? (
+     {!isLoading && chats.length === 0 ? (
        <View className="flex-1 items-center justify-center px-8">
          <View className="items-center">
            <Ionicons name="chatbubbles-outline" size={80} color="#E5E7EB" />

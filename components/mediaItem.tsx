@@ -130,8 +130,8 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
     const diffInHours = Math.floor(diffInMinutes / 60);
   
   
-    if (diffInHours >= 3) {
-      return '3h';
+    if (diffInHours >= 24) {
+      return '24h';
     } else if (diffInHours >= 1) {
       return `${diffInHours}h`;
     } else {

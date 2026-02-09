@@ -14,6 +14,7 @@ import { profileCache } from '@/utils/profileCache';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
   const [isPremium, setIsPremium] = useState(false); // Set to false for free users
   const { setUnreadCount } = useNotifications();
@@ -215,6 +216,8 @@ export default function ActivityScreen() {
       setNotifications(filteredNotifications);
     } catch (error) {
       console.error('[Activity] Error fetching notifications:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -321,7 +324,7 @@ export default function ActivityScreen() {
         </View>
       </View>
 
-      {notifications.length === 0 ? (
+      {!isLoading && notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <View className="items-center">
             <Ionicons name="heart-outline" size={80} color="#E5E7EB" />
