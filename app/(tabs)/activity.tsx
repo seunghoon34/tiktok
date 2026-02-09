@@ -334,7 +334,7 @@ export default function ActivityScreen() {
             <Text className="text-base text-gray-500 mt-3 text-center leading-6">
               When someone likes your posts or you get a match, you'll see it here
             </Text>
-            <View className="mt-8 space-y-3">
+            {/* <View className="mt-8 space-y-3">
               <View className="bg-red-50 px-6 py-3 rounded-xl flex-row items-center">
                 <Text className="text-2xl mr-3">💖</Text>
                 <Text className="text-sm text-gray-700 flex-1">
@@ -347,7 +347,7 @@ export default function ActivityScreen() {
                   <Text className="font-semibold">Matches</Text> - It's a match!
                 </Text>
               </View>
-            </View>
+            </View> */}
           </View>
         </View>
       ) : (
