@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, ScrollView, Image, Alert } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Image, Alert, Linking } from 'react-native';
 import { useAuth } from '@/providers/AuthProvider';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -143,6 +143,11 @@ useFocusEffect(
     icon: "ban-outline" as const,
     title: "Blocked users",
     onPress: () => router.push('/blocked'),
+  },
+  {
+    icon: "mail-outline" as const,
+    title: "Contact Support",
+    onPress: () => Linking.openURL('mailto:shootyourshot@gmail.com'),
   },
   {
     icon: "trash-outline" as const,

@@ -4,6 +4,8 @@ import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { Image } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -12,6 +14,7 @@ export default function SignupScreen() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const { signUp, signInWithGoogle } = useAuth();
 
   const validateEmail = (email) => {
@@ -89,9 +92,9 @@ export default function SignupScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`w-full bg-white border-2 border-gray-300 h-button rounded-xl flex-row justify-center items-center mb-4 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
+          className={`w-full bg-white border-2 border-gray-300 h-button rounded-xl flex-row justify-center items-center mb-4 ${(isGoogleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
           onPress={handleGoogleSignIn}
-          disabled={isGoogleLoading || isLoading}
+          disabled={isGoogleLoading || isLoading || !ageConfirmed}
           activeOpacity={0.6}
         >
           {isGoogleLoading ? (
@@ -140,10 +143,10 @@ export default function SignupScreen() {
         />
 
         <View className='w-full'>
-          <TouchableOpacity 
-            className={`bg-red-500 h-button rounded-xl justify-center items-center ${isLoading ? 'opacity-disabled' : ''}`}
+          <TouchableOpacity
+            className={`bg-red-500 h-button rounded-xl justify-center items-center ${(isLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
             onPress={handleSignUp}
-            disabled={isLoading}
+            disabled={isLoading || !ageConfirmed}
             activeOpacity={0.6}
           >
             {isLoading ? (
@@ -152,6 +155,31 @@ export default function SignupScreen() {
               <Text className='text-white font-semibold text-ios-body'>Sign up</Text>
             )}
           </TouchableOpacity>
+
+          <View className="w-full mt-4">
+            <TouchableOpacity
+              className="flex-row items-start"
+              onPress={() => setAgeConfirmed(!ageConfirmed)}
+              activeOpacity={0.6}
+            >
+              <Ionicons
+                name={ageConfirmed ? 'checkbox' : 'square-outline'}
+                size={22}
+                color={ageConfirmed ? '#FF6B6B' : '#9CA3AF'}
+                style={{ marginTop: 1 }}
+              />
+              <Text className="ml-2 text-gray-600 text-sm flex-1 leading-5">
+                I confirm I am 18 years or older and agree to the{' '}
+                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://google.com', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                  Terms of Service
+                </Text>{' '}
+                and{' '}
+                <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://google.com', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+          </View>
 
           <Link
             href="/(auth)"
