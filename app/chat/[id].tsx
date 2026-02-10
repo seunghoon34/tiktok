@@ -11,15 +11,40 @@ import { chatCache, CachedMessage } from '@/utils/chatCache';
 import { profileCache } from '@/utils/profileCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
 
-// Helper function to format time
+// Ensure Supabase UTC timestamps are parsed correctly
+const toLocalDate = (dateString: string) => {
+  const utc = dateString.endsWith('Z') || dateString.includes('+') ? dateString : dateString + 'Z';
+  return new Date(utc);
+};
+
 const formatTime = (dateString: string) => {
-  const date = new Date(dateString);
-  return date.toLocaleTimeString('en-US', { 
-    hour: 'numeric', 
+  return toLocalDate(dateString).toLocaleTimeString('en-US', {
+    hour: 'numeric',
     minute: '2-digit',
-    hour12: true 
+    hour12: true
   });
 };
+
+const formatDayLabel = (dateString: string) => {
+  const date = toLocalDate(dateString);
+  const now = new Date();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const startOfWeek = new Date(now);
+  startOfWeek.setDate(now.getDate() - now.getDay());
+
+  if (date.toDateString() === now.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (date >= startOfWeek) {
+    return date.toLocaleDateString('en-US', { weekday: 'long' });
+  }
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+};
+
+const getDateKey = (dateString: string) => toLocalDate(dateString).toDateString();
 
 export default function ChatScreen() {
   const [messages, setMessages] = useState<any[]>([]);
@@ -353,9 +378,20 @@ export default function ChatScreen() {
     const showAvatar = item.sender_id !== user.id &&
       (index === 0 || messages[index - 1].sender_id !== item.sender_id);
 
+    // Show day separator when date changes
+    const showDaySeparator = index === 0 ||
+      getDateKey(item.created_at) !== getDateKey(messages[index - 1].created_at);
+
     return (
+    <View key={item.id} style={{ width: '100%' }}>
+      {showDaySeparator && (
+        <View className="items-center my-3">
+          <Text className="text-xs text-gray-400 font-medium">
+            {formatDayLabel(item.created_at)}
+          </Text>
+        </View>
+      )}
     <View
-      key={item.id}
       className={`m-2 gap-3 ${item.sender_id === user.id ? 'self-end flex-row-reverse' : 'self-start flex-row'}`}
     >
       {/* Avatar for other user */}
@@ -437,6 +473,7 @@ export default function ChatScreen() {
           </Text>
         </View>
       </View>
+    </View>
     </View>
     );
   })}

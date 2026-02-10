@@ -25,7 +25,7 @@ export default function TabLayout() {
     const { data: userChats } = await supabase
       .from('Chat')
       .select('id')
-      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id})`);
+      .or(`user1_id.eq.${user.id},user2_id.eq.${user.id}`);
   
     if (!userChats) return 0;
   
@@ -156,6 +156,11 @@ export default function TabLayout() {
       </View>
     )
   }}
+  listeners={{
+    tabPress: () => {
+      getTotalUnreadNotifications().then(setUnreadCount);
+    }
+  }}
 />
       <Tabs.Screen
         name="empty"
@@ -180,10 +185,10 @@ export default function TabLayout() {
           title: '',
           tabBarIcon: ({ focused }) => (
             <View>
-              <Ionicons 
-                name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"} 
-                size={28} 
-                color="black" 
+              <Ionicons
+                name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
+                size={28}
+                color="black"
               />
               {unreadMessages > 0 && (
                 <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
@@ -194,6 +199,11 @@ export default function TabLayout() {
               )}
             </View>
           )
+        }}
+        listeners={{
+          focus: () => {
+            getTotalUnreadMessages().then(setUnreadMessages);
+          }
         }}
       />
       <Tabs.Screen

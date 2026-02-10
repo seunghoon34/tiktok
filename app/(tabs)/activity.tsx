@@ -27,13 +27,14 @@ export default function ActivityScreen() {
       await notificationCache.markNotificationAsRead(user.id, notificationId);
 
       // Update local state
-      setNotifications(prevNotifications =>
-        prevNotifications.map(notif => 
+      setNotifications(prevNotifications => {
+        const updated = prevNotifications.map(notif =>
           notif.id === notificationId ? { ...notif, read: true } : notif
-        )
-      );
-      
-      // Note: unread count is now updated automatically via real-time subscription in tab layout
+        );
+        // Update tab badge count
+        setUnreadCount(updated.filter(n => !n.read).length);
+        return updated;
+      });
     } catch (error) {
       console.error('[Activity] Error marking notification as read:', error);
     }
@@ -56,6 +57,9 @@ export default function ActivityScreen() {
       setNotifications(prev => 
         prev.map(n => ({ ...n, read: true }))
       );
+
+      // Update tab badge count
+      setUnreadCount(0);
 
       // Invalidate and refetch to ensure cache is correct
       await notificationCache.markAllNotificationsAsRead(user.id);

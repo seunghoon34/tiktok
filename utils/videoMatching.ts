@@ -1,6 +1,6 @@
 import { supabase } from '@/utils/supabase';
-import { sendMatchNotifications, sendShotNotification } from './notifications';
 import { invalidateNotificationCache } from './cacheInvalidation';
+// Push notifications are now handled by database triggers on Notification table
 
 export const handleVideoLike = async (
   userId: string,
@@ -37,13 +37,6 @@ export const handleVideoLike = async (
       console.error('User trying to insert:', userId);
       console.error('Authenticated user:', currentUser?.id);
       // Don't throw error - continue with like flow even if notification fails
-    }
-
-    // Send push notification for the shot
-    try {
-      await sendShotNotification(videoUserId);
-    } catch (e) {
-      console.error('Error sending shot push notification:', e);
     }
 
     // 2. Check if the other user has liked any of current user's videos
@@ -131,47 +124,6 @@ export const handleVideoLike = async (
     
 
     
-
-        const { data: users, error: usersError } = await supabase
-  .from('User')
-  .select('id, username')
-  .in('id', [userId, videoUserId]);
-
-if (usersError) throw usersError;
-
-
-
-const currentUser = users?.find(u => u.id === userId);
-const videoOwner = users?.find(u => u.id === videoUserId);
-
-if (!currentUser || !videoOwner) {
-  console.error('[VideoMatching] Could not find user data for match notification');
-  return {
-    status: 'matched',
-    message: "It's a match!",
-    like: newLike,
-    match,
-    users: [user1_id, user2_id]
-  };
-}
-
-console.log(currentUser)
-console.log(videoOwner)
-console.log("chat: ",chatData)
-
-// Replace the two sendMatchNotification calls with one sendMatchNotifications call
-try {
-  await sendMatchNotifications(
-    currentUser.id,
-    currentUser.username,
-    videoOwner.id,
-    videoOwner.username,
-    chatData.id
-  );
-  console.log("Match notification sent successfully");
-} catch (notificationError) {
-  console.error("Error sending match notification:", notificationError);
-}
 
         // Invalidate notification caches for both users after match
         await invalidateNotificationCache(userId);

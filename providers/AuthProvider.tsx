@@ -1,4 +1,4 @@
-import { registerForPushNotifications, sendMatchNotifications } from '@/utils/notifications';
+import { registerForPushNotifications, sendMatchNotifications, setActiveChatForNotifications } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState, useRef} from 'react'
@@ -413,6 +413,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     const setActiveChatId = (chatId: string | null) => {
         setCurrentChatId(chatId);
+        setActiveChatForNotifications(chatId);
     };
 
     const initializeAuth = async () => {

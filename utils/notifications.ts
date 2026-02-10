@@ -2,13 +2,32 @@ import * as Notifications from 'expo-notifications';
 import { supabase } from '@/utils/supabase';
 import { Platform } from 'react-native';
 
+// Track which chat the user is currently viewing
+let _activeChatId: string | null = null;
+
+export function setActiveChatForNotifications(chatId: string | null) {
+  _activeChatId = chatId;
+}
+
 Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    priority: Notifications.AndroidNotificationPriority.HIGH,
-  }),
+  handleNotification: async (notification) => {
+    const data = notification.request.content.data;
+    // Suppress alert if user is already in the chat this message is for
+    if (data?.type === 'message' && data?.chatId && data.chatId === _activeChatId) {
+      return {
+        shouldShowAlert: false,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
+        priority: Notifications.AndroidNotificationPriority.HIGH,
+      };
+    }
+    return {
+      shouldShowAlert: true,
+      shouldPlaySound: true,
+      shouldSetBadge: true,
+      priority: Notifications.AndroidNotificationPriority.HIGH,
+    };
+  },
 });
 
 

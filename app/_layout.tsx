@@ -4,7 +4,6 @@
   import * as Font from 'expo-font';
   import 'react-native-reanimated';
   import { AuthProvider } from '@/providers/AuthProvider';
-  import * as Notifications from 'expo-notifications';
   import { NotificationProvider } from '@/providers/NotificationProvider';
   import { Host, Portal } from 'react-native-portalize';
   import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
@@ -165,16 +164,8 @@
     ),
   };
 
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,  
-      shouldSetBadge: false,
-      shouldShowBanner: true,
-      shouldShowList: true,
-      priority: Notifications.AndroidNotificationPriority.HIGH,
-    }),
-  });
+  // Notification handler is configured in utils/notifications.ts
+  // (suppresses alerts when user is already in the active chat)
 
 
 

@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { hybridCache } from '@/utils/memoryCache';
 import { profileCache } from '@/utils/profileCache';
+import * as Notifications from 'expo-notifications';
 
 const formatDate = (dateString: string) => {
  if (!dateString) return '';
@@ -334,6 +335,18 @@ export default function InboxScreen() {
      }
    }, [user])
  );
+
+ // Re-fetch inbox when a message push notification arrives while on this screen
+ useEffect(() => {
+   if (!user) return;
+   const subscription = Notifications.addNotificationReceivedListener((notification) => {
+     const data = notification.request.content.data;
+     if (data?.type === 'message') {
+       fetchChats();
+     }
+   });
+   return () => subscription.remove();
+ }, [user]);
 
  return (
    <SafeAreaView className="flex-1 bg-white">
