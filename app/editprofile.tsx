@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   ActivityIndicator,
   ScrollView,
+  Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,7 +19,7 @@ import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import * as ImageManipulator from 'expo-image-manipulator';
-import Header from '@/components/header';
+
 import {
   ROLE_OPTIONS,
   ROLE_COLORS,
@@ -394,7 +395,41 @@ const EditProfileScreen = () => {
         keyboardOpeningTime={0}
         extraHeight={50}
       >
-        <Header title='' color={'black'} goBack={true}/>
+        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%', paddingHorizontal: 16, paddingVertical: 12 }}>
+          <View style={{ width: 40 }}>
+            <TouchableOpacity
+              onPress={() => {
+                if (hasChanges()) {
+                  Alert.alert('Unsaved Changes', 'You have unsaved changes. Are you sure you want to leave?', [
+                    { text: 'Keep Editing', style: 'cancel' },
+                    { text: 'Discard', style: 'destructive', onPress: () => router.back() },
+                  ]);
+                } else {
+                  router.back();
+                }
+              }}
+              activeOpacity={0.6}
+            >
+              <Ionicons name="chevron-back" size={28} color="black" />
+            </TouchableOpacity>
+          </View>
+          <Text style={{ fontSize: 17, fontWeight: '600', color: 'black' }}>{''}</Text>
+          <View style={{ width: 40 }}>
+            {hasChanges() && !isSubmitting && (
+              <TouchableOpacity
+                onPress={() => {
+                  Alert.alert('Save Changes', 'Are you sure you want to save your changes?', [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Save', onPress: handleSubmit },
+                  ]);
+                }}
+                activeOpacity={0.6}
+              >
+                <Ionicons name="checkmark" size={28} color="#FF6B6B" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
         <View style={styles.content}>
           <Text style={styles.title}>Edit Profile</Text>
 
@@ -689,7 +724,7 @@ const EditProfileScreen = () => {
           </View>
 
           {/* Additional Info Section */}
-          <Text style={styles.sectionTitle}>Additional Info</Text>
+          <Text style={styles.sectionTitle}>Additional Info <Text style={styles.optionalLabel}>(Optional)</Text></Text>
 
           {/* Height */}
           <View style={styles.formGroup}>
@@ -724,12 +759,17 @@ const EditProfileScreen = () => {
             <View style={styles.separator} />
           </View>
 
-          <TouchableOpacity 
+          <TouchableOpacity
             style={[
               styles.button,
               (!hasChanges() || isSubmitting) && styles.buttonDisabled
             ]}
-            onPress={handleSubmit}
+            onPress={() => {
+              Alert.alert('Save Changes', 'Are you sure you want to save your changes?', [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Save', onPress: handleSubmit },
+              ]);
+            }}
             disabled={!hasChanges() || isSubmitting}
           >
             {isSubmitting ? (
@@ -917,6 +957,11 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#6B7280',
     marginBottom: 12,
+  },
+  optionalLabel: {
+    fontSize: 14,
+    fontWeight: '400' as const,
+    color: '#9CA3AF',
   },
 });
 

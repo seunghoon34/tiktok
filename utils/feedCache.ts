@@ -394,25 +394,10 @@ export class FeedCacheService {
    */
   async getUserStories(targetUserId: string): Promise<CachedFeedItem[]> {
     try {
-      const cacheKey = this.getUserStoriesKey(targetUserId);
-      
-      // Try to get from cache first
-      const cached = await cache.get<CachedFeedItem[]>(cacheKey);
-      if (cached) {
-        console.log(`[FeedCache] Using cached user stories for user: ${targetUserId} (${cached.length} stories)`);
-        return cached;
-      }
-
-      // Fetch fresh user stories
+      // Always fetch fresh stories to ensure new posts appear immediately
       console.log(`[FeedCache] Fetching fresh user stories for user: ${targetUserId}`);
       const stories = await this.fetchUserStories(targetUserId);
-      
-      // Cache user stories for 30 minutes (shorter TTL since user-specific)
-      if (stories.length > 0) {
-        await cache.set(cacheKey, stories, 30 * 60 * 1000); // 30 minutes
-        console.log(`[FeedCache] Cached ${stories.length} user stories for user: ${targetUserId}`);
-      }
-      
+      console.log(`[FeedCache] Fetched ${stories.length} user stories for user: ${targetUserId}`);
       return stories;
     } catch (error) {
       console.error(`[FeedCache] Error getting user stories for ${targetUserId}:`, error);

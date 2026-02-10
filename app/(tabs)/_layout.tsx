@@ -125,11 +125,11 @@ export default function TabLayout() {
         name="index"
         options={{
           title: '',
-          tabBarIcon: ({ focused }) => 
-            <Ionicons 
-              name={focused ? "home" : "home-outline"} 
-              size={28} 
-              color="black" 
+          tabBarIcon: ({ focused }) =>
+            <Ionicons
+              name={focused ? "home" : "home-outline"}
+              size={28}
+              color="black"
             />
         }}
         listeners={{

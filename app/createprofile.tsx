@@ -656,7 +656,7 @@ const CreateProfileScreen = () => {
                     </View>
 
                     {/* Additional Info Section */}
-                    <Text style={styles.sectionTitle}>Additional Info</Text>
+                    <Text style={styles.sectionTitle}>Additional Info <Text style={styles.optionalLabel}>(Optional)</Text></Text>
 
                     {/* Height */}
                     <View style={styles.formGroup}>
@@ -914,6 +914,11 @@ const styles = StyleSheet.create({
         fontSize: 13,
         color: '#6B7280',
         marginBottom: 12,
+    },
+    optionalLabel: {
+        fontSize: 14,
+        fontWeight: '400' as const,
+        color: '#9CA3AF',
     },
 });
 

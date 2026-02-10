@@ -30,7 +30,7 @@ export class CacheService {
 
   // TTL constants (in milliseconds)
   static readonly TTL = {
-    PROFILES: 6 * 60 * 60 * 1000,      // 6 hours
+    PROFILES: 5 * 60 * 1000,             // 5 minutes
     CHAT_HISTORY: 0,                    // Never expire (persist forever)
     NOTIFICATIONS: 60 * 60 * 1000,      // 1 hour
     MEDIA_URLS: 20 * 60 * 60 * 1000,   // 20 hours

@@ -8,7 +8,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
 import { chatCache, CachedMessage } from '@/utils/chatCache';
-import { profileCache } from '@/utils/profileCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
 
 // Ensure Supabase UTC timestamps are parsed correctly
@@ -155,8 +154,8 @@ export default function ChatScreen() {
         supabase
           .from('Chat')
           .select(`
-            user1:user1_id (id, username),
-            user2:user2_id (id, username),
+            user1:user1_id (id, username, UserProfile (profilepicture)),
+            user2:user2_id (id, username, UserProfile (profilepicture)),
             created_at
           `)
           .eq('id', id)
@@ -174,7 +173,7 @@ export default function ChatScreen() {
 
         // Parallelize block check, match check, and profile fetch
         if (other?.id) {
-          const [blockResult, matchResult, profileResult] = await Promise.all([
+          const [blockResult, matchResult] = await Promise.all([
             supabase
               .from('UserBlock')
               .select('id')
@@ -184,7 +183,6 @@ export default function ChatScreen() {
               .select('created_at')
               .or(`and(user1_id.eq.${user.id},user2_id.eq.${other.id}),and(user1_id.eq.${other.id},user2_id.eq.${user.id})`)
               .single(),
-            profileCache.getProfile(other.id)
           ]);
 
           const { data: blockData } = blockResult;
@@ -207,10 +205,15 @@ export default function ChatScreen() {
             console.log(`[Chat] Match age: ${hoursPassed.toFixed(1)}h, expired: ${expired}`);
           }
 
-          // Set profile immediately (no extra render cycle)
-          if (profileResult) {
-            setOtherUserProfile(profileResult);
-            console.log('[Chat] Profile loaded in parallel');
+          // Build profile picture URL from fresh DB data
+          const otherProfile = (other as any).UserProfile;
+          const picPath = Array.isArray(otherProfile) ? otherProfile[0]?.profilepicture : otherProfile?.profilepicture;
+          if (picPath) {
+            const { data: urlData } = supabase.storage.from('profile_images').getPublicUrl(picPath);
+            if (urlData?.publicUrl) {
+              setOtherUserProfile({ profilepicture: urlData.publicUrl });
+              console.log('[Chat] Profile picture loaded from DB');
+            }
           }
         }
       }
@@ -344,11 +347,10 @@ export default function ChatScreen() {
 
   useFocusEffect(
     useCallback(() => {
-      // Only check if we have otherUser
       if (otherUser?.id) {
         checkUserVideos();
       }
-    }, [otherUser]) // Empty dependency array as we want it to run only on focus
+    }, [otherUser])
   );
 
   return (
@@ -370,7 +372,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         
       </View>
-      <TouchableOpacity className="mx-2" onPress={() => router.push(`/user?user_id=${otherUser?.id}`)}>
+      <TouchableOpacity className="mx-2" onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} disabled={isChatExpired} activeOpacity={isChatExpired ? 1 : 0.2}>
         <View className='flex-row'>
       {otherUserProfile?.profilepicture ? (
             <Image 
@@ -427,7 +429,7 @@ export default function ChatScreen() {
       {item.sender_id !== user.id && (
   showAvatar ? (
     hasVideos ? (
-      <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={isChatExpired ? 1 : 0.6} disabled={isChatExpired}>
         <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
           <View className="p-0.5 bg-white rounded-full">
             {otherUserProfile?.profilepicture ? (
@@ -453,7 +455,7 @@ export default function ChatScreen() {
         </View>
       </TouchableOpacity>
     ) : (
-      <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} activeOpacity={0.6}>
+      <TouchableOpacity onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} activeOpacity={isChatExpired ? 1 : 0.6} disabled={isChatExpired}>
         {otherUserProfile?.profilepicture ? (
           <Image
             source={{ uri: otherUserProfile.profilepicture }}
