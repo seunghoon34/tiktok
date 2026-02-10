@@ -365,168 +365,181 @@ export default function UserScreen() {
    <Portal>
      <Modalize
        ref={modalRef}
-       modalHeight={280}
+       adjustToContentHeight
        modalStyle={{
-         backgroundColor: '#1a1a1a',
-         borderTopLeftRadius: 20,
-         borderTopRightRadius: 20,
+         backgroundColor: 'transparent',
+         elevation: 0,
+         shadowOpacity: 0,
        }}
+       overlayStyle={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
        closeOnOverlayTap
-       handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
+       handlePosition="inside"
+       handleStyle={{ display: 'none' }}
        onClose={() => setModalView('menu')}
      >
-       <View className="pt-4 pb-6">
+       <View className="px-3 pb-8">
          {modalView === 'menu' && (
            <>
-             <TouchableOpacity
-               className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
-               onPress={() => setModalView('reportReasons')}
-             >
-               <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-                 <Ionicons name="flag-outline" size={18} color="#FF6B6B" />
-               </View>
-               <Text className="text-white text-base font-medium">Report {profile.user.username}</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity
-               className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
-               onPress={() => setModalView('confirmBlock')}
-             >
-               <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-                 <Ionicons name="ban-outline" size={18} color="#FF6B6B" />
-               </View>
-               <Text className="text-white text-base font-medium">Block {profile.user.username}</Text>
-             </TouchableOpacity>
-
-             <TouchableOpacity
-               className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-700/50 rounded-2xl active:bg-gray-600/60"
-               onPress={() => modalRef.current?.close()}
-             >
-               <View className="w-8 h-8 bg-gray-500/20 rounded-full items-center justify-center mr-4">
-                 <Ionicons name="close-outline" size={18} color="#9ca3af" />
-               </View>
-               <Text className="text-gray-300 text-base font-medium">Cancel</Text>
-             </TouchableOpacity>
+             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => setModalView('reportReasons')}
+               >
+                 <Text className="text-red-500 text-center text-lg">Report {profile.user.username}</Text>
+               </TouchableOpacity>
+               <View className="h-px bg-gray-200 mx-0" />
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => setModalView('confirmBlock')}
+               >
+                 <Text className="text-red-500 text-center text-lg">Block {profile.user.username}</Text>
+               </TouchableOpacity>
+             </View>
+             <View className="bg-white/95 rounded-2xl overflow-hidden">
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => modalRef.current?.close()}
+               >
+                 <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+               </TouchableOpacity>
+             </View>
            </>
          )}
 
          {modalView === 'reportReasons' && (
-           <View className="px-4 py-3">
-             <Text className="text-white text-lg mb-4">
-               Why are you reporting this user?
-             </Text>
-             
-             {(['INAPPROPRIATE_CONTENT', 'HARASSMENT', 'SPAM', 'FAKE_PROFILE', 'OTHER'] as const).map((reason) => (
+           <>
+             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+               <View className="py-3 px-4">
+                 <Text className="text-gray-500 text-center text-sm font-medium">Report {profile.user.username}</Text>
+               </View>
+               <View className="h-px bg-gray-200" />
+               {(['INAPPROPRIATE_CONTENT', 'HARASSMENT', 'SPAM', 'FAKE_PROFILE', 'OTHER'] as const).map((reason, index, arr) => (
+                 <View key={reason}>
+                   <TouchableOpacity
+                     className="py-4 active:bg-gray-100"
+                     onPress={() => handleReasonSelect(reason)}
+                   >
+                     <Text className="text-blue-500 text-center text-lg">
+                       {reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
+                     </Text>
+                   </TouchableOpacity>
+                   {index < arr.length - 1 && <View className="h-px bg-gray-200" />}
+                 </View>
+               ))}
+             </View>
+             <View className="bg-white/95 rounded-2xl overflow-hidden">
                <TouchableOpacity
-                 key={reason}
-                 className="active:bg-gray-800 rounded-lg py-3 mb-3"
-                 onPress={() => handleReasonSelect(reason)}
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => setModalView('menu')}
                >
-                 <Text className="text-white text-center text-lg">
-                   {reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
-                 </Text>
+                 <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
                </TouchableOpacity>
-             ))}
-             
-             <TouchableOpacity
-               className="active:bg-gray-800 rounded-lg py-3"
-               onPress={() => setModalView('menu')}
-             >
-               <Text className="text-white text-center text-lg">Cancel</Text>
-             </TouchableOpacity>
-           </View>
+             </View>
+           </>
          )}
 
          {modalView === 'confirmReportReason' && (
-           <View className="px-4 py-3">
-             <Text className="text-white text-lg mb-4">
-               Are you sure you want to report {profile.user.username} for{' '}
-               {selectedReason?.toLowerCase().replace(/_/g, ' ')}?
-             </Text>
-             
-             <TouchableOpacity
-               className="bg-red-500 rounded-xl py-3 mb-3"
-               onPress={async () => {
-                 if (!selectedReason) return;
-                 try {
-                   const result = await reportContent(
-                     user.id,
-                     userId,
-                     'USER',
-                     userId,
-                     selectedReason
-                   );
-                   
-                   if (result.status === 'success') {
-                     modalRef.current?.close();
-                     setModalView('menu');
-                     setSelectedReason(null);
+           <>
+             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+               <View className="py-4 px-6">
+                 <Text className="text-gray-900 text-center text-base font-semibold mb-1">Submit Report</Text>
+                 <Text className="text-gray-500 text-center text-sm">
+                   Report {profile.user.username} for {selectedReason?.toLowerCase().replace(/_/g, ' ')}?
+                 </Text>
+               </View>
+               <View className="h-px bg-gray-200" />
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={async () => {
+                   if (!selectedReason) return;
+                   try {
+                     const result = await reportContent(
+                       user.id,
+                       userId,
+                       'USER',
+                       userId,
+                       selectedReason
+                     );
+                     if (result.status === 'success') {
+                       modalRef.current?.close();
+                       setModalView('menu');
+                       setSelectedReason(null);
+                       Toast.show({
+                         type: 'success',
+                         text1: 'Report Submitted',
+                         text2: 'Thank you for helping keep our community safe',
+                       });
+                     }
+                   } catch (error) {
+                     console.error('Error reporting:', error);
                      Toast.show({
-                       type: 'success',
-                       text1: 'Report Submitted',
-                       text2: 'Thank you for helping keep our community safe',
+                       type: 'error',
+                       text1: 'Error',
+                       text2: 'Failed to submit report. Please try again.',
                      });
                    }
-                 } catch (error) {
-                   console.error('Error reporting:', error);
-                   Toast.show({
-                     type: 'error',
-                     text1: 'Error',
-                     text2: 'Failed to submit report. Please try again.',
-                   });
-                 }
-               }}
-             >
-               <Text className="text-white text-center font-semibold text-lg">Submit Report</Text>
-             </TouchableOpacity>
-             
-             <TouchableOpacity
-               className="bg-gray-600 rounded-lg py-3"
-               onPress={() => setModalView('reportReasons')}
-             >
-               <Text className="text-white text-center text-lg">Go Back</Text>
-             </TouchableOpacity>
-           </View>
+                 }}
+               >
+                 <Text className="text-red-500 text-center text-lg font-semibold">Submit Report</Text>
+               </TouchableOpacity>
+             </View>
+             <View className="bg-white/95 rounded-2xl overflow-hidden">
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => setModalView('reportReasons')}
+               >
+                 <Text className="text-blue-500 text-center text-lg font-semibold">Go Back</Text>
+               </TouchableOpacity>
+             </View>
+           </>
          )}
 
          {modalView === 'confirmBlock' && (
-           <View className="px-4 py-3">
-             <Text className="text-white text-lg mb-4">
-               Are you sure you want to block {profile.user.username}?
-             </Text>
-             <TouchableOpacity
-               className="bg-red-500 rounded-xl py-3 mb-3"
-               onPress={async () => {
-                 try {
-                   const result = await blockUser(user.id, userId);
-                   if (result.status === 'success' || result.status === 'already_blocked') {
-                     modalRef.current?.close();
-                     setModalView('menu');
+           <>
+             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+               <View className="py-4 px-6">
+                 <Text className="text-gray-900 text-center text-base font-semibold mb-1">Block User</Text>
+                 <Text className="text-gray-500 text-center text-sm">
+                   Are you sure you want to block {profile.user.username}?
+                 </Text>
+               </View>
+               <View className="h-px bg-gray-200" />
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={async () => {
+                   try {
+                     const result = await blockUser(user.id, userId);
+                     if (result.status === 'success' || result.status === 'already_blocked') {
+                       modalRef.current?.close();
+                       setModalView('menu');
+                       Toast.show({
+                         type: 'success',
+                         text1: 'User Blocked',
+                         text2: `You have blocked ${profile.user.username}`,
+                       });
+                     }
+                   } catch (error) {
+                     console.error('Error blocking user:', error);
                      Toast.show({
-                       type: 'success',
-                       text1: 'User Blocked',
-                       text2: `You have blocked ${profile.user.username}`,
+                       type: 'error',
+                       text1: 'Error',
+                       text2: 'Failed to block user. Please try again.',
                      });
                    }
-                 } catch (error) {
-                   console.error('Error blocking user:', error);
-                   Toast.show({
-                     type: 'error',
-                     text1: 'Error',
-                     text2: 'Failed to block user. Please try again.',
-                   });
-                 }
-               }}
-             >
-               <Text className="text-white text-center font-semibold text-lg">Block User</Text>
-             </TouchableOpacity>
-             <TouchableOpacity
-               className="bg-gray-600 rounded-lg py-3"
-               onPress={() => setModalView('menu')}
-             >
-               <Text className="text-white text-center text-lg">Cancel</Text>
-             </TouchableOpacity>
-           </View>
+                 }}
+               >
+                 <Text className="text-red-500 text-center text-lg font-semibold">Block</Text>
+               </TouchableOpacity>
+             </View>
+             <View className="bg-white/95 rounded-2xl overflow-hidden">
+               <TouchableOpacity
+                 className="py-4 active:bg-gray-100"
+                 onPress={() => setModalView('menu')}
+               >
+                 <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+               </TouchableOpacity>
+             </View>
+           </>
          )}
        </View>
      </Modalize>

@@ -8,8 +8,8 @@
   import { Host, Portal } from 'react-native-portalize';
   import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
   import { ProfileProvider } from '@/providers/ProfileProvider';
-  import Toast, { BaseToast, ErrorToast } from 'react-native-toast-message';
-  import { View, Text, Dimensions, Animated } from 'react-native';
+  import Toast from 'react-native-toast-message';
+  import { View, Text } from 'react-native';
   import { Ionicons } from '@expo/vector-icons';
   import { cache } from '@/utils/cache';
   import { enableCacheDebug } from '@/utils/cacheDebug';
@@ -43,125 +43,43 @@
     };
   }
 
-  // Define modern, centered toast styles with enhanced animations
+  const HudToast = ({ icon, iconColor, text1, text2 }: { icon: string; iconColor: string; text1: string; text2?: string }) => (
+    <View style={{
+      backgroundColor: 'rgba(60, 60, 60, 0.92)',
+      borderRadius: 14,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 28,
+      paddingVertical: 20,
+      minWidth: 140,
+      maxWidth: 220,
+    }}>
+      <Ionicons name={icon as any} size={36} color={iconColor} style={{ marginBottom: 10 }} />
+      <Text style={{
+        color: 'white',
+        fontSize: 15,
+        fontWeight: '600',
+        textAlign: 'center',
+      }}>
+        {text1}
+      </Text>
+      {text2 ? (
+        <Text style={{
+          color: 'rgba(255, 255, 255, 0.65)',
+          fontSize: 13,
+          textAlign: 'center',
+          marginTop: 3,
+        }}>
+          {text2}
+        </Text>
+      ) : null}
+    </View>
+  );
+
   const toastConfig = {
-    success: (props: any) => (
-      <Animated.View style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)', // iOS-style black semi-transparent
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-        borderRadius: 16, // iOS-style rounded corners
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 150,
-        maxWidth: 280,
-        // iOS-style blur effect simulation with shadows
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 15,
-      }}>
-        <Ionicons name="checkmark-circle" size={28} color="#4ADE80" style={{ marginBottom: 8 }} />
-        <Text style={{
-          color: 'white',
-          fontSize: 16,
-          fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 4,
-        }}>
-          {props.text1}
-        </Text>
-        {props.text2 && (
-          <Text style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 13,
-            textAlign: 'center',
-            lineHeight: 18,
-          }}>
-            {props.text2}
-          </Text>
-        )}
-      </Animated.View>
-    ),
-    error: (props: any) => (
-      <Animated.View style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Same iOS-style black background
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-        borderRadius: 16, // iOS-style rounded corners
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 150,
-        maxWidth: 280,
-        // iOS-style blur effect simulation with shadows
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 15,
-      }}>
-        <Ionicons name="close-circle" size={28} color="#FF6B6B" style={{ marginBottom: 8 }} />
-        <Text style={{
-          color: 'white',
-          fontSize: 16,
-          fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 4,
-        }}>
-          {props.text1}
-        </Text>
-        {props.text2 && (
-          <Text style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 13,
-            textAlign: 'center',
-            lineHeight: 18,
-          }}>
-            {props.text2}
-          </Text>
-        )}
-      </Animated.View>
-    ),
-    info: (props: any) => (
-      <Animated.View style={{
-        backgroundColor: 'rgba(0, 0, 0, 0.8)', // Same iOS-style black background
-        paddingHorizontal: 24,
-        paddingVertical: 20,
-        borderRadius: 16, // iOS-style rounded corners
-        alignItems: 'center',
-        justifyContent: 'center',
-        minWidth: 150,
-        maxWidth: 280,
-        // iOS-style blur effect simulation with shadows
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 10 },
-        shadowOpacity: 0.3,
-        shadowRadius: 20,
-        elevation: 15,
-      }}>
-        <Ionicons name="information-circle" size={28} color="#3B82F6" style={{ marginBottom: 8 }} />
-        <Text style={{
-          color: 'white',
-          fontSize: 16,
-          fontWeight: '600',
-          textAlign: 'center',
-          marginBottom: 4,
-        }}>
-          {props.text1}
-        </Text>
-        {props.text2 && (
-          <Text style={{
-            color: 'rgba(255, 255, 255, 0.8)',
-            fontSize: 13,
-            textAlign: 'center',
-            lineHeight: 18,
-          }}>
-            {props.text2}
-          </Text>
-        )}
-      </Animated.View>
-    ),
+    success: (props: any) => <HudToast icon="checkmark" iconColor="white" text1={props.text1} text2={props.text2} />,
+    error: (props: any) => <HudToast icon="close" iconColor="white" text1={props.text1} text2={props.text2} />,
+    info: (props: any) => <HudToast icon="information" iconColor="white" text1={props.text1} text2={props.text2} />,
   };
 
   // Notification handler is configured in utils/notifications.ts

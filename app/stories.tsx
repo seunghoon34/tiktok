@@ -420,51 +420,64 @@ export default function Mystoryscreen() {
       <Portal>
         <Modalize
           ref={modalRef}
-          modalHeight={180}
-          modalStyle={{ backgroundColor: '#1a1a1a', borderTopLeftRadius: 20, borderTopRightRadius: 20 }}
-          handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
+          adjustToContentHeight
+          modalStyle={{
+            backgroundColor: 'transparent',
+            elevation: 0,
+            shadowOpacity: 0,
+          }}
+          overlayStyle={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+          closeOnOverlayTap
+          handlePosition="inside"
+          handleStyle={{ display: 'none' }}
           onClose={() => setShowDeleteConfirm(false)}
         >
-          <View className="pt-4 pb-6">
+          <View className="px-3 pb-8">
             {!showDeleteConfirm ? (
-              <TouchableOpacity
-                className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
-                onPress={() => setShowDeleteConfirm(true)}
-              >
-                <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-                  <Ionicons name="trash-outline" size={18} color="#FF6B6B" />
-                </View>
-                <Text className="text-white text-base font-medium">Delete Story</Text>
-              </TouchableOpacity>
-            ) : (
-              <View className="px-6 py-3">
-                <Text className="text-white text-lg mb-2 text-center font-semibold">
-                  Delete Story?
-                </Text>
-                <Text className="text-gray-400 text-sm mb-6 text-center">
-                  This action cannot be undone.
-                </Text>
-                
-                <View className="flex-row justify-between gap-3">
+              <>
+                <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
                   <TouchableOpacity
-                    className="flex-1 bg-gray-700/60 rounded-2xl py-4"
-                    onPress={() => setShowDeleteConfirm(false)}
+                    className="py-4 active:bg-gray-100"
+                    onPress={() => setShowDeleteConfirm(true)}
                   >
-                    <Text className="text-gray-300 text-center text-base font-medium">
-                      Cancel
-                    </Text>
+                    <Text className="text-red-500 text-center text-lg">Delete Story</Text>
                   </TouchableOpacity>
-                  
+                </View>
+                <View className="bg-white/95 rounded-2xl overflow-hidden">
                   <TouchableOpacity
-                    className="flex-1 bg-red-500/90 rounded-2xl py-4"
+                    className="py-4 active:bg-gray-100"
+                    onPress={() => modalRef.current?.close()}
+                  >
+                    <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+                  <View className="py-4 px-6">
+                    <Text className="text-gray-900 text-center text-base font-semibold mb-1">Delete Story</Text>
+                    <Text className="text-gray-500 text-center text-sm">
+                      This action cannot be undone.
+                    </Text>
+                  </View>
+                  <View className="h-px bg-gray-200" />
+                  <TouchableOpacity
+                    className="py-4 active:bg-gray-100"
                     onPress={handleDelete}
                   >
-                    <Text className="text-white text-center text-base font-semibold">
-                      Delete
-                    </Text>
+                    <Text className="text-red-500 text-center text-lg font-semibold">Delete</Text>
                   </TouchableOpacity>
                 </View>
-              </View>
+                <View className="bg-white/95 rounded-2xl overflow-hidden">
+                  <TouchableOpacity
+                    className="py-4 active:bg-gray-100"
+                    onPress={() => setShowDeleteConfirm(false)}
+                  >
+                    <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
           </View>
         </Modalize>

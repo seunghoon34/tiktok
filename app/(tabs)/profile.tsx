@@ -300,58 +300,72 @@ useFocusEffect(
      <Portal>
   <Modalize
     ref={modalRef}
-    modalHeight={200}
+    adjustToContentHeight
     modalStyle={{
-      backgroundColor: '#1a1a1a',
-      borderTopLeftRadius: 20,
-      borderTopRightRadius: 20,
+      backgroundColor: 'transparent',
+      elevation: 0,
+      shadowOpacity: 0,
     }}
+    overlayStyle={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
     closeOnOverlayTap
-    handleStyle={{ backgroundColor: '#4a4a4a', width: 40, height: 4, borderRadius: 2 }}
-    onClose={() => setModalView('menu')}  // Reset view when modal closes
+    handlePosition="inside"
+    handleStyle={{ display: 'none' }}
+    onClose={() => setModalView('menu')}
   >
-    <View className="pt-4 pb-6">
+    <View className="px-3 pb-8">
       {modalView === 'menu' ? (
         <>
-          <TouchableOpacity
-            className="flex-row items-center px-6 py-4 mx-4 mb-2 bg-gray-800/50 rounded-2xl active:bg-gray-700/60"
-            onPress={()=> {console.log("delete account?")
-              setModalView("confirmDelete")
-            }}
-          >
-            <View className="w-8 h-8 bg-red-500/20 rounded-full items-center justify-center mr-4">
-              <Ionicons name="person-remove-outline" size={18} color="#FF6B6B" />
-            </View>
-            <Text className="text-white text-base font-medium">Delete Account</Text>
-          </TouchableOpacity>
-
-          
+          <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+            <TouchableOpacity
+              className="py-4 active:bg-gray-100"
+              onPress={() => setModalView("confirmDelete")}
+            >
+              <Text className="text-red-500 text-center text-lg">Delete Account</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="bg-white/95 rounded-2xl overflow-hidden">
+            <TouchableOpacity
+              className="py-4 active:bg-gray-100"
+              onPress={() => modalRef.current?.close()}
+            >
+              <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+            </TouchableOpacity>
+          </View>
         </>
-      )  : modalView === 'confirmDelete' ? (
-        <View className="px-4 py-3">
-          <Text className="text-white text-lg mb-4">Are you sure you want to delete your account?</Text>
-          <TouchableOpacity
-            className="bg-red-500 rounded-lg py-3 mb-3"
-            onPress={async () => {
-              try {
-                await deleteAccount();
-                modalRef.current?.close();
-              } catch (error) {
-                console.error('Error deleting account:', error);
-                modalRef.current?.close();
-
-                // Handle error (show alert, etc)
-              }
-            }}          >
-            <Text className="text-white text-center font-semibold text-lg">Delete Account</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            className="bg-gray-600 rounded-lg py-3"
-            onPress={() => setModalView('menu')}
-          >
-            <Text className="text-white text-center text-lg">Cancel</Text>
-          </TouchableOpacity>
-        </View>
+      ) : modalView === 'confirmDelete' ? (
+        <>
+          <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+            <View className="py-4 px-6">
+              <Text className="text-gray-900 text-center text-base font-semibold mb-1">Delete Account</Text>
+              <Text className="text-gray-500 text-center text-sm">
+                This action cannot be undone. All your data will be permanently deleted.
+              </Text>
+            </View>
+            <View className="h-px bg-gray-200" />
+            <TouchableOpacity
+              className="py-4 active:bg-gray-100"
+              onPress={async () => {
+                try {
+                  await deleteAccount();
+                  modalRef.current?.close();
+                } catch (error) {
+                  console.error('Error deleting account:', error);
+                  modalRef.current?.close();
+                }
+              }}
+            >
+              <Text className="text-red-500 text-center text-lg font-semibold">Delete Account</Text>
+            </TouchableOpacity>
+          </View>
+          <View className="bg-white/95 rounded-2xl overflow-hidden">
+            <TouchableOpacity
+              className="py-4 active:bg-gray-100"
+              onPress={() => setModalView('menu')}
+            >
+              <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </>
       ) : null}
     </View>
   </Modalize>
