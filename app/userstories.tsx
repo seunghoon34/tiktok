@@ -54,7 +54,7 @@ export default function UserStoryScreen() {
   
   const params = useLocalSearchParams();
   const modalRef = useRef<Modalize>(null);
-  const videoRef = useRef(null);
+  const videoRef = useRef<Video>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   const router = useRouter();
@@ -228,13 +228,17 @@ export default function UserStoryScreen() {
                 top: 0
               }}
               resizeMode={ResizeMode.COVER}
-              isLooping
               shouldPlay={true}
               isMuted={stories[currentIndex].is_muted || mute}
               onLoadStart={() => setIsMediaLoading(true)}
               onPlaybackStatusUpdate={(status) => {
-                if (status.isLoaded && !status.isBuffering) {
-                  setIsMediaLoading(false);
+                if (status.isLoaded) {
+                  if (!status.isBuffering) {
+                    setIsMediaLoading(false);
+                  }
+                  if (status.didJustFinish) {
+                    videoRef.current?.replayAsync();
+                  }
                 }
               }}
             />

@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import { useAuth } from '@/providers/AuthProvider';
 import { supabase } from '@/utils/supabase';
 import { useRef, useState, useEffect } from 'react';
-import { Video, ResizeMode } from 'expo-av';
+import { Video, ResizeMode, AVPlaybackStatus } from 'expo-av';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { handleVideoLike } from '@/utils/videoMatching';
 import SimpleSpinner from '@/components/simpleSpinner';
@@ -58,6 +58,7 @@ type ModalView = 'menu' | 'confirmReport' | 'confirmBlock' | 'reportReasons' | '
 type ReportType = 'USER' | 'CONTENT';
 
 export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onMuteChange }: MediaItemProps) => {
+  const videoRef = useRef<Video>(null);
   const [showMuteIcon, setShowMuteIcon] = useState(false);
   const [isVideoLoading, setIsVideoLoading] = useState(true); // Track individual video loading
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -456,16 +457,21 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       {item.type === 'video' ? (
         <>
           <Video
+            ref={videoRef}
             source={{ uri: item.signedUrl }}
             style={[mediaStyle, { position: 'absolute' }]}
             resizeMode={ResizeMode.COVER}
-            isLooping
             shouldPlay={isVisible && isScreenFocused}
             isMuted={item.is_muted || mute}
             onLoadStart={handleLoadStart}
-            onPlaybackStatusUpdate={(status) => {
-              if (status.isLoaded && !status.isBuffering) {
-                setIsVideoLoading(false);
+            onPlaybackStatusUpdate={(status: AVPlaybackStatus) => {
+              if (status.isLoaded) {
+                if (!status.isBuffering) {
+                  setIsVideoLoading(false);
+                }
+                if (status.didJustFinish) {
+                  videoRef.current?.replayAsync();
+                }
               }
             }}
           />

@@ -1,7 +1,7 @@
 import { Video, ResizeMode } from 'expo-av';
 import { StyleSheet, View, Image, TouchableOpacity, ActivityIndicator } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { TextOverlayManager } from './textOverlayManager';
 
 interface PreviewMediaProps {
@@ -25,6 +25,7 @@ export default function PreviewMedia({
 }: PreviewMediaProps) {
   if (!uri) return <View style={styles.previewContainer} />;
   
+  const videoRef = useRef<Video>(null);
   const [isMuted, setIsMuted] = useState(false);
   const [isDraggingText, setIsDraggingText] = useState(false);
   const [textOverlays, setTextOverlays] = useState<any[]>([]);
@@ -89,13 +90,18 @@ export default function PreviewMedia({
           />
         ) : (
           <Video
+            ref={videoRef}
             source={{ uri }}
             style={styles.preview}
             useNativeControls={false}
             resizeMode={ResizeMode.COVER}
-            isLooping
             shouldPlay
             isMuted={isMuted}
+            onPlaybackStatusUpdate={(status) => {
+              if (status.isLoaded && status.didJustFinish) {
+                videoRef.current?.replayAsync();
+              }
+            }}
           />
         )}
       </View>
