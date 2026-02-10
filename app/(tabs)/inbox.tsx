@@ -99,7 +99,7 @@ const [isExpired, setIsExpired] = useState(false);
       // Handle match expiration
       const { data: matchData } = matchResult;
       if (matchData?.created_at) {
-        const matchTime = new Date(matchData.created_at).getTime();
+        const matchTime = new Date(matchData.created_at + 'Z').getTime();
         const now = Date.now();
         const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
         setIsExpired(hoursPassed >= 24);
@@ -310,12 +310,12 @@ export default function InboxScreen() {
      console.log(`[Inbox] Optimized fetch: ${chatIds.length} chats loaded with 2 queries instead of ${chatIds.length * 2}`);
 
      const sortedChats = chatsWithDetails.sort((a, b) => {
-       const aTime = a.lastMessage 
-         ? new Date(a.lastMessage.created_at).getTime() 
-         : new Date(a.created_at).getTime();
-       const bTime = b.lastMessage 
-         ? new Date(b.lastMessage.created_at).getTime() 
-         : new Date(b.created_at).getTime();
+       const aChatTime = new Date(a.created_at).getTime();
+       const aMessageTime = a.lastMessage ? new Date(a.lastMessage.created_at).getTime() : 0;
+       const aTime = Math.max(aChatTime, aMessageTime);
+       const bChatTime = new Date(b.created_at).getTime();
+       const bMessageTime = b.lastMessage ? new Date(b.lastMessage.created_at).getTime() : 0;
+       const bTime = Math.max(bChatTime, bMessageTime);
        return bTime - aTime;
      });
 

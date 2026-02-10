@@ -39,12 +39,13 @@ export const handleVideoLike = async (
       // Don't throw error - continue with like flow even if notification fails
     }
 
-    // 2. Check if the other user has liked any of current user's videos
+    // 2. Check if the other user has liked any of current user's non-expired videos
     const { data: otherUserLikes, error: checkError } = await supabase
       .from('Like')
-      .select('*')
+      .select('*, Video!inner(expired_at)')
       .eq('user_id', videoUserId)
-      .eq('video_user_id', userId);
+      .eq('video_user_id', userId)
+      .gt('Video.expired_at', new Date().toISOString());
 
     if (checkError) throw checkError;
 
@@ -62,6 +63,49 @@ export const handleVideoLike = async (
         .single();
 
       if (matchCheckError && matchCheckError.code !== 'PGRST116') throw matchCheckError;
+
+      // If match exists but is expired (24h+), reset it to give a fresh 24h window
+      if (existingMatch) {
+        const matchAge = (Date.now() - new Date(existingMatch.created_at + 'Z').getTime()) / (1000 * 60 * 60);
+        if (matchAge >= 24) {
+          const now = new Date().toISOString();
+
+          // Reset match and chat created_at in parallel
+          const [matchReset, chatReset] = await Promise.all([
+            supabase
+              .from('Match')
+              .update({ created_at: now })
+              .eq('id', existingMatch.id),
+            supabase
+              .from('Chat')
+              .update({ created_at: now })
+              .eq('user1_id', user1_id)
+              .eq('user2_id', user2_id)
+          ]);
+
+          if (matchReset.error) console.error('Error resetting match:', matchReset.error);
+          if (chatReset.error) console.error('Error resetting chat:', chatReset.error);
+
+          // Send match notifications
+          await supabase
+            .from('Notification')
+            .insert([
+              { type: 'MATCH', from_user: userId, to_user: videoUserId },
+              { type: 'MATCH', from_user: videoUserId, to_user: userId }
+            ]);
+
+          await invalidateNotificationCache(userId);
+          await invalidateNotificationCache(videoUserId);
+          console.log('[VideoMatching] Reset expired match + chat, new 24h window');
+
+          return {
+            status: 'matched',
+            message: "It's a match!",
+            like: newLike,
+            users: [user1_id, user2_id]
+          };
+        }
+      }
 
       // Only create new match if it doesn't exist
       if (!existingMatch) {

@@ -63,7 +63,30 @@ export default function ChatScreen() {
   const [isChatExpired, setIsChatExpired] = useState<boolean>(false);
   const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
   const [isBlocked, setIsBlocked] = useState<boolean>(false);
+  const [timeLeft, setTimeLeft] = useState<string>('');
 
+  // Countdown timer for match expiration
+  useEffect(() => {
+    if (!matchCreatedAt || isChatExpired) {
+      setTimeLeft('');
+      return;
+    }
+    const update = () => {
+      const expiresAt = toLocalDate(matchCreatedAt).getTime() + 24 * 60 * 60 * 1000;
+      const remaining = expiresAt - Date.now();
+      if (remaining <= 0) {
+        setTimeLeft('');
+        setIsChatExpired(true);
+        return;
+      }
+      const h = Math.floor(remaining / (1000 * 60 * 60));
+      const m = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+      setTimeLeft(`${h}h ${m}m`);
+    };
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [matchCreatedAt, isChatExpired]);
 
   const scrollViewRef = useRef<ScrollView>(null);
   const isInitialMount = useRef(true);
@@ -175,7 +198,7 @@ export default function ChatScreen() {
             setMatchCreatedAt(matchData.created_at);
 
             // Check if 24 hours have passed
-            const matchTime = new Date(matchData.created_at).getTime();
+            const matchTime = new Date(matchData.created_at + 'Z').getTime();
             const now = Date.now();
             const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
             const expired = hoursPassed >= 24;
@@ -367,6 +390,12 @@ export default function ChatScreen() {
       </Text>
       </View>
       </TouchableOpacity>
+      {timeLeft ? (
+        <View className="ml-auto flex-row items-center">
+          <Ionicons name="time-outline" size={14} color="#FF6B6B" />
+          <Text className="text-sm text-red-400 ml-1 font-medium">{timeLeft}</Text>
+        </View>
+      ) : null}
     </View>
          <ScrollView
   ref={scrollViewRef}
