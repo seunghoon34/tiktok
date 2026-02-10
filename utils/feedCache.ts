@@ -61,15 +61,7 @@ export class FeedCacheService {
    */
   async getBlockedUsers(userId: string): Promise<string[]> {
     try {
-      const cacheKey = this.getBlockedUsersKey(userId);
-      const cached = await cache.get<string[]>(cacheKey);
-      
-      if (cached) {
-        console.log(`[FeedCache] Using cached blocked users list (${cached.length} users)`);
-        return cached;
-      }
-
-      // Fetch fresh blocked users
+      // Always fetch fresh blocked users (no cache) to ensure blocks are reflected immediately
       const { data: blockedUsers, error } = await supabase
         .from('UserBlock')
         .select('blocker_id, blocked_id')
@@ -86,10 +78,8 @@ export class FeedCacheService {
       // Add current user to exclude list
       excludeUserIds.push(userId);
 
-      // Cache blocked users list for 5 minutes (shorter to reduce stale data issues)
-      await cache.set(cacheKey, excludeUserIds, 5 * 60 * 1000);
-      console.log(`[FeedCache] Cached blocked users list (${excludeUserIds.length} users) for 5 minutes`);
-      
+      console.log(`[FeedCache] Fetched blocked users list (${excludeUserIds.length} users)`);
+
       return excludeUserIds;
     } catch (error) {
       console.error('[FeedCache] Error getting blocked users:', error);
