@@ -100,7 +100,7 @@ export const handleVideoLike = async (
 
           return {
             status: 'matched',
-            message: "It's a match!",
+            message: "You connected!",
             like: newLike,
             users: [user1_id, user2_id]
           };
@@ -176,7 +176,7 @@ export const handleVideoLike = async (
         
         return {
           status: 'matched',
-          message: "It's a match!",
+          message: "You connected!",
           like: newLike,
           match,
           users: [user1_id,user2_id]

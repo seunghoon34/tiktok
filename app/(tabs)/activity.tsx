@@ -187,10 +187,10 @@ export default function ActivityScreen() {
     switch (type) {
       case 'SHOT':
         return isPremium
-        ? `${username || 'Someone'} fired a shot your way! 💘`
-        : `A shot was fired your way! 💘`;
+        ? `${username || 'Someone'} liked your Shot`
+        : `Someone liked your Shot`;
       case 'MATCH':
-        return `You matched with ${username || 'someone'}! 🎉`;
+        return `You connected with ${username || 'someone'}!`;
       default:
         return 'New notification';
     }
@@ -225,10 +225,10 @@ export default function ActivityScreen() {
     let displayContent = '';
     if (item.type === 'SHOT') {
       displayContent = isPremium
-        ? `${username} fired a shot your way! 💘`
-        : `A shot was fired your way! 💘`;
+        ? `${username} liked your Shot`
+        : `Someone liked your Shot`;
     } else if (item.type === 'MATCH') {
-      displayContent = `You matched with ${username}! 💕`;
+      displayContent = `You connected with ${username}!`;
     } else {
       displayContent = item.content || `${username} sent you a notification`;
     }
@@ -294,7 +294,7 @@ export default function ActivityScreen() {
               No Activity Yet
             </Text>
             <Text className="text-base text-gray-500 mt-3 text-center leading-6">
-              When someone likes your posts or you get a match, you'll see it here
+              When someone likes your posts or you connect, you'll see it here
             </Text>
             {/* <View className="mt-8 space-y-3">
               <View className="bg-red-50 px-6 py-3 rounded-xl flex-row items-center">

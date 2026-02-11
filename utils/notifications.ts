@@ -111,8 +111,8 @@ export async function registerForPushNotifications(userId: string) {
         const message = {
           to: pushToken,
           sound: 'default',
-          title: "New Match! 🎉",
-          body: `You matched with ${username}!`,
+          title: "New Connection!",
+          body: `You connected with ${username}!`,
           data: { type: 'match', matchedUser: username, chatId: chatId },
           priority: 'high',
       channelId: 'default',
@@ -155,7 +155,7 @@ export async function registerForPushNotifications(userId: string) {
       const message = {
         to: userData.expo_push_token,
         sound: 'default',
-        title: "A shot was fired your way! 💘",
+        title: "Someone liked your Shot!",
         body: 'Open the app to find out who!',
         data: { type: 'shot' },
         priority: 'high',
@@ -189,7 +189,8 @@ export async function registerForPushNotifications(userId: string) {
     senderId: string,
     senderUsername: string,
     receiverId: string,
-    chatId: string
+    chatId: string,
+    messageContent?: string
 ) {
     try {
         const { data: userData, error: userError } = await supabase
@@ -205,12 +206,16 @@ export async function registerForPushNotifications(userId: string) {
 
         console.log(`Sending message notification to: ${receiverId}, token: ${userData.expo_push_token}`);
 
+        const preview = messageContent
+            ? messageContent.length > 30 ? messageContent.substring(0, 30) + '...' : messageContent
+            : 'Sent you a message';
+
         const message = {
             to: userData.expo_push_token,
             sound: 'default',
-            title: "New Message! 💬",
-            body: `New message from ${senderUsername}`,
-            data: { 
+            title: senderUsername || 'New Message',
+            body: preview,
+            data: {
                 type: 'message',
                 senderId: senderId,
                 senderName: senderUsername,

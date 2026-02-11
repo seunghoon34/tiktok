@@ -1,53 +1,58 @@
 -- Database function to send push notifications when a message is inserted
 -- This runs server-side, so it works even when the receiver's app is closed!
 
-CREATE OR REPLACE FUNCTION send_message_notification()
+CREATE OR REPLACE FUNCTION send_message_push_notification()
 RETURNS TRIGGER AS $$
 DECLARE
-  receiver_id UUID;
-  sender_username TEXT;
-  receiver_token TEXT;
-  chat_user1 UUID;
-  chat_user2 UUID;
+  v_receiver_id TEXT;
+  v_sender_username TEXT;
+  v_receiver_token TEXT;
+  v_chat_user1 TEXT;
+  v_chat_user2 TEXT;
+  v_message_preview TEXT;
 BEGIN
   -- Get chat participants
-  SELECT user1_id, user2_id INTO chat_user1, chat_user2
+  SELECT user1_id, user2_id INTO v_chat_user1, v_chat_user2
   FROM "Chat"
   WHERE id = NEW.chat_id;
-  
+
   -- Determine receiver (the one who didn't send the message)
-  IF NEW.sender_id = chat_user1 THEN
-    receiver_id := chat_user2;
+  IF NEW.sender_id = v_chat_user1 THEN
+    v_receiver_id := v_chat_user2;
   ELSE
-    receiver_id := chat_user1;
+    v_receiver_id := v_chat_user1;
   END IF;
-  
-  -- Get sender's username and receiver's push token
-  SELECT username INTO sender_username
+
+  -- Get sender's username
+  SELECT username INTO v_sender_username
   FROM "User"
   WHERE id = NEW.sender_id;
-  
-  SELECT expo_push_token INTO receiver_token
+
+  -- Get receiver's push token
+  SELECT expo_push_token INTO v_receiver_token
   FROM "User"
-  WHERE id = receiver_id;
-  
-  -- Only send notification if receiver has a push token
-  IF receiver_token IS NOT NULL THEN
-    -- Use Supabase Edge Functions or pg_net to send HTTP request to Expo
-    -- For now, we'll use a simple approach with http extension
-    
+  WHERE id = v_receiver_id;
+
+  -- Build message preview (first 30 chars)
+  v_message_preview := LEFT(NEW.content, 30);
+  IF LENGTH(NEW.content) > 30 THEN
+    v_message_preview := v_message_preview || '...';
+  END IF;
+
+  -- Only send if receiver has a push token
+  IF v_receiver_token IS NOT NULL AND v_receiver_token != '' THEN
     PERFORM net.http_post(
       url := 'https://exp.host/--/api/v2/push/send',
       headers := '{"Content-Type": "application/json", "Accept": "application/json"}'::jsonb,
       body := json_build_object(
-        'to', receiver_token,
+        'to', v_receiver_token,
         'sound', 'default',
-        'title', 'New Message! 💬',
-        'body', 'New message from ' || sender_username,
+        'title', COALESCE(v_sender_username, 'New Message'),
+        'body', v_message_preview,
         'data', json_build_object(
           'type', 'message',
           'senderId', NEW.sender_id,
-          'senderName', sender_username,
+          'senderName', v_sender_username,
           'chatId', NEW.chat_id
         ),
         'priority', 'high',
@@ -56,21 +61,8 @@ BEGIN
         'badge', 1
       )::jsonb
     );
-    
-    RAISE LOG 'Notification sent to user % for message %', receiver_id, NEW.id;
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Create trigger to fire after message insert
-DROP TRIGGER IF EXISTS on_message_inserted ON "Message";
-CREATE TRIGGER on_message_inserted
-  AFTER INSERT ON "Message"
-  FOR EACH ROW
-  EXECUTE FUNCTION send_message_notification();
-
--- Grant necessary permissions
-GRANT EXECUTE ON FUNCTION send_message_notification() TO authenticated;
-GRANT EXECUTE ON FUNCTION send_message_notification() TO service_role;
