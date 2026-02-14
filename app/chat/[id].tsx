@@ -530,6 +530,7 @@ export default function ChatScreen() {
                   value={newMessage}
                   onChangeText={setNewMessage}
                   placeholder="Type a message..."
+                  maxLength={500}
                   multiline={true}
                   style={{ 
                     maxHeight: 120, // Allow more height for expansion
