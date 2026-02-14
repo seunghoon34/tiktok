@@ -2,7 +2,7 @@ import { View, Text, TouchableOpacity, SafeAreaView, Image, StyleSheet } from 'r
 import { useAuth } from '@/providers/AuthProvider'; 
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/utils/supabase';
-import { useEffect,  useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { Modalize } from 'react-native-modalize';
 import { Portal } from 'react-native-portalize';
@@ -10,6 +10,7 @@ import { reportContent, blockUser } from '@/utils/userModeration';
 import Toast from 'react-native-toast-message';
 import { ScrollView } from 'react-native-gesture-handler';
 import SkeletonLoader from '@/components/userSkeleton';
+import { useColorScheme } from 'nativewind';
 import {
   ROLE_OPTIONS,
   ROLE_COLORS,
@@ -42,6 +43,9 @@ interface UserProfileData {
 }
 
 export default function UserScreen() {
+ const { colorScheme } = useColorScheme();
+ const isDark = colorScheme === 'dark';
+ const styles = useMemo(() => createStyles(isDark), [isDark]);
  const params = useLocalSearchParams();
  const [profile, setProfile] = useState<UserProfileData | null>(null);
  const router = useRouter();
@@ -145,13 +149,13 @@ export default function UserScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.headerButton}>
-          <Ionicons name="chevron-back" size={28} color="#1F2937"/>
+          <Ionicons name="chevron-back" size={28} color={isDark ? '#F9FAFB' : '#1F2937'}/>
         </TouchableOpacity>
-        
+
         <Text style={styles.username}>@{profile.user.username}</Text>
-        
+
         <TouchableOpacity onPress={() => modalRef.current?.open()} style={styles.headerButton}>
-          <Ionicons name="ellipsis-horizontal" size={28} color="#1F2937"/>
+          <Ionicons name="ellipsis-horizontal" size={28} color={isDark ? '#F9FAFB' : '#1F2937'}/>
         </TouchableOpacity>
       </View>
 
@@ -380,24 +384,24 @@ export default function UserScreen() {
        <View className="px-3 pb-8">
          {modalView === 'menu' && (
            <>
-             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden mb-2">
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => setModalView('reportReasons')}
                >
                  <Text className="text-red-500 text-center text-lg">Report {profile.user.username}</Text>
                </TouchableOpacity>
-               <View className="h-px bg-gray-200 mx-0" />
+               <View className="h-px bg-gray-200 dark:bg-gray-700 mx-0" />
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => setModalView('confirmBlock')}
                >
                  <Text className="text-red-500 text-center text-lg">Block {profile.user.username}</Text>
                </TouchableOpacity>
              </View>
-             <View className="bg-white/95 rounded-2xl overflow-hidden">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden">
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => modalRef.current?.close()}
                >
                  <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
@@ -408,28 +412,28 @@ export default function UserScreen() {
 
          {modalView === 'reportReasons' && (
            <>
-             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden mb-2">
                <View className="py-3 px-4">
-                 <Text className="text-gray-500 text-center text-sm font-medium">Report {profile.user.username}</Text>
+                 <Text className="text-gray-500 dark:text-gray-400 text-center text-sm font-medium">Report {profile.user.username}</Text>
                </View>
-               <View className="h-px bg-gray-200" />
+               <View className="h-px bg-gray-200 dark:bg-gray-700" />
                {(['INAPPROPRIATE_CONTENT', 'HARASSMENT', 'SPAM', 'FAKE_PROFILE', 'OTHER'] as const).map((reason, index, arr) => (
                  <View key={reason}>
                    <TouchableOpacity
-                     className="py-4 active:bg-gray-100"
+                     className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                      onPress={() => handleReasonSelect(reason)}
                    >
                      <Text className="text-blue-500 text-center text-lg">
                        {reason.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, l => l.toUpperCase())}
                      </Text>
                    </TouchableOpacity>
-                   {index < arr.length - 1 && <View className="h-px bg-gray-200" />}
+                   {index < arr.length - 1 && <View className="h-px bg-gray-200 dark:bg-gray-700" />}
                  </View>
                ))}
              </View>
-             <View className="bg-white/95 rounded-2xl overflow-hidden">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden">
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => setModalView('menu')}
                >
                  <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
@@ -440,16 +444,16 @@ export default function UserScreen() {
 
          {modalView === 'confirmReportReason' && (
            <>
-             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden mb-2">
                <View className="py-4 px-6">
-                 <Text className="text-gray-900 text-center text-base font-semibold mb-1">Submit Report</Text>
-                 <Text className="text-gray-500 text-center text-sm">
+                 <Text className="text-gray-900 dark:text-gray-100 text-center text-base font-semibold mb-1">Submit Report</Text>
+                 <Text className="text-gray-500 dark:text-gray-400 text-center text-sm">
                    Report {profile.user.username} for {selectedReason?.toLowerCase().replace(/_/g, ' ')}?
                  </Text>
                </View>
-               <View className="h-px bg-gray-200" />
+               <View className="h-px bg-gray-200 dark:bg-gray-700" />
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={async () => {
                    if (!selectedReason) return;
                    try {
@@ -483,9 +487,9 @@ export default function UserScreen() {
                  <Text className="text-red-500 text-center text-lg font-semibold">Submit Report</Text>
                </TouchableOpacity>
              </View>
-             <View className="bg-white/95 rounded-2xl overflow-hidden">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden">
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => setModalView('reportReasons')}
                >
                  <Text className="text-blue-500 text-center text-lg font-semibold">Go Back</Text>
@@ -496,16 +500,16 @@ export default function UserScreen() {
 
          {modalView === 'confirmBlock' && (
            <>
-             <View className="bg-white/95 rounded-2xl overflow-hidden mb-2">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden mb-2">
                <View className="py-4 px-6">
-                 <Text className="text-gray-900 text-center text-base font-semibold mb-1">Block User</Text>
-                 <Text className="text-gray-500 text-center text-sm">
+                 <Text className="text-gray-900 dark:text-gray-100 text-center text-base font-semibold mb-1">Block User</Text>
+                 <Text className="text-gray-500 dark:text-gray-400 text-center text-sm">
                    Are you sure you want to block {profile.user.username}?
                  </Text>
                </View>
-               <View className="h-px bg-gray-200" />
+               <View className="h-px bg-gray-200 dark:bg-gray-700" />
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={async () => {
                    try {
                      const result = await blockUser(user.id, userId);
@@ -531,9 +535,9 @@ export default function UserScreen() {
                  <Text className="text-red-500 text-center text-lg font-semibold">Block</Text>
                </TouchableOpacity>
              </View>
-             <View className="bg-white/95 rounded-2xl overflow-hidden">
+             <View className="bg-white/95 dark:bg-[#2C2C2E]/95 rounded-2xl overflow-hidden">
                <TouchableOpacity
-                 className="py-4 active:bg-gray-100"
+                 className="py-4 active:bg-gray-100 dark:active:bg-gray-800"
                  onPress={() => setModalView('menu')}
                >
                  <Text className="text-blue-500 text-center text-lg font-semibold">Cancel</Text>
@@ -548,10 +552,10 @@ export default function UserScreen() {
  );
 }
 
-const styles = StyleSheet.create({
+const createStyles = (isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? '#000000' : '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
@@ -559,7 +563,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
-    backgroundColor: 'white',
+    backgroundColor: isDark ? '#000000' : 'white',
   },
   headerButton: {
     width: 40,
@@ -570,7 +574,7 @@ const styles = StyleSheet.create({
   username: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: isDark ? '#F9FAFB' : '#1F2937',
   },
   imageWrapper: {
     paddingHorizontal: 16,
@@ -582,7 +586,7 @@ const styles = StyleSheet.create({
     aspectRatio: 4/5,
     borderRadius: 24,
     overflow: 'hidden',
-    backgroundColor: '#E5E7EB',
+    backgroundColor: isDark ? '#38383A' : '#E5E7EB',
     maxHeight: 480,
   },
   profileImage: {
@@ -595,7 +599,7 @@ const styles = StyleSheet.create({
     height: '100%',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? '#2C2C2E' : '#F3F4F6',
   },
   imageGradient: {
     position: 'absolute',
@@ -646,13 +650,13 @@ const styles = StyleSheet.create({
     paddingTop: 16,
   },
   card: {
-    backgroundColor: 'white',
+    backgroundColor: isDark ? '#1C1C1E' : 'white',
     borderRadius: 20,
     padding: 20,
     marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: isDark ? 0.2 : 0.05,
     shadowRadius: 8,
     elevation: 2,
   },
@@ -664,16 +668,15 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1F2937',
+    color: isDark ? '#F9FAFB' : '#1F2937',
     marginLeft: 10,
   },
   aboutText: {
     fontSize: 16,
     lineHeight: 24,
-    color: '#4B5563',
+    color: isDark ? '#D1D5DB' : '#4B5563',
   },
   roleBanner: {
-    // backgroundColor and borderColor will be set dynamically
     borderRadius: 16,
     padding: 18,
     marginBottom: 12,
@@ -685,7 +688,7 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: 'white',
+    backgroundColor: isDark ? '#2C2C2E' : 'white',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 14,
@@ -694,7 +697,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   roleLabel: {
-    // color will be set dynamically
     fontSize: 13,
     fontWeight: '600',
     marginBottom: 2,
@@ -702,13 +704,11 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
   roleValue: {
-    // color will be set dynamically
     fontSize: 18,
     fontWeight: '700',
     marginBottom: 4,
   },
   roleDescription: {
-    // color will be set dynamically
     fontSize: 13,
     fontStyle: 'italic',
   },
@@ -718,21 +718,21 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tag: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3D1515' : '#FEE2E2',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
   },
   tagBlue: {
-    backgroundColor: '#DBEAFE',
+    backgroundColor: isDark ? '#1E2A4A' : '#DBEAFE',
   },
   tagText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#DC2626',
+    color: isDark ? '#FCA5A5' : '#DC2626',
   },
   tagTextBlue: {
-    color: '#1D4ED8',
+    color: isDark ? '#93C5FD' : '#1D4ED8',
   },
   infoGrid: {
     flexDirection: 'row',
@@ -742,19 +742,19 @@ const styles = StyleSheet.create({
   infoItem: {
     flex: 1,
     minWidth: '45%',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? '#2C2C2E' : '#F9FAFB',
     padding: 16,
     borderRadius: 12,
   },
   infoLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: isDark ? '#8E8E93' : '#6B7280',
     marginBottom: 4,
     fontWeight: '500',
   },
   infoValue: {
     fontSize: 16,
-    color: '#1F2937',
+    color: isDark ? '#F9FAFB' : '#1F2937',
     fontWeight: '600',
   },
   lifestyleGrid: {
@@ -763,7 +763,7 @@ const styles = StyleSheet.create({
   lifestyleItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? '#2C2C2E' : '#F9FAFB',
     padding: 14,
     borderRadius: 12,
   },
@@ -771,7 +771,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: 'white',
+    backgroundColor: isDark ? '#1C1C1E' : 'white',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
@@ -781,13 +781,13 @@ const styles = StyleSheet.create({
   },
   lifestyleLabel: {
     fontSize: 13,
-    color: '#6B7280',
+    color: isDark ? '#8E8E93' : '#6B7280',
     marginBottom: 2,
     fontWeight: '500',
   },
   lifestyleValue: {
     fontSize: 15,
-    color: '#1F2937',
+    color: isDark ? '#F9FAFB' : '#1F2937',
     fontWeight: '600',
   },
 });

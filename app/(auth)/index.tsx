@@ -53,10 +53,10 @@ export default function LoginScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 items-center justify-center bg-white px-6">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black px-6">
         <View className='w-full items-center'>
           <Image
-            source={require('../../assets/images/s2icon.png')}
+            source={require('../../assets/images/logo-transparent.png')}
             style={{ width: 100, height: 100, marginBottom: 32 }}
           />
 
@@ -67,7 +67,7 @@ export default function LoginScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`w-full bg-white border-2 border-gray-300 h-button rounded-xl flex-row justify-center items-center mb-4 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
+          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-4 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
           onPress={handleGoogleSignIn}
           disabled={isGoogleLoading || isLoading}
           activeOpacity={0.6}
@@ -76,22 +76,22 @@ export default function LoginScreen() {
             <ActivityIndicator color="#EA4335" />
           ) : (
             <>
-              <Text className="text-2xl mr-2">G</Text>
-              <Text className="text-gray-700 font-semibold text-ios-body">Continue with Google</Text>
+              <Text className="text-2xl mr-2 dark:text-white">G</Text>
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold text-ios-body">Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
         <View className="w-full flex-row items-center mb-4">
-          <View className="flex-1 h-px bg-gray-300" />
-          <Text className="mx-4 text-gray-500 text-ios-body">or</Text>
-          <View className="flex-1 h-px bg-gray-300" />
+          <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+          <Text className="mx-4 text-gray-500 dark:text-gray-400 text-ios-body">or</Text>
+          <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
         </View>
 
         <TextInput
           placeholder='Email'
           placeholderTextColor="#8E8E93"
-          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-3 text-ios-body'
+          className='bg-gray-100 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-700 w-full mb-3 text-ios-body dark:text-white'
           value={email}
           onChangeText={(text) => {
             setEmail(text);
@@ -105,7 +105,7 @@ export default function LoginScreen() {
           secureTextEntry={true}
           placeholder='Password'
           placeholderTextColor="#8E8E93"
-          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-4 text-ios-body'
+          className='bg-gray-100 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-700 w-full mb-4 text-ios-body dark:text-white'
           value={password}
           onChangeText={(text) => {
             setPassword(text);
@@ -114,7 +114,7 @@ export default function LoginScreen() {
         />
 
         <View className='w-full'>
-          <TouchableOpacity 
+          <TouchableOpacity
             className={`bg-red-500 h-button rounded-xl justify-center items-center ${isLoading ? 'opacity-disabled' : ''}`}
             onPress={handleSignIn}
             disabled={isLoading}

@@ -9,6 +9,7 @@ import Header from '@/components/header';
 import CustomHeader from '@/components/customHeader';
 import { chatCache, CachedMessage } from '@/utils/chatCache';
 import { EnhancedChatService } from '@/utils/chatCacheEnhanced';
+import { useColorScheme } from 'nativewind';
 
 // Ensure Supabase UTC timestamps are parsed correctly
 const toLocalDate = (dateString: string) => {
@@ -54,7 +55,7 @@ export default function ChatScreen() {
     paramUsername ? { username: paramUsername } : null
   );
   const [keyboardHeight, setKeyboardHeight] = useState(0);
-  const [inputHeight, setInputHeight] = useState(44); // Track input height
+  const [inputHeight, setInputHeight] = useState(44);
   const [otherUserProfile, setOtherUserProfile] = useState<any>(
     paramProfilePicture ? { profilepicture: paramProfilePicture as string } : null
   );
@@ -63,6 +64,8 @@ export default function ChatScreen() {
   const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);
   const [isBlocked, setIsBlocked] = useState<boolean>(false);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   // Countdown timer for match expiration
   useEffect(() => {
@@ -98,7 +101,6 @@ export default function ChatScreen() {
   // Consolidated scroll effect - no timeouts needed
   useEffect(() => {
     if (messages.length > 0) {
-      // Instant scroll on initial load, animated for subsequent updates
       const animated = !isInitialMount.current;
       scrollViewRef.current?.scrollToEnd({ animated });
       if (isInitialMount.current) {
@@ -110,7 +112,6 @@ export default function ChatScreen() {
   useEffect(() => {
     if (!id || !user) return;
 
-    // Mark messages as read when entering chat
     const markMessagesAsRead = async () => {
       await EnhancedChatService.markMessagesAsRead(id as string, user.id);
     };
@@ -149,7 +150,6 @@ export default function ChatScreen() {
     if (!id || !user) return;
 
     const fetchMessages = async () => {
-      // Parallelize all initial queries for faster loading
       const [chatResult, messagesResult] = await Promise.all([
         supabase
           .from('Chat')
@@ -171,7 +171,6 @@ export default function ChatScreen() {
         const other = user1?.id === user.id ? user2 : user1;
         setOtherUser(other);
 
-        // Parallelize block check, match check, and profile fetch
         if (other?.id) {
           const [blockResult, matchResult] = await Promise.all([
             supabase
@@ -195,7 +194,6 @@ export default function ChatScreen() {
           if (matchData?.created_at) {
             setMatchCreatedAt(matchData.created_at);
 
-            // Check if 24 hours have passed
             const matchTime = new Date(matchData.created_at + 'Z').getTime();
             const now = Date.now();
             const hoursPassed = (now - matchTime) / (1000 * 60 * 60);
@@ -205,7 +203,6 @@ export default function ChatScreen() {
             console.log(`[Chat] Match age: ${hoursPassed.toFixed(1)}h, expired: ${expired}`);
           }
 
-          // Build profile picture URL from fresh DB data
           const otherProfile = (other as any).UserProfile;
           const picPath = Array.isArray(otherProfile) ? otherProfile[0]?.profilepicture : otherProfile?.profilepicture;
           if (picPath) {
@@ -218,7 +215,6 @@ export default function ChatScreen() {
         }
       }
 
-      // Set messages from parallel load
       setMessages(messagesResult.messages);
 
       if (messagesResult.hasNewMessages) {
@@ -241,7 +237,6 @@ export default function ChatScreen() {
         filter: `chat_id=eq.${id}`
       },
       async (payload) => {
-        // If the new message is from the other user, mark it as read immediately
         if (payload.new.sender_id !== user.id) {
           await supabase
             .from('Message')
@@ -249,7 +244,6 @@ export default function ChatScreen() {
             .eq('id', payload.new.id);
         }
 
-        // Optimize: Use payload data directly instead of fetching again
         const isIncoming = payload.new.sender_id !== user.id;
         const newMessage = {
           ...payload.new,
@@ -260,7 +254,6 @@ export default function ChatScreen() {
 
         setMessages(current => [...current, newMessage]);
 
-        // Update cache with new message
         await chatCache.addMessage(id as string, newMessage as CachedMessage);
 
         console.log(`[Chat] Real-time message added and cached`);
@@ -275,16 +268,14 @@ export default function ChatScreen() {
         filter: `chat_id=eq.${id}`
       },
       async (payload) => {
-        // Use payload data directly - no database fetch needed
         setMessages(current =>
           current.map(msg =>
             msg.id === payload.new.id
-              ? { ...msg, ...payload.new }  // Merge update into existing message
+              ? { ...msg, ...payload.new }
               : msg
           )
         );
 
-        // Sync read status update to cache
         if (payload.new.read !== payload.old?.read) {
           await chatCache.updateMessage(id as string, payload.new.id, { read: payload.new.read });
         }
@@ -300,13 +291,11 @@ export default function ChatScreen() {
   const sendMessage = async () => {
     if (!newMessage.trim()) return;
 
-    // Check if user is blocked
     if (isBlocked) {
       console.log('[Chat] Cannot send message - user is blocked');
       return;
     }
 
-    // Check if chat has expired
     if (isChatExpired) {
       console.log('[Chat] Cannot send message - chat has expired');
       return;
@@ -326,14 +315,11 @@ export default function ChatScreen() {
       return;
     }
 
-    // Notification is handled automatically by AuthProvider's real-time subscription
-    // No need to send it here to avoid duplicates
-
     setNewMessage('');
   };
 
   const checkUserVideos = async () => {
-    if (!otherUser?.id) return; // Add this check
+    if (!otherUser?.id) return;
 
     const { data, error } = await supabase
       .from('Video')
@@ -341,7 +327,7 @@ export default function ChatScreen() {
       .eq('user_id', otherUser?.id)
       .gt('expired_at', new Date().toISOString())
       .limit(1);
-    
+
             setHasVideos(data ? data.length > 0 : false);
   };
 
@@ -354,41 +340,41 @@ export default function ChatScreen() {
   );
 
   return (
-    <View className="flex-1 bg-white">
-      <SafeAreaView edges={['top']} className="flex-1 bg-white">
+    <View className="flex-1 bg-white dark:bg-black">
+      <SafeAreaView edges={['top']} className="flex-1 bg-white dark:bg-black">
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           style={{ flex: 1 }}
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}
         >
           <View className="flex-1">
-           
+
             <View className="flex-row items-center  w-full px-4 py-2">
       <View className="w-10">
-        
+
           <TouchableOpacity onPress={() => router.back()}>
-          
-            <Ionicons name="chevron-back" size={32} color={'black'}/>
+
+            <Ionicons name="chevron-back" size={32} color={isDark ? 'white' : 'black'}/>
           </TouchableOpacity>
-        
+
       </View>
       <TouchableOpacity className="mx-2" onPress={() => router.push(`/user?user_id=${otherUser?.id}`)} disabled={isChatExpired} activeOpacity={isChatExpired ? 1 : 0.2}>
         <View className='flex-row'>
       {otherUserProfile?.profilepicture ? (
-            <Image 
+            <Image
               source={{ uri: otherUserProfile.profilepicture }}
               className="w-10 h-10 rounded-full mr-2"
             />
           ) : (
-            <Ionicons 
-              name="person-circle-outline" 
-              size={40} 
-              color="gray" 
-              className="mr-2" 
+            <Ionicons
+              name="person-circle-outline"
+              size={40}
+              color="gray"
+              className="mr-2"
             />
           )}
-      <Text className="font-bold text-2xl text-black">
-        {otherUser?.username || 'Chat'} 
+      <Text className="font-bold text-2xl text-black dark:text-white">
+        {otherUser?.username || 'Chat'}
       </Text>
       </View>
       </TouchableOpacity>
@@ -405,11 +391,9 @@ export default function ChatScreen() {
   contentContainerStyle={{ paddingBottom: 20 }}
 >
   {messages.map((item, index) => {
-    // Only show avatar if it's the first message or if the previous message was from a different sender
     const showAvatar = item.sender_id !== user.id &&
       (index === 0 || messages[index - 1].sender_id !== item.sender_id);
 
-    // Show day separator when date changes
     const showDaySeparator = index === 0 ||
       getDateKey(item.created_at) !== getDateKey(messages[index - 1].created_at);
 
@@ -431,7 +415,7 @@ export default function ChatScreen() {
     hasVideos ? (
       <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={isChatExpired ? 1 : 0.6} disabled={isChatExpired}>
         <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
-          <View className="p-0.5 bg-white rounded-full">
+          <View className="p-0.5 bg-white dark:bg-black rounded-full">
             {otherUserProfile?.profilepicture ? (
               <Image
                 source={{ uri: otherUserProfile.profilepicture }}
@@ -478,7 +462,6 @@ export default function ChatScreen() {
       </TouchableOpacity>
     )
   ) : (
-    // Empty spacer to maintain alignment for consecutive messages
     <View className="w-avatar" />
   )
 )}
@@ -489,17 +472,19 @@ export default function ChatScreen() {
           className={`px-3 py-2 rounded-2xl ${item.sender_id === user.id ? 'self-end' : 'self-start'}`}
           style={[
             { maxWidth: '75%' },
-            item.sender_id === user.id ? { backgroundColor: '#FF6B6B' } : { backgroundColor: '#F3F4F6' }
+            item.sender_id === user.id
+              ? { backgroundColor: '#FF6B6B' }
+              : { backgroundColor: isDark ? '#2C2C2E' : '#F3F4F6' }
           ]}
         >
-          <Text className={`text-base ${item.sender_id === user.id ? 'text-white' : 'text-black'}`}>
+          <Text className={`text-base ${item.sender_id === user.id ? 'text-white' : 'text-black dark:text-white'}`}>
             {item.content}
           </Text>
         </View>
 
-        {/* Time and Read status - directly under bubble */}
+        {/* Time and Read status */}
         <View className={`mt-0.5 ${item.sender_id === user.id ? 'items-end' : 'items-start'}`}>
-          <Text className="text-gray-500 text-xs">
+          <Text className="text-gray-500 dark:text-gray-400 text-xs">
             {item.sender_id === user.id && item.read ? 'Read · ' : ''}{formatTime(item.created_at)}
           </Text>
         </View>
@@ -509,48 +494,48 @@ export default function ChatScreen() {
     );
   })}
 </ScrollView>
-            
-            <View className="px-4 py-4 pb-8 border-t border-gray-200 flex-row items-center bg-white">
+
+            <View className="px-4 py-4 pb-8 border-t border-gray-200 dark:border-gray-700 flex-row items-center bg-white dark:bg-black">
             {isBlocked ? (
-              <View className="flex-1 bg-gray-200 px-4 py-3 rounded-[20px] items-center justify-center">
-                <Text className="text-gray-500 font-medium">
-                  🚫 This user is blocked
+              <View className="flex-1 bg-gray-200 dark:bg-[#1C1C1E] px-4 py-3 rounded-[20px] items-center justify-center">
+                <Text className="text-gray-500 dark:text-gray-400 font-medium">
+                  This user is blocked
                 </Text>
               </View>
             ) : isChatExpired ? (
-              <View className="flex-1 bg-gray-200 px-4 py-3 rounded-[20px] items-center justify-center">
-                <Text className="text-gray-500 font-medium">
-                  💬 This chat has expired (24h)
+              <View className="flex-1 bg-gray-200 dark:bg-[#1C1C1E] px-4 py-3 rounded-[20px] items-center justify-center">
+                <Text className="text-gray-500 dark:text-gray-400 font-medium">
+                  This chat has expired (24h)
                 </Text>
               </View>
             ) : (
               <>
                 <TextInput
-                  className="flex-1 bg-gray-100 px-4 py-3 mr-2 min-h-[44px]"
+                  className="flex-1 bg-gray-100 dark:bg-[#1C1C1E] px-4 py-3 mr-2 min-h-[44px] dark:text-white"
                   value={newMessage}
                   onChangeText={setNewMessage}
                   placeholder="Type a message..."
+                  placeholderTextColor={isDark ? '#8E8E93' : undefined}
                   maxLength={500}
                   multiline={true}
-                  style={{ 
-                    maxHeight: 120, // Allow more height for expansion
+                  style={{
+                    maxHeight: 120,
                     borderRadius: 20,
-                    textAlignVertical: 'top', // Align text to top for multiline
+                    textAlignVertical: 'top',
                     fontSize: 16,
-                    lineHeight: 20, // Better line spacing
+                    lineHeight: 20,
                   }}
                   onContentSizeChange={(event) => {
-                    const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24)); // 24 for padding
+                    const newHeight = Math.max(44, Math.min(120, event.nativeEvent.contentSize.height + 24));
                     const previousHeight = inputHeight;
                     setInputHeight(newHeight);
 
-                    // Force scroll when input height changes (expanding or shrinking)
                     if (newHeight !== previousHeight) {
                       scrollViewRef.current?.scrollToEnd({ animated: true });
                     }
                   }}
                 />
-                <TouchableOpacity 
+                <TouchableOpacity
                   onPress={sendMessage}
                   className="bg-[#FF6B6B] rounded-full p-3"
                 >

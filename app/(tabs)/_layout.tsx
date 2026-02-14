@@ -6,9 +6,12 @@ import { useNotifications } from '@/providers/NotificationProvider';
 import { supabase } from '@/utils/supabase';
 import { useAuth } from '@/providers/AuthProvider';
 import * as Notifications from 'expo-notifications';
+import { useColorScheme } from 'nativewind';
 
 export default function TabLayout() {
-  const [iconColor, setIconColor] = useState<'black' | 'white'>('black');
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const iconColor = isDark ? 'white' : 'black';
   const router = useRouter()
   const { unreadCount, setUnreadCount } = useNotifications()
   const { user } = useAuth()
@@ -110,15 +113,15 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#000',
+        tabBarActiveTintColor: isDark ? '#FFFFFF' : '#000000',
         headerShown: false,
         tabBarStyle: {
-          height: 70, // Increased height for more padding
+          height: 70,
           paddingBottom: 20,
           paddingTop: 8,
           borderTopWidth: 0.5,
-          borderTopColor: '#C6C6C8',
-          backgroundColor: '#FFFFFF',
+          borderTopColor: isDark ? '#38383A' : '#C6C6C8',
+          backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF',
         },
       }}>
       <Tabs.Screen
@@ -129,7 +132,7 @@ export default function TabLayout() {
             <Ionicons
               name={focused ? "home" : "home-outline"}
               size={28}
-              color="black"
+              color={iconColor}
             />
         }}
         listeners={{
@@ -145,7 +148,7 @@ export default function TabLayout() {
     title: '',
     tabBarIcon: ({ focused }) => (
       <View>
-        <Ionicons name={focused ? "heart" : "heart-outline"} size={28} color="black" />
+        <Ionicons name={focused ? "heart" : "heart-outline"} size={28} color={iconColor} />
         {unreadCount > 0 && (
           <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
             <Text className="text-white text-[11px] font-semibold">
@@ -167,8 +170,8 @@ export default function TabLayout() {
         options={{
           title: '',
           tabBarIcon: ({ focused }) => (
-            <View className="items-center justify-center w-[28px] h-[28px] border-[1.5px] border-black rounded-md">
-              <Ionicons name="add" size={18} color="black" />
+            <View className={`items-center justify-center w-[28px] h-[28px] border-[1.5px] rounded-md ${isDark ? 'border-white' : 'border-black'}`}>
+              <Ionicons name="add" size={18} color={iconColor} />
             </View>
           )          
         }}
@@ -188,7 +191,7 @@ export default function TabLayout() {
               <Ionicons
                 name={focused ? "chatbubble-ellipses" : "chatbubble-ellipses-outline"}
                 size={28}
-                color="black"
+                color={iconColor}
               />
               {unreadMessages > 0 && (
                 <View className="absolute -top-1 -right-2 bg-red-500 rounded-full min-w-[18px] h-[18px] items-center justify-center">
@@ -210,7 +213,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: '',
-          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={28} color="black" />
+          tabBarIcon: ({ focused }) => <Ionicons name={focused?"person":"person-outline"} size={28} color={iconColor} />
         }}
       />
       

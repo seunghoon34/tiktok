@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -33,8 +33,12 @@ import {
 } from '@/constants/profileOptions';
 import { hybridCache } from '@/utils/memoryCache';
 import { invalidateUserCache } from '@/utils/cacheInvalidation';
+import { useColorScheme } from 'nativewind';
 
 const EditProfileScreen = () => {
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const styles = useMemo(() => createStyles(isDark), [isDark]);
   const scrollViewRef = useRef<any>(null);
   const aboutMeRef = useRef<any>(null);
   const [image, setImage] = useState<string | null>(null);
@@ -382,7 +386,7 @@ const EditProfileScreen = () => {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: 'white' }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: isDark ? '#000000' : 'white' }}>
       <KeyboardAwareScrollView
         ref={scrollViewRef}
         style={styles.container}
@@ -410,10 +414,10 @@ const EditProfileScreen = () => {
               }}
               activeOpacity={0.6}
             >
-              <Ionicons name="chevron-back" size={28} color="black" />
+              <Ionicons name="chevron-back" size={28} color={isDark ? 'white' : 'black'} />
             </TouchableOpacity>
           </View>
-          <Text style={{ fontSize: 17, fontWeight: '600', color: 'black' }}>{''}</Text>
+          <Text style={{ fontSize: 17, fontWeight: '600', color: isDark ? 'white' : 'black' }}>{''}</Text>
           <View style={{ width: 40 }}>
             {hasChanges() && !isSubmitting && (
               <TouchableOpacity
@@ -474,9 +478,9 @@ const EditProfileScreen = () => {
               onChange={onDateChange}
               maximumDate={new Date()}
               minimumDate={new Date(1900, 0, 1)}
-              textColor="#111827"
-              themeVariant="light"
-              style={{backgroundColor: 'white', marginLeft: -20}}
+              textColor={isDark ? '#F9FAFB' : '#111827'}
+              themeVariant={isDark ? 'dark' : 'light'}
+              style={{backgroundColor: isDark ? '#000000' : 'white', marginLeft: -20}}
             />
             <View style={styles.separator} />
           </View>
@@ -784,10 +788,10 @@ const EditProfileScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (isDark: boolean) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: isDark ? '#000000' : '#ffffff',
   },
   content: {
     padding: 20,
@@ -797,7 +801,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 30,
-    color: '#111827',
+    color: isDark ? '#F9FAFB' : '#111827',
   },
   imageContainer: {
     alignSelf: 'center',
@@ -812,14 +816,14 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? '#2C2C2E' : '#F3F4F6',
     justifyContent: 'center',
     alignItems: 'center',
   },
   uploadText: {
     marginTop: 8,
     fontSize: 14,
-    color: '#6B7280',
+    color: isDark ? '#8E8E93' : '#6B7280',
   },
   formGroup: {
     marginBottom: 20,
@@ -828,17 +832,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
     marginBottom: 8,
-    color: '#374151',
+    color: isDark ? '#D1D5DB' : '#374151',
   },
   input: {
     fontSize: 16,
-    color: '#111827',
+    color: isDark ? '#F9FAFB' : '#111827',
     paddingVertical: 12,
     paddingHorizontal: 10,
   },
   separator: {
     height: 1,
-    backgroundColor: '#E5E7EB',
+    backgroundColor: isDark ? '#38383A' : '#E5E7EB',
     marginTop: 8,
   },
   aboutMeHeader: {
@@ -849,15 +853,15 @@ const styles = StyleSheet.create({
   },
   characterCount: {
     fontSize: 14,
-    color: '#6B7280',
+    color: isDark ? '#8E8E93' : '#6B7280',
   },
   textArea: {
     minHeight: 100,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB',
     borderRadius: 8,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   button: {
     backgroundColor: '#FF6B6B',
@@ -886,7 +890,7 @@ const styles = StyleSheet.create({
   errorContainer: {
     marginBottom: 20,
     padding: 10,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#451A1A' : '#FEE2E2',
     borderRadius: 8,
   },
   generalError: {
@@ -899,7 +903,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginTop: 20,
     marginBottom: 15,
-    color: '#111827',
+    color: isDark ? '#F9FAFB' : '#111827',
   },
   tagsContainer: {
     flexDirection: 'row',
@@ -911,9 +915,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: isDark ? '#2C2C2E' : '#F3F4F6',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   tagSelected: {
     backgroundColor: '#FF6B6B',
@@ -921,7 +925,7 @@ const styles = StyleSheet.create({
   },
   tagText: {
     fontSize: 14,
-    color: '#374151',
+    color: isDark ? '#D1D5DB' : '#374151',
   },
   tagTextSelected: {
     color: 'white',
@@ -937,17 +941,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
-    backgroundColor: '#F9FAFB',
+    backgroundColor: isDark ? '#1C1C1E' : '#F9FAFB',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   optionButtonSelected: {
-    backgroundColor: '#FEE2E2',
+    backgroundColor: isDark ? '#3D1515' : '#FEE2E2',
     borderColor: '#FF6B6B',
   },
   optionText: {
     fontSize: 14,
-    color: '#374151',
+    color: isDark ? '#D1D5DB' : '#374151',
   },
   optionTextSelected: {
     color: '#FF6B6B',
@@ -955,13 +959,13 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 13,
-    color: '#6B7280',
+    color: isDark ? '#8E8E93' : '#6B7280',
     marginBottom: 12,
   },
   optionalLabel: {
     fontSize: 14,
     fontWeight: '400' as const,
-    color: '#9CA3AF',
+    color: isDark ? '#6B7280' : '#9CA3AF',
   },
 });
 

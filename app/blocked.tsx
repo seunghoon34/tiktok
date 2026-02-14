@@ -7,6 +7,7 @@ import Toast from 'react-native-toast-message';
 import Header from "@/components/header";
 import { invalidateBlockedUsersCache } from "@/utils/cacheInvalidation";
 import { profileCache, CachedProfile } from "@/utils/profileCache";
+import { useColorScheme } from 'nativewind';
 
 interface BlockedUser {
   id: string;
@@ -28,7 +29,7 @@ const BlockedUserItem = ({ blockedUser, onUnblock }: BlockedUserItemProps) => {
       try {
         console.log('[BlockedScreen] Loading profile for blocked user:', blockedUser.blocked_id);
         const profile = await profileCache.getProfile(blockedUser.blocked_id);
-        
+
         if (profile) {
           console.log('[BlockedScreen] Profile loaded:', { userId: profile.user_id, hasPicture: !!profile.profilepicture });
           setUserProfile(profile);
@@ -43,10 +44,10 @@ const BlockedUserItem = ({ blockedUser, onUnblock }: BlockedUserItemProps) => {
   }, [blockedUser]);
 
   return (
-    <View className="p-4 border-b border-gray-100 flex-row items-center justify-between">
+    <View className="p-4 border-b border-gray-100 dark:border-gray-800 flex-row items-center justify-between">
       <View className="flex-row items-center flex-1">
         {userProfile?.profilepicture ? (
-          <Image 
+          <Image
             source={{ uri: userProfile.profilepicture }}
             className="w-10 h-10 rounded-full"
             onLoad={() => console.log('[BlockedScreen] Image loaded successfully')}
@@ -56,18 +57,18 @@ const BlockedUserItem = ({ blockedUser, onUnblock }: BlockedUserItemProps) => {
             }}
           />
         ) : (
-          <Ionicons 
-            name="person-circle-outline" 
-            size={40} 
-            color="gray" 
+          <Ionicons
+            name="person-circle-outline"
+            size={40}
+            color="gray"
           />
         )}
-        <Text className="text-lg font-semibold ml-3">
+        <Text className="text-lg font-semibold ml-3 dark:text-white">
           {userProfile?.username}
         </Text>
       </View>
-      
-      <TouchableOpacity 
+
+      <TouchableOpacity
         onPress={() => onUnblock(blockedUser)}
         className="bg-blue-500 px-4 py-2 rounded-full"
       >
@@ -80,6 +81,8 @@ const BlockedUserItem = ({ blockedUser, onUnblock }: BlockedUserItemProps) => {
 export default function BlockedScreen() {
   const { user } = useAuth();
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const fetchBlockedUsers = async () => {
     try {
@@ -100,19 +103,17 @@ export default function BlockedScreen() {
       const { error } = await supabase
         .from('UserBlock')
         .delete()
-        .match({ 
-          blocker_id: user.id, 
-          blocked_id: blockedUser.blocked_id 
+        .match({
+          blocker_id: user.id,
+          blocked_id: blockedUser.blocked_id
         });
 
       if (error) throw error;
 
-      // Invalidate blocked users cache to reflect the change
       await invalidateBlockedUsersCache(user.id);
       console.log('[BlockedScreen] Cache invalidated after unblock');
 
-      // Update the local state to remove the unblocked user
-      setBlockedUsers(current => 
+      setBlockedUsers(current =>
         current.filter(u => u.blocked_id !== blockedUser.blocked_id)
       );
 
@@ -136,21 +137,20 @@ export default function BlockedScreen() {
   }, []);
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
-        <Header title="Blocked Users" color="black" goBack={true}/>
-      
-      
+    <SafeAreaView className="flex-1 bg-white dark:bg-black">
+        <Header title="Blocked Users" color={isDark ? 'white' : 'black'} goBack={true}/>
+
       {blockedUsers.length === 0 ? (
         <View className="flex-1 items-center justify-center">
-          <Ionicons name="shield-checkmark-outline" size={64} color="gray" />
-          <Text className="text-gray-500 text-lg mt-4">No blocked users</Text>
+          <Ionicons name="shield-checkmark-outline" size={64} color={isDark ? '#48484A' : 'gray'} />
+          <Text className="text-gray-500 dark:text-gray-400 text-lg mt-4">No blocked users</Text>
         </View>
       ) : (
         <FlatList
           data={blockedUsers}
           renderItem={({ item }) => (
-            <BlockedUserItem 
-              blockedUser={item} 
+            <BlockedUserItem
+              blockedUser={item}
               onUnblock={handleUnblock}
             />
           )}

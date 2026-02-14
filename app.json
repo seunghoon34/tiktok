@@ -4,18 +4,23 @@
     "slug": "s2",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/s2icon.png",
+    "icon": "./assets/images/ios-light.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/images/s2splash.png",
+      "image": "./assets/images/splash-icon-light.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.seunghoon34.shoot",
+      "icon": {
+        "light": "./assets/images/ios-light.png",
+        "dark": "./assets/images/ios-dark.png",
+        "tinted": "./assets/images/ios-tinted.png"
+      },
       "infoPlist": {
         "UIBackgroundModes": [
           "remote-notification"
@@ -24,7 +29,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/ios-light.png",
         "backgroundColor": "#ffffff"
       },
       "permissions": [
@@ -52,7 +57,7 @@
       [
         "expo-notifications",
         {
-          "icon": "./assets/images/s2icon.png",
+          "icon": "./assets/images/ios-light.png",
           "color": "#ffffff",
           "enableBackgroundRemoteNotifications": true
         }
@@ -60,10 +65,14 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/s2splash.png",
+          "image": "./assets/images/splash-icon-light.png",
           "imageWidth": 200,
           "resizeMode": "contain",
-          "backgroundColor": "#ffffff"
+          "backgroundColor": "#ffffff",
+          "dark": {
+            "image": "./assets/images/splash-icon-dark.png",
+            "backgroundColor": "#000000"
+          }
         }
       ],
       [

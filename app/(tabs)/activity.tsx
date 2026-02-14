@@ -11,6 +11,7 @@ import { notificationCache } from '@/utils/notificationCache';
 import { useNotifications } from '@/providers/NotificationProvider';
 import { useRouter } from 'expo-router';
 import { profileCache } from '@/utils/profileCache';
+import { useColorScheme } from 'nativewind';
 
 export default function ActivityScreen() {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -20,6 +21,8 @@ export default function ActivityScreen() {
   const { setUnreadCount } = useNotifications();
   const router = useRouter();
   const [userProfiles, setUserProfiles] = useState<Record<string, string | null>>({});
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === 'dark';
 
   const markSingleAsRead = async (notificationId: string) => {
     try {
@@ -43,7 +46,7 @@ export default function ActivityScreen() {
   const markAllAsRead = async () => {
     try {
       console.log('[Activity] Marking all notifications as read for user:', user.id);
-      
+
       // Update in database - only update currently unread notifications
       const { error } = await supabase
         .from('Notification')
@@ -54,7 +57,7 @@ export default function ActivityScreen() {
       if (error) throw error;
 
       // Update local state
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => ({ ...n, read: true }))
       );
 
@@ -64,7 +67,7 @@ export default function ActivityScreen() {
       // Invalidate and refetch to ensure cache is correct
       await notificationCache.markAllNotificationsAsRead(user.id);
       console.log('[Activity] All notifications marked as read');
-      
+
     } catch (error) {
       console.error('[Activity] Error marking all as read:', error);
     }
@@ -216,11 +219,11 @@ export default function ActivityScreen() {
   const renderNotification = ({ item }: { item: any }) => {
     // All notifications are clickable (removed disabled state for matches)
     const isClickable = true;
-    
+
     // Get the username - handle sender being array or object
     const sender = Array.isArray(item.sender) ? item.sender[0] : item.sender;
     const username = item.username || sender?.username || 'Someone';
-    
+
     // Build display content based on type
     let displayContent = '';
     if (item.type === 'SHOT') {
@@ -232,17 +235,17 @@ export default function ActivityScreen() {
     } else {
       displayContent = item.content || `${username} sent you a notification`;
     }
-    
+
     return (
-    <TouchableOpacity 
-      className={`px-4 py-3 border-b border-gray-200 ${!item.read ? 'bg-ios-blue/5' : ''}`}
+    <TouchableOpacity
+      className={`px-4 py-3 border-b border-gray-200 dark:border-gray-700 ${!item.read ? 'bg-ios-blue/5 dark:bg-ios-blue/10' : ''}`}
       onPress={() => handleNotificationPress(item)}
       activeOpacity={0.6}
     >
       <View className="flex-row items-center">
-        <View className="h-avatar-md w-avatar-md rounded-full bg-gray-200 items-center justify-center mr-3">
+        <View className="h-avatar-md w-avatar-md rounded-full bg-gray-200 dark:bg-gray-700 items-center justify-center mr-3">
           {(isPremium || item.type === 'MATCH') && userProfiles[item.userId] ? (
-            <Image 
+            <Image
               source={{ uri: userProfiles[item.userId]! }}
               className="h-avatar-md w-avatar-md rounded-full"
             />
@@ -250,13 +253,13 @@ export default function ActivityScreen() {
             <Ionicons name="person" size={24} color="#8E8E93" />
           )}
         </View>
-  
+
         <View className="flex-1">
           <View className="flex-row justify-between items-start">
-            <Text className={`text-ios-body flex-1 ${!item.read ? 'font-semibold text-black' : 'text-gray-900'}`}>
+            <Text className={`text-ios-body flex-1 ${!item.read ? 'font-semibold text-black dark:text-white' : 'text-gray-900 dark:text-gray-100'}`}>
               {displayContent}
             </Text>
-            <Text className="text-ios-caption1 text-gray-500 ml-2">
+            <Text className="text-ios-caption1 text-gray-500 dark:text-gray-400 ml-2">
               {formatTimeAgo(item.created_at)}
             </Text>
           </View>
@@ -271,12 +274,12 @@ export default function ActivityScreen() {
 
 
   return (
-    <SafeAreaView className="flex-1 bg-white">
+    <SafeAreaView className="flex-1 bg-white dark:bg-black">
       <View className="px-4 pt-2 pb-3">
         <View className="flex-row items-center justify-between">
-          <Text className="text-ios-large-title">Activities</Text>
+          <Text className="text-ios-large-title dark:text-white">Activities</Text>
           {notifications.some(n => !n.read) && (
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={markAllAsRead}
               activeOpacity={0.6}
             >
@@ -289,27 +292,13 @@ export default function ActivityScreen() {
       {!isLoading && notifications.length === 0 ? (
         <View className="flex-1 items-center justify-center px-8">
           <View className="items-center">
-            <Ionicons name="heart-outline" size={80} color="#E5E7EB" />
-            <Text className="text-2xl font-bold text-gray-800 mt-6 text-center">
+            <Ionicons name="heart-outline" size={80} color={isDark ? '#38383A' : '#E5E7EB'} />
+            <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 text-center">
               No Activity Yet
             </Text>
-            <Text className="text-base text-gray-500 mt-3 text-center leading-6">
+            <Text className="text-base text-gray-500 dark:text-gray-400 mt-3 text-center leading-6">
               When someone likes your posts or you connect, you'll see it here
             </Text>
-            {/* <View className="mt-8 space-y-3">
-              <View className="bg-red-50 px-6 py-3 rounded-xl flex-row items-center">
-                <Text className="text-2xl mr-3">💖</Text>
-                <Text className="text-sm text-gray-700 flex-1">
-                  <Text className="font-semibold">Likes</Text> - Someone shot their shot!
-                </Text>
-              </View>
-              <View className="bg-purple-50 px-6 py-3 rounded-xl flex-row items-center">
-                <Text className="text-2xl mr-3">✨</Text>
-                <Text className="text-sm text-gray-700 flex-1">
-                  <Text className="font-semibold">Matches</Text> - It's a match!
-                </Text>
-              </View>
-            </View> */}
           </View>
         </View>
       ) : (

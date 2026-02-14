@@ -8,6 +8,7 @@
   import { Host, Portal } from 'react-native-portalize';
   import { GestureHandlerRootView } from 'react-native-gesture-handler';  // Add this import
   import { ProfileProvider } from '@/providers/ProfileProvider';
+  import { ThemeProvider } from '@/providers/ThemeProvider';
   import Toast from 'react-native-toast-message';
   import { View, Text } from 'react-native';
   import { Ionicons } from '@expo/vector-icons';
@@ -134,6 +135,7 @@
 
     return (
       <GestureHandlerRootView style={{ flex: 1 }}>
+        <ThemeProvider>
         <Host>
           <AuthProvider>
               <NotificationProvider>
@@ -157,6 +159,7 @@
               </NotificationProvider>
           </AuthProvider>
         </Host>
+        </ThemeProvider>
         <Toast 
           config={toastConfig} 
           position={'center' as any}

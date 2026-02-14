@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useFocusEffect } from '@react-navigation/native';
 import { hybridCache } from '@/utils/memoryCache';
 import * as Notifications from 'expo-notifications';
+import { useColorScheme } from 'nativewind';
 
 const formatDate = (dateString: string) => {
  if (!dateString) return '';
@@ -20,11 +21,11 @@ const formatDate = (dateString: string) => {
 
    const userTimezoneOffset = date.getTimezoneOffset();
    const localDate = new Date(date.getTime() - (userTimezoneOffset * 60000));
-   
+
    const now = new Date();
    const yesterday = new Date(now);
    yesterday.setDate(now.getDate() - 1);
-   
+
    const startOfWeek = new Date(now);
    startOfWeek.setDate(now.getDate() - now.getDay());
 
@@ -34,8 +35,8 @@ const formatDate = (dateString: string) => {
    const isThisYear = localDate.getFullYear() === now.getFullYear();
 
    if (isToday) {
-     return localDate.toLocaleTimeString('en-US', { 
-       hour: '2-digit', 
+     return localDate.toLocaleTimeString('en-US', {
+       hour: '2-digit',
        minute: '2-digit',
        hour12: true
      });
@@ -95,7 +96,7 @@ const ChatItem = memo(({ chat, user, onChatPress }: ChatItemProps) => {
 
  return (
    <TouchableOpacity
-     className="px-4 py-3 border-b border-gray-200"
+     className="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
      onPress={() => {
        onChatPress?.(chat.id);
        router.push({
@@ -117,27 +118,27 @@ const ChatItem = memo(({ chat, user, onChatPress }: ChatItemProps) => {
              className="w-avatar h-avatar rounded-full"
            />
          ) : (
-           <View className="w-avatar h-avatar rounded-full bg-gray-200 items-center justify-center">
-             <Ionicons 
-               name="person" 
-               size={20} 
-               color="#8E8E93" 
+           <View className="w-avatar h-avatar rounded-full bg-gray-200 dark:bg-gray-700 items-center justify-center">
+             <Ionicons
+               name="person"
+               size={20}
+               color="#8E8E93"
              />
            </View>
          )}
          <View className="ml-3 flex-1">
            <View className="flex-row items-center justify-between mb-0.5">
-             <Text className="text-ios-body font-semibold text-black">
+             <Text className="text-ios-body font-semibold text-black dark:text-white">
                {otherUser?.username}
              </Text>
              {isExpired && (
-               <View className="bg-red-100 px-2 py-0.5 rounded-full ml-2">
-                 <Text className="text-red-600 text-xs font-semibold">Expired</Text>
+               <View className="bg-red-100 dark:bg-red-900/30 px-2 py-0.5 rounded-full ml-2">
+                 <Text className="text-red-600 dark:text-red-400 text-xs font-semibold">Expired</Text>
                </View>
              )}
            </View>
            {lastMessage && (
-             <Text className="text-ios-subhead text-gray-600" numberOfLines={1}>
+             <Text className="text-ios-subhead text-gray-600 dark:text-gray-400" numberOfLines={1}>
                {truncatedMessage}
              </Text>
            )}
@@ -146,7 +147,7 @@ const ChatItem = memo(({ chat, user, onChatPress }: ChatItemProps) => {
 
        <View className="items-end ml-2">
          {lastMessage && (
-           <Text className="text-ios-caption1 text-gray-500 mb-1">
+           <Text className="text-ios-caption1 text-gray-500 dark:text-gray-400 mb-1">
              {formatDate(lastMessage.created_at)}
            </Text>
          )}
@@ -186,6 +187,8 @@ export default function InboxScreen() {
  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
  const { user } = useAuth();
  const chatIdsRef = useRef<string[]>([]);
+ const { colorScheme } = useColorScheme();
+ const isDark = colorScheme === 'dark';
 
  const filteredChats = useMemo(() => {
    if (!showUnreadOnly) return chats;
@@ -367,14 +370,14 @@ export default function InboxScreen() {
  }, [user]);
 
  return (
-   <SafeAreaView className="flex-1 bg-white">
+   <SafeAreaView className="flex-1 bg-white dark:bg-black">
      <View className="px-4 pt-2 pb-3 flex-row items-center justify-between">
-       <Text className="text-ios-large-title">Messages</Text>
+       <Text className="text-ios-large-title dark:text-white">Messages</Text>
        <TouchableOpacity
          onPress={() => setShowUnreadOnly(prev => !prev)}
-         className={`px-3 py-1.5 rounded-full ${showUnreadOnly ? 'bg-[#FF6B6B]' : 'bg-gray-100'}`}
+         className={`px-3 py-1.5 rounded-full ${showUnreadOnly ? 'bg-[#FF6B6B]' : 'bg-gray-100 dark:bg-[#1C1C1E]'}`}
        >
-         <Text className={`text-sm font-medium ${showUnreadOnly ? 'text-white' : 'text-gray-600'}`}>
+         <Text className={`text-sm font-medium ${showUnreadOnly ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
            Unread
          </Text>
        </TouchableOpacity>
@@ -382,19 +385,19 @@ export default function InboxScreen() {
      {!isLoading && filteredChats.length === 0 ? (
        <View className="flex-1 items-center justify-center px-8">
          <View className="items-center">
-           <Ionicons name={showUnreadOnly ? "mail-open-outline" : "chatbubbles-outline"} size={80} color="#E5E7EB" />
-           <Text className="text-2xl font-bold text-gray-800 mt-6 text-center">
+           <Ionicons name={showUnreadOnly ? "mail-open-outline" : "chatbubbles-outline"} size={80} color={isDark ? '#38383A' : '#E5E7EB'} />
+           <Text className="text-2xl font-bold text-gray-800 dark:text-gray-200 mt-6 text-center">
              {showUnreadOnly ? 'All Caught Up' : 'No Messages Yet'}
            </Text>
-           <Text className="text-base text-gray-500 mt-3 text-center leading-6">
+           <Text className="text-base text-gray-500 dark:text-gray-400 mt-3 text-center leading-6">
              {showUnreadOnly
                ? "You have no unread messages"
                : "When you match with someone, you'll be able to chat with them here"}
            </Text>
            {!showUnreadOnly && (
-             <View className="mt-8 bg-gray-50 px-6 py-4 rounded-2xl">
-               <Text className="text-sm text-gray-600 text-center">
-                 💡 Start liking posts in your feed to get matches!
+             <View className="mt-8 bg-gray-50 dark:bg-[#1C1C1E] px-6 py-4 rounded-2xl">
+               <Text className="text-sm text-gray-600 dark:text-gray-400 text-center">
+                 Start liking posts in your feed to get matches!
                </Text>
              </View>
            )}

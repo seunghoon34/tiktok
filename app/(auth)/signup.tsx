@@ -78,10 +78,10 @@ export default function SignupScreen() {
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-      <View className="flex-1 items-center justify-center bg-white px-6">
+      <View className="flex-1 items-center justify-center bg-white dark:bg-black px-6">
         <View className='w-full items-center'>
           <Image
-            source={require('../../assets/images/s2icon.png')}
+            source={require('../../assets/images/logo-transparent.png')}
             style={{ width: 100, height: 100, marginBottom: 32 }}
           />
 
@@ -92,7 +92,7 @@ export default function SignupScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`w-full bg-white border-2 border-gray-300 h-button rounded-xl flex-row justify-center items-center mb-4 ${(isGoogleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
+          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-4 ${(isGoogleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
           onPress={handleGoogleSignIn}
           disabled={isGoogleLoading || isLoading || !ageConfirmed}
           activeOpacity={0.6}
@@ -101,22 +101,22 @@ export default function SignupScreen() {
             <ActivityIndicator color="#EA4335" />
           ) : (
             <>
-              <Text className="text-2xl mr-2">G</Text>
-              <Text className="text-gray-700 font-semibold text-ios-body">Continue with Google</Text>
+              <Text className="text-2xl mr-2 dark:text-white">G</Text>
+              <Text className="text-gray-700 dark:text-gray-300 font-semibold text-ios-body">Continue with Google</Text>
             </>
           )}
         </TouchableOpacity>
 
         <View className="w-full flex-row items-center mb-4">
-          <View className="flex-1 h-px bg-gray-300" />
-          <Text className="mx-4 text-gray-500 text-ios-body">or</Text>
-          <View className="flex-1 h-px bg-gray-300" />
+          <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
+          <Text className="mx-4 text-gray-500 dark:text-gray-400 text-ios-body">or</Text>
+          <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />
         </View>
 
         <TextInput
           placeholder='Email'
           placeholderTextColor="#8E8E93"
-          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-3 text-ios-body'
+          className='bg-gray-100 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-700 w-full mb-3 text-ios-body dark:text-white'
           value={email}
           onChangeText={(text) => {
             setEmail(text);
@@ -132,7 +132,7 @@ export default function SignupScreen() {
           secureTextEntry={true}
           placeholder='Password'
           placeholderTextColor="#8E8E93"
-          className='bg-gray-100 p-4 rounded-xl border border-gray-200 w-full mb-4 text-ios-body'
+          className='bg-gray-100 dark:bg-[#1C1C1E] p-4 rounded-xl border border-gray-200 dark:border-gray-700 w-full mb-4 text-ios-body dark:text-white'
           value={password}
           onChangeText={(text) => {
             setPassword(text);
@@ -168,7 +168,7 @@ export default function SignupScreen() {
                 color={ageConfirmed ? '#FF6B6B' : '#9CA3AF'}
                 style={{ marginTop: 1 }}
               />
-              <Text className="ml-2 text-gray-600 text-sm flex-1 leading-5">
+              <Text className="ml-2 text-gray-600 dark:text-gray-400 text-sm flex-1 leading-5">
                 I confirm I am 18 years or older and agree to the{' '}
                 <Text className="text-blue-500" onPress={() => WebBrowser.openBrowserAsync('https://s2-delta-tan.vercel.app/terms', { presentationStyle: WebBrowser.WebBrowserPresentationStyle.PAGE_SHEET })}>
                   Terms of Service
