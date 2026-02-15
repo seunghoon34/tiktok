@@ -35,7 +35,9 @@
       "permissions": [
         "android.permission.CAMERA",
         "android.permission.RECORD_AUDIO",
-        "android.permission.NOTIFICATIONS"
+        "android.permission.NOTIFICATIONS",
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION"
       ],
       "package": "com.seunghoon34.s2"
     },
@@ -98,7 +100,7 @@
         "origin": false
       },
       "eas": {
-        "projectId": "3bf3ab47-6348-425d-8db5-cf045f6a7184"
+        "projectId": "0c701e4b-acf1-47a0-939d-0b799a059c09"
       }
     },
     "owner": "seunghoon34"
