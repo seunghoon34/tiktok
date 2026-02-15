@@ -1,9 +1,10 @@
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Keyboard, TouchableWithoutFeedback, Platform } from 'react-native';
 import "../../global.css";
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
 import { Image } from 'expo-image';
+import { Ionicons } from '@expo/vector-icons';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -11,7 +12,8 @@ export default function LoginScreen() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const { signIn, signInWithGoogle } = useAuth();
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
+  const { signIn, signInWithGoogle, signInWithApple } = useAuth();
 
   const handleSignIn = async () => {
     if (!email || !password) {
@@ -34,6 +36,20 @@ export default function LoginScreen() {
       }
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAppleSignIn = async () => {
+    setError('');
+    setIsAppleLoading(true);
+
+    try {
+      await signInWithApple();
+    } catch (error: any) {
+      setError('Apple sign in failed. Please try again.');
+      console.error('Apple sign in error:', error);
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
@@ -69,9 +85,9 @@ export default function LoginScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-4 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
+          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-3 ${isGoogleLoading ? 'opacity-disabled' : ''}`}
           onPress={handleGoogleSignIn}
-          disabled={isGoogleLoading || isLoading}
+          disabled={isGoogleLoading || isLoading || isAppleLoading}
           activeOpacity={0.6}
         >
           {isGoogleLoading ? (
@@ -83,6 +99,24 @@ export default function LoginScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            className={`w-full bg-black dark:bg-white h-button rounded-xl flex-row justify-center items-center mb-4 ${isAppleLoading ? 'opacity-disabled' : ''}`}
+            onPress={handleAppleSignIn}
+            disabled={isAppleLoading || isLoading || isGoogleLoading}
+            activeOpacity={0.6}
+          >
+            {isAppleLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="logo-apple" size={20} color={Platform.OS === 'ios' ? 'white' : 'black'} className="mr-2 dark:text-black" />
+                <Text className="text-white dark:text-black font-semibold text-ios-body">Continue with Apple</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <View className="w-full flex-row items-center mb-4">
           <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />

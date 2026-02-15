@@ -1,4 +1,4 @@
-import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import { View, Text, TouchableOpacity, TextInput, ActivityIndicator, Keyboard, TouchableWithoutFeedback, Platform } from 'react-native';
 import "../../global.css";
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
@@ -14,8 +14,9 @@ export default function SignupScreen() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
-  const { signUp, signInWithGoogle } = useAuth();
+  const { signUp, signInWithGoogle, signInWithApple } = useAuth();
 
   const validateEmail = (email) => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -24,6 +25,20 @@ export default function SignupScreen() {
 
   const validatePassword = (password) => {
     return password.length >= 6; // Minimum 6 characters
+  };
+
+  const handleAppleSignIn = async () => {
+    setError('');
+    setIsAppleLoading(true);
+
+    try {
+      await signInWithApple();
+    } catch (error: any) {
+      setError('Apple sign in failed. Please try again.');
+      console.error('Apple sign in error:', error);
+    } finally {
+      setIsAppleLoading(false);
+    }
   };
 
   const handleGoogleSignIn = async () => {
@@ -94,9 +109,9 @@ export default function SignupScreen() {
         ) : null}
 
         <TouchableOpacity
-          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-4 ${(isGoogleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
+          className={`w-full bg-white dark:bg-[#1C1C1E] border-2 border-gray-300 dark:border-gray-600 h-button rounded-xl flex-row justify-center items-center mb-3 ${(isGoogleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
           onPress={handleGoogleSignIn}
-          disabled={isGoogleLoading || isLoading || !ageConfirmed}
+          disabled={isGoogleLoading || isLoading || isAppleLoading || !ageConfirmed}
           activeOpacity={0.6}
         >
           {isGoogleLoading ? (
@@ -108,6 +123,24 @@ export default function SignupScreen() {
             </>
           )}
         </TouchableOpacity>
+
+        {Platform.OS === 'ios' && (
+          <TouchableOpacity
+            className={`w-full bg-black dark:bg-white h-button rounded-xl flex-row justify-center items-center mb-4 ${(isAppleLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
+            onPress={handleAppleSignIn}
+            disabled={isAppleLoading || isLoading || isGoogleLoading || !ageConfirmed}
+            activeOpacity={0.6}
+          >
+            {isAppleLoading ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <>
+                <Ionicons name="logo-apple" size={20} color="white" className="mr-2 dark:text-black" />
+                <Text className="text-white dark:text-black font-semibold text-ios-body">Continue with Apple</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
 
         <View className="w-full flex-row items-center mb-4">
           <View className="flex-1 h-px bg-gray-300 dark:bg-gray-600" />

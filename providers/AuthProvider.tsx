@@ -5,10 +5,11 @@ import { createContext, useContext, useEffect, useState, useRef} from 'react'
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { requestLocationPermission } from '@/utils/location';
 import * as Linking from 'expo-linking';
 import * as WebBrowser from 'expo-web-browser';
+import * as AppleAuthentication from 'expo-apple-authentication';
 
 // Complete the WebBrowser auth session when done
 WebBrowser.maybeCompleteAuthSession();
@@ -18,6 +19,7 @@ export const AuthContext = createContext({
     signIn: async (email: string, password: string) =>{},
     signUp: async (email: string, password: string) =>{},
     signInWithGoogle: async () =>{},
+    signInWithApple: async () =>{},
     signOut: async () =>{},
     deleteAccount: async () =>{},
     likes: [] as any[],
@@ -335,6 +337,48 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
         }
     };
 
+    const signInWithApple = async () => {
+        try {
+            setIsProcessingAuth(true);
+            isManualAuthRef.current = true;
+
+            const credential = await AppleAuthentication.signInAsync({
+                requestedScopes: [
+                    AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+                    AppleAuthentication.AppleAuthenticationScope.EMAIL,
+                ],
+            });
+
+            if (!credential.identityToken) {
+                throw new Error('No identityToken from Apple.');
+            }
+
+            const { error, data: { session: appleSession } } = await supabase.auth.signInWithIdToken({
+                provider: 'apple',
+                token: credential.identityToken,
+            });
+
+            if (error) throw error;
+
+            if (appleSession) {
+                setSession(appleSession);
+                await getUser(appleSession.user.id);
+            }
+
+            console.log('[signInWithApple] Auth processing completed successfully');
+        } catch (e: any) {
+            if (e.code === 'ERR_REQUEST_CANCELED') {
+                console.log('[signInWithApple] User cancelled');
+            } else {
+                console.error('Apple sign in error:', e);
+                throw e;
+            }
+        } finally {
+            setIsProcessingAuth(false);
+            isManualAuthRef.current = false;
+        }
+    };
+
     const signOut = async () => {
       // Always clear local state, let auth state change listener handle redirect
       try {
@@ -643,6 +687,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
             signIn,
             signUp,
             signInWithGoogle,
+            signInWithApple,
             signOut,
             deleteAccount,
             likes,

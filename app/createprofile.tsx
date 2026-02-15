@@ -390,7 +390,7 @@ const CreateProfileScreen = () => {
                             style={[styles.input, errors.username && styles.inputError]}
                             value={formData.username}
                             onChangeText={(text) => {
-                                setFormData(prev => ({ ...prev, username: text }));
+                                setFormData(prev => ({ ...prev, username: text.replace(/\s/g, '') }));
                                 setErrors(prev => ({ ...prev, username: '' }));
                             }}
                             onBlur={() => checkUsername(formData.username)}

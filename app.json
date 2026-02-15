@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/ios-light.png",
-    "scheme": "myapp",
+    "scheme": "s2",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
@@ -81,7 +81,14 @@
           "photosPermission": "The app accesses your photos to let you share them with your friends."
         }
       ],
-      "expo-web-browser"
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to access your location to find people nearby."
+        }
+      ],
+      "expo-web-browser",
+      "expo-apple-authentication"
     ],
     "experiments": {
       "typedRoutes": true

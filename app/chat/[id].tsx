@@ -56,9 +56,7 @@ export default function ChatScreen() {
   );
   const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [inputHeight, setInputHeight] = useState(44);
-  const [otherUserProfile, setOtherUserProfile] = useState<any>(
-    paramProfilePicture ? { profilepicture: paramProfilePicture as string } : null
-  );
+  const [otherUserProfile, setOtherUserProfile] = useState<any>(null);
   const [hasVideos, setHasVideos] = useState<boolean>(false);
   const [isChatExpired, setIsChatExpired] = useState<boolean>(false);
   const [matchCreatedAt, setMatchCreatedAt] = useState<string | null>(null);

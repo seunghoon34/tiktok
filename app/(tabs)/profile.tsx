@@ -110,7 +110,7 @@ useFocusEffect(
           .getPublicUrl(profile.profilepicture);
 
         if (data?.publicUrl) {
-          const imageUrl = data.publicUrl;
+          const imageUrl = `${data.publicUrl}?t=${Date.now()}`;
           console.log('[ProfileScreen] Setting image URL:', imageUrl);
           setImageUrl(imageUrl);
         } else {
