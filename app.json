@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.seunghoon34.shoot",
+      "bundleIdentifier": "com.seunghoon34.s2",
       "icon": {
         "light": "./assets/images/ios-light.png",
         "dark": "./assets/images/ios-dark.png",
@@ -37,7 +37,7 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.NOTIFICATIONS"
       ],
-      "package": "com.seunghoon34.shoot"
+      "package": "com.seunghoon34.s2"
     },
     "web": {
       "bundler": "metro",
