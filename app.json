@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "S2",
+    "name": "s2",
     "slug": "s2",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -23,8 +23,10 @@
       },
       "infoPlist": {
         "UIBackgroundModes": [
+          "remote-notification",
           "remote-notification"
-        ]
+        ],
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
