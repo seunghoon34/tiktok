@@ -8,7 +8,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { CameraView, CameraType, useCameraPermissions, FlashMode } from 'expo-camera';
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Button, StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View, Dimensions } from 'react-native';
 
 // Fixed 9:16 aspect ratio for consistent cross-device display (like Snapchat/Instagram)
 const ASPECT_RATIO = 9 / 16;
@@ -55,9 +55,16 @@ export default function CameraScreen() {
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
   };
 
+  // Auto-request camera permission when screen opens
+  useEffect(() => {
+    if (permission && !permission.granted) {
+      requestPermission();
+    }
+  }, [permission]);
+
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    
+
     if (isRecording) {
       setElapsedTime(0); // Reset timer when starting recording
           intervalId = setInterval(() => {
@@ -66,7 +73,7 @@ export default function CameraScreen() {
     } else {
       setElapsedTime(0); // Reset timer when stopping
     }
-  
+
     return () => {
       if (intervalId) {
         clearInterval(intervalId);
@@ -74,19 +81,9 @@ export default function CameraScreen() {
     };
   }, [isRecording]);
 
-  if (!permission) {
-    // Camera permissions are still loading.
-    return <View />;
-  }
-
-  if (!permission.granted) {
-    // Camera permissions are not granted yet.
-    return (
-      <View style={styles.container}>
-        <Text style={styles.message}>We need your permission to show the camera</Text>
-        <Button onPress={requestPermission} title="grant permission" />
-      </View>
-    );
+  if (!permission || !permission.granted) {
+    // Camera permissions are loading or not yet granted
+    return <View style={styles.container} />;
   }
 
   function toggleCameraFacing() {
