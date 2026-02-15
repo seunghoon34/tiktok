@@ -20,6 +20,13 @@
     }
   },
   "submit": {
-    "production": {}
+    "production": {
+      "ios":{
+        "appleId": "seunghoon34@gmail.com",
+        "ascAppId": "6759219372",
+        "appleTeamId": "L3WYKGN3D9"
+
+      }
+    }
   }
 }
