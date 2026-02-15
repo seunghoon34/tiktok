@@ -75,7 +75,7 @@ export default function LoginScreen() {
           activeOpacity={0.6}
         >
           {isGoogleLoading ? (
-            <ActivityIndicator color="#EA4335" />
+            <ActivityIndicator color="#007C7B" />
           ) : (
             <>
               <Text className="text-2xl mr-2 dark:text-white">G</Text>
