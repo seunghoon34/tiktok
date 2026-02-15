@@ -66,7 +66,7 @@ export default function PreviewMedia({
               width: 44,
               height: 44,
               borderRadius: 22,
-              backgroundColor: isMuted ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: isMuted ? '#007C7B' : 'rgba(0, 0, 0, 0.4)',
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -128,7 +128,7 @@ export default function PreviewMedia({
               width: 80,
               height: 80,
               borderRadius: 40,
-              backgroundColor: '#FF6B6B',
+              backgroundColor: '#007C7B',
               justifyContent: 'center',
               alignItems: 'center',
               opacity: isUploading ? 0.6 : 1,

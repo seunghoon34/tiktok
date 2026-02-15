@@ -238,7 +238,7 @@ export default function ActivityScreen() {
 
     return (
     <TouchableOpacity
-      className={`px-4 py-3 border-b border-gray-200 dark:border-gray-700 ${!item.read ? 'bg-ios-blue/5 dark:bg-ios-blue/10' : ''}`}
+      className={`px-4 py-3 ${!item.read ? 'bg-ios-blue/5 dark:bg-ios-blue/10' : ''}`}
       onPress={() => handleNotificationPress(item)}
       activeOpacity={0.6}
     >
@@ -283,7 +283,7 @@ export default function ActivityScreen() {
               onPress={markAllAsRead}
               activeOpacity={0.6}
             >
-              <Text className="text-red-500 text-ios-body">Mark all as read</Text>
+              <Text className="text-[#007C7B] text-ios-body">Mark all as read</Text>
             </TouchableOpacity>
           )}
         </View>

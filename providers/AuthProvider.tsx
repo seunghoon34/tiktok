@@ -1,4 +1,4 @@
-import { registerForPushNotifications, sendMatchNotifications, setActiveChatForNotifications } from '@/utils/notifications';
+import { registerForPushNotifications, setActiveChatForNotifications } from '@/utils/notifications';
 import { supabase } from '@/utils/supabase'
 import { useRouter } from 'expo-router';
 import { createContext, useContext, useEffect, useState, useRef} from 'react'
@@ -59,8 +59,7 @@ export const AuthProvider = ({ children }:{children: React.ReactNode}) => {
 
     const getUser = async (id: string, skipProfileCheck: boolean = false) => {
         try {
-            console.log('[getUser] ***** CALLED WITH ID:', id, 'skipProfileCheck:', skipProfileCheck, '*****');
-            console.log('[getUser] Stack trace:', new Error().stack);
+            console.log('[getUser] Called with ID:', id);
             const { data, error } = await supabase
                 .from("User")
                 .select("*")

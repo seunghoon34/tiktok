@@ -380,8 +380,8 @@ export default function ChatScreen() {
       </TouchableOpacity>
       {timeLeft ? (
         <View className="ml-auto flex-row items-center">
-          <Ionicons name="time-outline" size={14} color="#FF6B6B" />
-          <Text className="text-sm text-red-400 ml-1 font-medium">{timeLeft}</Text>
+          <Ionicons name="time-outline" size={14} color="#007C7B" />
+          <Text className="text-sm text-[#007C7B] ml-1 font-medium">{timeLeft}</Text>
         </View>
       ) : null}
     </View>
@@ -414,7 +414,7 @@ export default function ChatScreen() {
   showAvatar ? (
     hasVideos ? (
       <TouchableOpacity onPress={() => router.push(`/userstories?user_id=${otherUser?.id}`)} activeOpacity={isChatExpired ? 1 : 0.6} disabled={isChatExpired}>
-        <View className="p-0.5 rounded-full" style={{ backgroundColor: '#FF6B6B' }}>
+        <View className="p-0.5 rounded-full" style={{ backgroundColor: '#007C7B' }}>
           <View className="p-0.5 bg-white dark:bg-black rounded-full">
             {otherUserProfile?.profilepicture ? (
               <Image
@@ -473,7 +473,7 @@ export default function ChatScreen() {
           style={[
             { maxWidth: '75%' },
             item.sender_id === user.id
-              ? { backgroundColor: '#FF6B6B' }
+              ? { backgroundColor: '#007C7B' }
               : { backgroundColor: isDark ? '#2C2C2E' : '#F3F4F6' }
           ]}
         >
@@ -537,7 +537,7 @@ export default function ChatScreen() {
                 />
                 <TouchableOpacity
                   onPress={sendMessage}
-                  className="bg-[#FF6B6B] rounded-full p-3"
+                  className="bg-[#007C7B] rounded-full p-3"
                 >
                   <Ionicons name="send" size={20} color="white" />
                 </TouchableOpacity>

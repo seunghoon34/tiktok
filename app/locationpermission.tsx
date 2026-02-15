@@ -29,7 +29,7 @@ export default function LocationPermissionScreen() {
       <View style={styles.content}>
         {/* Icon */}
         <View style={styles.iconContainer}>
-          <Ionicons name="location" size={80} color="#FF6B6B" />
+          <Ionicons name="location" size={80} color="#007C7B" />
         </View>
 
         {/* Title */}
@@ -57,7 +57,7 @@ export default function LocationPermissionScreen() {
           style={styles.secondaryButton}
           onPress={handleOpenSettings}
         >
-          <Ionicons name="settings-outline" size={20} color="#FF6B6B" style={{ marginRight: 8 }} />
+          <Ionicons name="settings-outline" size={20} color="#007C7B" style={{ marginRight: 8 }} />
           <Text style={styles.secondaryButtonText}>Open Settings</Text>
         </TouchableOpacity>
 
@@ -88,7 +88,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#CCFBF1',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   },
   primaryButton: {
     flexDirection: 'row',
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#007C7B',
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
@@ -140,12 +140,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#FF6B6B',
+    borderColor: '#007C7B',
     width: '100%',
     marginBottom: 24,
   },
   secondaryButtonText: {
-    color: '#FF6B6B',
+    color: '#007C7B',
     fontSize: 16,
     fontWeight: '600',
   },

@@ -3,7 +3,7 @@ import "../../global.css";
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
-import { Image } from 'react-native';
+import { Image } from 'expo-image';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -58,6 +58,8 @@ export default function LoginScreen() {
           <Image
             source={require('../../assets/images/logo-transparent.png')}
             style={{ width: 100, height: 100, marginBottom: 32 }}
+            contentFit="contain"
+            transition={200}
           />
 
         {error ? (
@@ -115,7 +117,7 @@ export default function LoginScreen() {
 
         <View className='w-full'>
           <TouchableOpacity
-            className={`bg-red-500 h-button rounded-xl justify-center items-center ${isLoading ? 'opacity-disabled' : ''}`}
+            className={`bg-[#007C7B] h-button rounded-xl justify-center items-center ${isLoading ? 'opacity-disabled' : ''}`}
             onPress={handleSignIn}
             disabled={isLoading}
             activeOpacity={0.6}

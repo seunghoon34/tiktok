@@ -3,9 +3,9 @@ import "../../global.css";
 import { Link, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { useAuth } from '@/providers/AuthProvider';
-import { Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
+import { Image } from 'expo-image';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -83,6 +83,8 @@ export default function SignupScreen() {
           <Image
             source={require('../../assets/images/logo-transparent.png')}
             style={{ width: 100, height: 100, marginBottom: 32 }}
+            contentFit="contain"
+            transition={200}
           />
 
         {error ? (
@@ -144,7 +146,7 @@ export default function SignupScreen() {
 
         <View className='w-full'>
           <TouchableOpacity
-            className={`bg-red-500 h-button rounded-xl justify-center items-center ${(isLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
+            className={`bg-[#007C7B] h-button rounded-xl justify-center items-center ${(isLoading || !ageConfirmed) ? 'opacity-disabled' : ''}`}
             onPress={handleSignUp}
             disabled={isLoading || !ageConfirmed}
             activeOpacity={0.6}
@@ -165,7 +167,7 @@ export default function SignupScreen() {
               <Ionicons
                 name={ageConfirmed ? 'checkbox' : 'square-outline'}
                 size={22}
-                color={ageConfirmed ? '#FF6B6B' : '#9CA3AF'}
+                color={ageConfirmed ? '#007C7B' : '#9CA3AF'}
                 style={{ marginTop: 1 }}
               />
               <Text className="ml-2 text-gray-600 dark:text-gray-400 text-sm flex-1 leading-5">

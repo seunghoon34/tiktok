@@ -96,7 +96,7 @@ const ChatItem = memo(({ chat, user, onChatPress }: ChatItemProps) => {
 
  return (
    <TouchableOpacity
-     className="px-4 py-3 border-b border-gray-200 dark:border-gray-700"
+     className="px-4 py-3"
      onPress={() => {
        onChatPress?.(chat.id);
        router.push({
@@ -152,7 +152,7 @@ const ChatItem = memo(({ chat, user, onChatPress }: ChatItemProps) => {
            </Text>
          )}
          {chat.unreadCount > 0 && (
-           <View className="bg-red-500 rounded-full px-1.5 py-0.5 min-w-[18px] items-center">
+           <View className="bg-[#007C7B] rounded-full px-1.5 py-0.5 min-w-[18px] items-center">
              <Text className="text-white text-[11px] font-semibold">
                {chat.unreadCount}
              </Text>
@@ -375,7 +375,7 @@ export default function InboxScreen() {
        <Text className="text-ios-large-title dark:text-white">Messages</Text>
        <TouchableOpacity
          onPress={() => setShowUnreadOnly(prev => !prev)}
-         className={`px-3 py-1.5 rounded-full ${showUnreadOnly ? 'bg-[#FF6B6B]' : 'bg-gray-100 dark:bg-[#1C1C1E]'}`}
+         className={`px-3 py-1.5 rounded-full ${showUnreadOnly ? 'bg-[#007C7B]' : 'bg-gray-100 dark:bg-[#1C1C1E]'}`}
        >
          <Text className={`text-sm font-medium ${showUnreadOnly ? 'text-white' : 'text-gray-600 dark:text-gray-400'}`}>
            Unread

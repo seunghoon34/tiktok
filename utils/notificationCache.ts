@@ -371,14 +371,13 @@ export class NotificationCacheService {
   }
 
   private getNotificationContent(type: string, username: string): string {
-    const displayName = username || 'Someone';
     switch (type) {
       case 'SHOT':
-        return `${displayName} sent you a shot! 📸`;
+        return `Someone liked your Shot!`;
       case 'MATCH':
-        return `You matched with ${displayName}! 💕`;
+        return `You connected with ${username}!`;
       default:
-        return `${displayName} sent you a notification`;
+        return `${username} sent you a notification`;
     }
   }
 

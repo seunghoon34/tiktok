@@ -9,9 +9,9 @@ module.exports = {
       // iOS Color System
       colors: {
         primary: {
-          DEFAULT: '#FF6B6B', // Lighter, more pleasant red
-          light: '#FF8787',
-          dark: '#FA5252',
+          DEFAULT: '#007C7B', // Dark cyan/teal brand color
+          light: '#009E9D',
+          dark: '#005F5E',
         },
         ios: {
           blue: '#007AFF',
@@ -25,16 +25,16 @@ module.exports = {
           yellow: '#FFCC00',
         },
         red: {
-          50: '#FFE3E3',
-          100: '#FFC9C9',
-          200: '#FFA8A8',
-          300: '#FF8787',
-          400: '#FF6B6B',
-          500: '#FF6B6B',  // Our custom lighter red
-          600: '#FA5252',
-          700: '#F03E3E',
-          800: '#E03131',
-          900: '#C92A2A',
+          50: '#FEF2F2',
+          100: '#FEE2E2',
+          200: '#FECACA',
+          300: '#FCA5A5',
+          400: '#F87171',
+          500: '#EF4444',
+          600: '#DC2626',
+          700: '#B91C1C',
+          800: '#991B1B',
+          900: '#7F1D1D',
         },
         gray: {
           50: '#F9FAFB',

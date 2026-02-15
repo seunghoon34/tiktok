@@ -155,7 +155,15 @@ useFocusEffect(
   {
     icon: "mail-outline" as const,
     title: "Contact Support",
-    onPress: () => Linking.openURL('mailto:s2.shootyourshot@gmail.com'),
+    onPress: async () => {
+      const url = 'mailto:s2.shootyourshot@gmail.com';
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert('No Mail App', 'Please email s2.shootyourshot@gmail.com for support.');
+      }
+    },
   },
   {
     icon: "trash-outline" as const,
@@ -166,7 +174,7 @@ useFocusEffect(
 
  return (
     <SafeAreaView className="flex-1 bg-white dark:bg-black">
-      <View className="px-4 pt-2 pb-3 border-b border-gray-200 dark:border-gray-700">
+      <View className="px-4 pt-2 pb-3">
         <View className="flex-row items-center justify-between">
           <View className="w-10" />
           <Text className="text-ios-title2 dark:text-white">Profile</Text>
@@ -178,7 +186,7 @@ useFocusEffect(
             ])}
             activeOpacity={0.6}
           >
-            <Ionicons name="log-out-outline" size={24} color="#FF6B6B" />
+            <Ionicons name="log-out-outline" size={24} color="#007C7B" />
           </TouchableOpacity>
         </View>
       </View>
@@ -188,7 +196,7 @@ useFocusEffect(
       <View className="relative">
 {hasVideos ? (
   <TouchableOpacity onPress={() => router.push('/stories')} activeOpacity={0.6}>
-      <View className="p-0.5 rounded-full bg-red-500">
+      <View className="p-0.5 rounded-full bg-[#007C7B]">
       <View className="p-0.5 bg-white dark:bg-black rounded-full">
         <Image
           source={{ uri: imageUrl ?? undefined }}
@@ -319,7 +327,7 @@ useFocusEffect(
         {menuItems.map((item, index) => (
           <TouchableOpacity
             key={index}
-            className="flex-row items-center py-4 border-b border-gray-200 dark:border-gray-700"
+            className="flex-row items-center py-4"
             onPress={item.onPress}
             activeOpacity={0.6}
           >

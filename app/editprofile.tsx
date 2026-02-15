@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Ionicons } from '@expo/vector-icons';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { supabase } from '@/utils/supabase';
 import { router } from 'expo-router';
@@ -52,7 +51,6 @@ const EditProfileScreen = () => {
   const { user } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
-    birthdate: new Date(),
     aboutme: '',
     hobbies: [] as string[],
     interests: [] as string[],
@@ -67,7 +65,6 @@ const EditProfileScreen = () => {
   });
   const [originalFormData, setOriginalFormData] = useState({
     name: '',
-    birthdate: new Date(),
     aboutme: '',
     hobbies: [] as string[],
     interests: [] as string[],
@@ -91,7 +88,6 @@ const EditProfileScreen = () => {
         console.log('[EditProfile] Using cached profile');
         const profileData = {
           name: cached.name || '',
-          birthdate: new Date(cached.birthdate),
           aboutme: cached.aboutme || '',
           hobbies: cached.hobbies || [],
           interests: cached.interests || [],
@@ -136,7 +132,6 @@ const EditProfileScreen = () => {
           
           const profileData = {
             name: data.name || '',
-            birthdate: new Date(data.birthdate),
             aboutme: data.aboutme || '',
             hobbies: data.hobbies || [],
             interests: data.interests || [],
@@ -206,11 +201,6 @@ const EditProfileScreen = () => {
     }
   };
 
-  const onDateChange = (event: any, selectedDate?: Date) => {
-    if (selectedDate) {
-      setFormData(prev => ({ ...prev, birthdate: selectedDate }));
-    }
-  };
 
   const validateForm = () => {
     const newErrors = {
@@ -312,7 +302,6 @@ const EditProfileScreen = () => {
       console.log('[EditProfile] Form data state:', formData);
       const updateData: any = {
         name: formData.name.trim(),
-        birthdate: formData.birthdate,
         aboutme: formData.aboutme.trim(),
         hobbies: formData.hobbies.length > 0 ? formData.hobbies : null,
         interests: formData.interests.length > 0 ? formData.interests : null,
@@ -366,15 +355,14 @@ const EditProfileScreen = () => {
   const hasChanges = () => {
     const hobbiesChanged = JSON.stringify(formData.hobbies) !== JSON.stringify(originalFormData.hobbies);
     const interestsChanged = JSON.stringify(formData.interests) !== JSON.stringify(originalFormData.interests);
-    
+
     return (
       image !== originalImage ||
       formData.name.trim() !== originalFormData.name.trim() ||
       formData.aboutme.trim() !== originalFormData.aboutme.trim() ||
-      formData.birthdate.getTime() !== originalFormData.birthdate.getTime() ||
       hobbiesChanged ||
       interestsChanged ||
-        formData.role !== originalFormData.role ||
+      formData.role !== originalFormData.role ||
       formData.exercise !== originalFormData.exercise ||
       formData.drinking !== originalFormData.drinking ||
       formData.smoking !== originalFormData.smoking ||
@@ -429,7 +417,7 @@ const EditProfileScreen = () => {
                 }}
                 activeOpacity={0.6}
               >
-                <Ionicons name="checkmark" size={28} color="#FF6B6B" />
+                <Ionicons name="checkmark" size={28} color="#007C7B" />
               </TouchableOpacity>
             )}
           </View>
@@ -470,20 +458,6 @@ const EditProfileScreen = () => {
             <View style={styles.separator} />
           </View>
 
-          <View style={styles.formGroup}>
-            <Text style={styles.label}>Birthdate</Text>
-            <DateTimePicker
-              value={formData.birthdate}
-              mode="date"
-              onChange={onDateChange}
-              maximumDate={new Date()}
-              minimumDate={new Date(1900, 0, 1)}
-              textColor={isDark ? '#F9FAFB' : '#111827'}
-              themeVariant={isDark ? 'dark' : 'light'}
-              style={{backgroundColor: isDark ? '#000000' : 'white', marginLeft: -20}}
-            />
-            <View style={styles.separator} />
-          </View>
 
           <View style={styles.formGroup}>
             <View style={styles.aboutMeHeader}>
@@ -864,7 +838,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   button: {
-    backgroundColor: '#FF6B6B',
+    backgroundColor: '#007C7B',
     padding: 16,
     borderRadius: 8,
     marginTop: 10,
@@ -920,8 +894,8 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   tagSelected: {
-    backgroundColor: '#FF6B6B',
-    borderColor: '#FF6B6B',
+    backgroundColor: '#007C7B',
+    borderColor: '#007C7B',
   },
   tagText: {
     fontSize: 14,
@@ -946,15 +920,15 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     borderColor: isDark ? '#38383A' : '#E5E7EB',
   },
   optionButtonSelected: {
-    backgroundColor: isDark ? '#3D1515' : '#FEE2E2',
-    borderColor: '#FF6B6B',
+    backgroundColor: isDark ? '#042F2E' : '#CCFBF1',
+    borderColor: '#007C7B',
   },
   optionText: {
     fontSize: 14,
     color: isDark ? '#D1D5DB' : '#374151',
   },
   optionTextSelected: {
-    color: '#FF6B6B',
+    color: '#007C7B',
     fontWeight: '500',
   },
   helperText: {

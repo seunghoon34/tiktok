@@ -268,7 +268,7 @@ const deleteUri = () =>{
               width: 44,
               height: 44,
               borderRadius: 22,
-              backgroundColor: flashMode === 'on' ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: flashMode === 'on' ? '#007C7B' : 'rgba(0, 0, 0, 0.4)',
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -399,7 +399,7 @@ const deleteUri = () =>{
               width: 44,
               height: 44,
               borderRadius: 22,
-              backgroundColor: flashMode === 'on' ? '#FF6B6B' : 'rgba(0, 0, 0, 0.4)',
+              backgroundColor: flashMode === 'on' ? '#007C7B' : 'rgba(0, 0, 0, 0.4)',
               justifyContent: 'center',
               alignItems: 'center',
             }}
@@ -422,7 +422,7 @@ const deleteUri = () =>{
             zIndex: 1
           }}>
             <View style={{
-              backgroundColor: '#FF6B6B',
+              backgroundColor: '#007C7B',
               paddingHorizontal: 16,
               paddingVertical: 8,
               borderRadius: 20,
@@ -539,7 +539,7 @@ const deleteUri = () =>{
                     width: 64,
                     height: 64,
                     borderRadius: 32,
-                    backgroundColor: '#FF6B6B',
+                    backgroundColor: '#007C7B',
                     borderWidth: 4,
                     borderColor: 'white',
                   }} />
@@ -548,7 +548,7 @@ const deleteUri = () =>{
                     width: 32,
                     height: 32,
                     borderRadius: 6,
-                    backgroundColor: '#FF6B6B',
+                    backgroundColor: '#007C7B',
                   }} />
                 )}
               </TouchableOpacity>

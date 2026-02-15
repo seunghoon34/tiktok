@@ -571,7 +571,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
             await getLikes(user?.id); // Force refresh likes after unlike
           }}
         >
-            <Ionicons name="heart" size={40} color="#FF6B6B"/>
+            <Ionicons name="heart" size={40} color="#007C7B"/>
           </TouchableOpacity> 
         ) : (
           <TouchableOpacity onPress={likeVideo}>
@@ -597,7 +597,7 @@ export const MediaItemComponent = ({ item, isVisible, isScreenFocused, mute, onM
       opacity: heartOpacity
     }]}
   >
-    <Ionicons name="heart" size={80} color="#FF6B6B" />
+    <Ionicons name="heart" size={80} color="#007C7B" />
   </Animated.View>
 )}
       <Portal>

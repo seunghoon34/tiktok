@@ -7,9 +7,9 @@
 export const Colors = {
   // Primary Brand Color
   primary: {
-    DEFAULT: '#FF6B6B', // Lighter, more pleasant red
-    light: '#FF8787',
-    dark: '#FA5252',
+    DEFAULT: '#007C7B', // Dark cyan/teal brand color
+    light: '#009E9D',
+    dark: '#005F5E',
   },
 
   // Semantic Colors (iOS Standard)

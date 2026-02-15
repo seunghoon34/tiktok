@@ -199,7 +199,7 @@ export default function UserScreen() {
         {/* About Me */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons name="information-circle" size={22} color="#FF6B6B" />
+            <Ionicons name="information-circle" size={22} color="#007C7B" />
             <Text style={styles.cardTitle}>About Me</Text>
           </View>
           <Text style={styles.aboutText}>
@@ -237,7 +237,7 @@ export default function UserScreen() {
         {profile.hobbies && profile.hobbies.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name="basketball" size={22} color="#FF6B6B" />
+              <Ionicons name="basketball" size={22} color="#007C7B" />
               <Text style={styles.cardTitle}>Hobbies</Text>
             </View>
             <View style={styles.tagsContainer}>
@@ -254,7 +254,7 @@ export default function UserScreen() {
         {profile.interests && profile.interests.length > 0 && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name="sparkles" size={22} color="#FF6B6B" />
+              <Ionicons name="sparkles" size={22} color="#007C7B" />
               <Text style={styles.cardTitle}>Interests</Text>
             </View>
             <View style={styles.tagsContainer}>
@@ -271,7 +271,7 @@ export default function UserScreen() {
         {profile.height && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name="information" size={22} color="#FF6B6B" />
+              <Ionicons name="information" size={22} color="#007C7B" />
               <Text style={styles.cardTitle}>Basics</Text>
             </View>
             <View style={styles.infoGrid}>
@@ -287,7 +287,7 @@ export default function UserScreen() {
         {(profile.exercise || profile.drinking || profile.smoking || profile.pets || profile.diet) && (
           <View style={styles.card}>
             <View style={styles.cardHeader}>
-              <Ionicons name="leaf" size={22} color="#FF6B6B" />
+              <Ionicons name="leaf" size={22} color="#007C7B" />
               <Text style={styles.cardTitle}>Lifestyle</Text>
             </View>
             <View style={styles.lifestyleGrid}>
@@ -718,7 +718,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
     gap: 8,
   },
   tag: {
-    backgroundColor: isDark ? '#3D1515' : '#FEE2E2',
+    backgroundColor: isDark ? '#042F2E' : '#CCFBF1',
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
@@ -729,7 +729,7 @@ const createStyles = (isDark: boolean) => StyleSheet.create({
   tagText: {
     fontSize: 14,
     fontWeight: '600',
-    color: isDark ? '#FCA5A5' : '#DC2626',
+    color: isDark ? '#5EEAD4' : '#047857',
   },
   tagTextBlue: {
     color: isDark ? '#93C5FD' : '#1D4ED8',

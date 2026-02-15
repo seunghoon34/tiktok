@@ -9,6 +9,7 @@ import {
     SafeAreaView,
     ActivityIndicator,
     ScrollView,
+    Alert,
 } from 'react-native';
 import * as WebBrowser from 'expo-web-browser';
 import * as ImagePicker from 'expo-image-picker';
@@ -48,7 +49,7 @@ const CreateProfileScreen = () => {
 
     const scrollViewRef = useRef<any>(null);
     const aboutMeRef = useRef<any>(null);
-    const { user, refreshUserData } = useAuth();
+    const { user, refreshUserData, deleteAccount } = useAuth();
     const [hasSubmitted, setHasSubmitted] = useState(false);
     const [formData, setFormData] = useState({
         username: '',
@@ -140,12 +141,34 @@ const CreateProfileScreen = () => {
 
     const validateForm = () => {
         const age = getAge(formData.birthdate);
+
+        if (age < 18) {
+            Alert.alert(
+                'Age Requirement',
+                'You must be at least 18 years old to use this app. Your account will be removed.',
+                [
+                    {
+                        text: 'OK',
+                        onPress: async () => {
+                            try {
+                                await deleteAccount();
+                            } catch (error) {
+                                console.error('[CreateProfile] Error deleting underage account:', error);
+                            }
+                        },
+                    },
+                ],
+                { cancelable: false }
+            );
+            return false;
+        }
+
         const newErrors = {
             image: !image ? 'Profile picture is required' : '',
             username: !formData.username.trim() ? 'Username is required' : '',
             name: !formData.name.trim() ? 'Name is required' : '',
             aboutme: !formData.aboutme.trim() ? 'About me is required' : '',
-            birthdate: age < 18 ? 'You must be at least 18 years old to create a profile' : '',
+            birthdate: '',
             general: '',
         };
 
@@ -699,7 +722,7 @@ const CreateProfileScreen = () => {
                         <Ionicons
                             name={tosConfirmed ? 'checkbox' : 'square-outline'}
                             size={22}
-                            color={tosConfirmed ? '#FF6B6B' : '#9CA3AF'}
+                            color={tosConfirmed ? '#007C7B' : '#9CA3AF'}
                             style={{ marginTop: 1 }}
                         />
                         <Text style={{ marginLeft: 8, color: '#4B5563', fontSize: 13, flex: 1, lineHeight: 20 }}>
@@ -810,7 +833,7 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     button: {
-        backgroundColor: '#FF6B6B',
+        backgroundColor: '#007C7B',
         padding: 16,
         borderRadius: 8,
         marginTop: 10,
@@ -873,8 +896,8 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     tagSelected: {
-        backgroundColor: '#FF6B6B',
-        borderColor: '#FF6B6B',
+        backgroundColor: '#007C7B',
+        borderColor: '#007C7B',
     },
     tagText: {
         fontSize: 14,
@@ -899,15 +922,15 @@ const styles = StyleSheet.create({
         borderColor: '#E5E7EB',
     },
     optionButtonSelected: {
-        backgroundColor: '#FEE2E2',
-        borderColor: '#FF6B6B',
+        backgroundColor: '#CCFBF1',
+        borderColor: '#007C7B',
     },
     optionText: {
         fontSize: 14,
         color: '#374151',
     },
     optionTextSelected: {
-        color: '#FF6B6B',
+        color: '#007C7B',
         fontWeight: '500',
     },
     helperText: {
