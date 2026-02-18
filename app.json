@@ -53,8 +53,8 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow $(PRODUCT_NAME) to access your camera",
-          "microphonePermission": "Allow $(PRODUCT_NAME) to access your microphone",
+          "cameraPermission": "s2 needs camera access to record short videos and take photos for your profile that are shared with people nearby.",
+          "microphonePermission": "s2 needs microphone access to capture audio when recording short videos to share with people nearby.",
           "recordAudioAndroid": true
         }
       ],
@@ -82,13 +82,13 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "The app accesses your photos to let you share them with your friends."
+          "photosPermission": "s2 accesses your photo library so you can select existing photos or videos to share on your profile."
         }
       ],
       [
         "expo-location",
         {
-          "locationWhenInUsePermission": "Allow $(PRODUCT_NAME) to access your location to find people nearby."
+          "locationWhenInUsePermission": "s2 uses your location to show you videos and profiles from people nearby so you can connect with them."
         }
       ],
       "expo-web-browser",
